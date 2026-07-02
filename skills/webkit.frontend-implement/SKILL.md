@@ -1,0 +1,405 @@
+---
+name: webkit-frontend-implement
+description: >
+  Generates and implements modular base structure folder and files for frontend modules.
+  Detects the target framework (Vue, React, etc.) based on package.json, file extensions, or config files, and scaffolds appropriately.
+  Focuses primarily on the frontend UI, setting up pages, components, hooks/composables, and routes (static mockup/UI first).
+  Supports dragging folder or file paths into the command to specify the target module.
+  Triggered when the user runs the command `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
+---
+
+# Webkit Frontend Implement
+
+This skill coordinates the generation of standard web frontend modules, folders, pages, and components, matching the existing project's architecture, conventions, and style.
+
+---
+
+## Overview
+
+When the user requests to implement or scaffold the frontend structure of a module (e.g., using `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`), the agent must:
+1. Check if a folder or file path was dragged/passed into the command.
+2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
+3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
+4. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
+5. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
+6. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
+7. Generate the complete frontend folder structure and UI views matching the discovered framework (mock static data first).
+8. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
+
+---
+
+## Architecture Discovery Phase (MANDATORY)
+
+Before generating any code, directories, or styles, perform an Architecture Discovery step to inspect the project. Do not assume Vue or modular folders by default.
+
+### Items to Detect:
+- **Frontend Framework**: Vue, React, Next.js, Nuxt, Angular, or standard HTML/JS.
+- **Folder Organization**: Feature-based, module-based, domain-driven, atomic design, or layered architecture.
+- **Routing Strategy**: Vue Router, React Router, Next Router, file-based routing, etc.
+- **State Management**: Pinia, Vuex, Redux, Zustand, Recoil, Context API, etc.
+- **API Layer**: Axios instances, standard fetch wrappers, TanStack Query (React/Vue Query), custom hooks, or raw composables.
+- **Shared Component Structure**: Global buttons, modals, input elements, tables, status indicators.
+- **Styling System**: Tailwind CSS, Bootstrap, Vuetify, PrimeVue, MUI, Ant Design, CSS Modules, or SCSS.
+- **Naming Conventions**: PascalCase, kebab-case, or snake_case for component files, hooks, or assets.
+- **Build Tool**: Vite, Webpack, Nuxt build, Next build.
+- **TypeScript or JavaScript**: Determine file extensions (`.js`/`.vue` vs. `.ts`/`.tsx`/`.vue`).
+
+The discovered architecture MUST become the implementation blueprint.
+
+---
+
+## Architecture Lock & Folder Generation Rules
+
+### Architecture Lock
+- The existing project architecture is always the absolute source of truth.
+- **NEVER**: Create a new folder hierarchy, reorganize files, move existing files, introduce a different architecture, or migrate project organizations.
+- Always extend the existing architecture. If uncertain, search for adjacent modules to see how they are structured.
+
+### Folder Generation Rules
+- Do not generate new subfolders simply because they exist in a standard skill template.
+- Only create subfolders when:
+  1. The project already uses them.
+  2. They are absolutely required.
+  3. The user explicitly requests them.
+- Otherwise, place new files directly inside the existing project folders.
+
+---
+
+## Existing Module & Pattern Discovery
+
+### Existing Module Discovery
+Before creating a new module, search for similar existing modules.
+- Identify the folder layout, file naming casing, helper composables, page wrappers, API files, and state handlers of the closest existing module.
+- Mirror the existing module implementation. Use the closest existing module as the template.
+
+### Existing Pattern Detection
+Before generating, detect the existing styles and code shapes for:
+- Component pattern (functional vs. class-based, options vs. composition)
+- Page wrapper layouts
+- Composable / Hook pattern
+- API request pattern
+- Form validations and validation wrappers
+- Modal / Dialog overlays
+- Table grids and lists
+- Filter / Search input layouts
+- Layout patterns
+
+---
+
+## Execution Strategy (Performance Optimized)
+
+The agent MUST minimize workspace scanning and token consumption.
+
+### Search Order
+1. Current module directory.
+2. Shared global components (`resources/views/web/src/components/` or React components folder).
+3. Sibling feature modules.
+4. Current portal modules.
+5. Entire frontend project (ONLY if explicitly requested).
+
+- **Hard Stop Rule**: If a reusable component with $\ge 80\%$ feature match is found, stop searching and reuse it immediately unless the user explicitly requests a new/separate implementation.
+- Stop searching immediately after finding an acceptable reusable component. Never continue searching for "better" ones.
+- Never scan the entire frontend unless explicitly requested.
+
+---
+
+## Workspace Inspection Budget
+
+To reduce unnecessary token usage, limit the number of files scanned in a single turn.
+
+### Maximum Files to Inspect:
+- **Framework Detection**: 5 files
+- **Component Discovery**: 20 files
+- **Route Discovery**: 5 files
+- **API Layer**: 5 files
+- **Utility Discovery**: 10 files
+
+If the budget is exceeded:
+1. Stop scanning.
+2. Use the best matching implementation already discovered.
+
+---
+
+## Context Loading Strategy
+
+Only load context that is required.
+
+### Context Priority
+Current file $\to$ Current folder $\to$ Shared components $\to$ Related module $\to$ Portal $\to$ Entire workspace (explicit request only)
+
+- **Token Protection**: Never load more than 2 full files simultaneously unless performing a merge or refactor operation. Prefer targeted snippets over full-file context whenever possible.
+- Never load unrelated modules or inspect backend files when implementing frontend code.
+- Never inspect mobile code when implementing web, and vice-versa.
+
+---
+
+## Intelligent Search & Duplication Prevention
+
+### Intelligent Similarity Search
+Before creating new files, search by semantic similarity.
+Example translation flow for matching:
+`EmployeeTable` → `UsersTable` → `MemberTable` → `StaffTable` → `PersonnelTable`
+
+If one already exists, reuse or extend it. Do not generate duplicates.
+
+### Duplicate Prevention
+Before creating components, pages, hooks, composables, API files, or utilities, search existing files.
+If one exists:
+1. Reuse or extend it.
+2. Never generate duplicate files or redundant business logic.
+
+### Confidence Evaluation
+Before generating code, determine the confidence score:
+- **High**: Existing implementation found. Reuse.
+- **Medium**: Similar implementation found. Adapt.
+- **Low**: No implementation exists. Generate from scratch.
+
+---
+
+## Technology Stack & Styling Detection
+
+### API Layer Detection
+Before creating API requests, detect the existing API integration layer (Axios instance, fetch wrapper, TanStack Query, custom hooks, or raw composables).
+- Reuse the detected client. Do not introduce a new API request abstraction.
+
+### State Management Detection
+Detect the existing state management library (Pinia, Vuex, Redux, Zustand, or Context API).
+- Continue using the detected state solution. Never introduce another state library.
+
+### Styling Detection
+Detect the existing UI/CSS styling solution (Tailwind CSS, Bootstrap, PrimeVue, Vuetify, MUI, Ant Design, CSS Modules, or SCSS).
+- Use only the detected styling approach. Never mix UI libraries or introduce new visual systems unless requested.
+
+---
+
+## Path Parsing Rules (Dragged Folder / File Support)
+
+If a path parameter is passed in the command (e.g. `/webkit.frontend-implement @[/Users/.../web/src/module/hr/employees] <prompt>`):
+- **Extract Portal Name**: Identify the folder segment immediately following `resources/views/web/src/module/` (e.g., `hr`, `admin`, `employee`, `manager`, `payroll`, `timekeeping`).
+- **Extract Module Name**: Identify the next folder segment (e.g., `employees`, `sick_leave_monitoring`).
+- **Sub-folder resolution**: If the path points to a component, page, or script inside a module (e.g., `.../module/hr/employees/components`), traverse upwards to resolve the module directory name (`employees`) and the portal name (`hr`).
+
+---
+
+## Framework-Agnostic Setup Examples
+
+Adapt the structure, file naming, and coding syntax to the detected project framework:
+
+### 1. Vue.js Project Pattern (Composition API + `<script setup>`)
+
+```
+<module_name>/
+├── components/           # Vue sub-components (.vue)
+├── pages/                # Main Vue views/pages (e.g., <ModuleName>.vue)
+├── script/               # Composable files and API requests
+│   ├── useApiRequest.js  # API request functions utilizing global client
+│   └── use<ModuleName>.js # Composable state machine managing filters, lists, and actions
+└── webRoute.js           # Route configuration for dynamic route importing
+```
+
+### 2. React / Next.js Project Pattern (Functional Hooks + TypeScript/JSX)
+
+```
+<module_name>/
+├── components/           # React sub-components (.jsx or .tsx)
+├── pages/                # Main page components (e.g., <ModuleName>.jsx)
+├── hooks/                # React custom hooks (e.g., use<ModuleName>.js)
+├── services/             # React API request hooks or client calls (e.g., useApiRequest.ts)
+└── routes.js             # Route configurations
+```
+
+---
+
+## Frontend Implementation Guidelines
+
+### 1. Routes Definition (`webRoute.js` / `routes.js`)
+Export a default array or route list for the module's pages.
+- **For Vue**:
+```javascript
+export default [
+  {
+    path: '<portal_name>/<module_name>',
+    name: '<portal_name>_<module_name>',
+    component: () => import('@/src/module/<portal_name>/<module_name>/pages/<ModuleName>.vue'),
+    meta: { title: '<Module Title>' }
+  }
+];
+```
+- **For React**: Export standard React routes matching the project's routing system (e.g. React Router config).
+
+### 2. API Request Layer (`useApiRequest.js` / `.ts`)
+Create functions/hooks to communicate with the backend. 
+- **CRITICAL**: Check if the HTTP client (e.g., axios/fetch wrapper) is globally registered. Do not import it if it's already bound globally.
+- **Mock Setup**: For the frontend-only phase, return mockup data resembling the final expected JSON response structure.
+
+```javascript
+export function useApiRequest() {
+  return {
+    getData: async (params = {}) => {
+      return {
+        data: [
+          { id: 1, name: 'Mock Item 1', status: 1, created_at: '2026-06-19' },
+          { id: 2, name: 'Mock Item 2', status: 0, created_at: '2026-06-19' }
+        ],
+        total: 2
+      };
+    },
+    saveData: async (params = {}) => {
+      return { success: true };
+    }
+  };
+}
+```
+
+### 3. State Management (Vue Composable or React Custom Hook)
+Manage reactive states, active filters, loading indicators, and actions:
+- **For Vue**: Use Vue's reactive refs and watchers in `use<ModuleName>.js`.
+- **For React**: Use custom hook state (`useState`, `useEffect`, `useMemo`) in `hooks/use<ModuleName>.js`.
+
+```javascript
+import { ref, onMounted, onUnmounted, watch } from "vue";
+import { useRoute } from "vue-router";
+import { useApiRequest } from "./useApiRequest";
+import { debounce } from "@/src/utils/debounce";
+
+export function use<ModuleName>() {
+  const route = useRoute();
+  const apiRequest = useApiRequest();
+
+  const isLoading = ref(false);
+  const dataList = ref({ data: [] });
+  const totalItems = ref(0);
+  const isModalOpen = ref(false);
+
+  // Filter States
+  const searchQuery = ref('');
+  const selectedStatus = ref('');
+
+  // Create a debounced function for fetching data
+  const debouncedFetch = debounce((params) => {
+    fetchData(params);
+  }, 300);
+
+  // Watch search query with debounce to prevent excessive API calls
+  watch(searchQuery, (newVal) => {
+    debouncedFetch({
+      search: newVal,
+      status: selectedStatus.value,
+      page: 1
+    });
+  });
+
+  // Watch non-text filters for immediate update
+  watch(selectedStatus, (newVal) => {
+    fetchData({
+      search: searchQuery.value,
+      status: newVal,
+      page: 1
+    });
+  });
+
+  async function fetchData(params = {}) {
+    isLoading.value = true;
+    try {
+      const res = await apiRequest.getData(params);
+      dataList.value = res.data || { data: [] };
+      totalItems.value = res.total || 0;
+    } catch (err) {
+      console.error(err);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  onMounted(() => {
+    fetchData({
+      page: route.query.page || 1
+    });
+  });
+
+  onUnmounted(() => {
+    debouncedFetch.cancel();
+  });
+
+  return {
+    fetchData,
+    isLoading,
+    dataList,
+    totalItems,
+    isModalOpen,
+    searchQuery,
+    selectedStatus
+  };
+}
+```
+
+### 4. UI Components & Layouts
+- **View/Page Files**: Main page files should go in the `pages/` directory (e.g., `pages/<ModuleName>.vue` for Vue, or `pages/<ModuleName>.jsx` / `pages/<ModuleName>.tsx` for React).
+- **Framework Standards**: Always use `<script setup>` and composition hooks for Vue. For React, use modern functional components, hooks, and proper type definitions if TypeScript is used.
+- **Breadcrumbs**: Include a styled breadcrumb navigation mapping the module path (e.g., `<PORTAL_NAME> / <ModuleName>`).
+- **Premium Aesthetics**:
+  - Grid & list view toggling with state persistence via `localStorage`.
+  - Search inputs with modern icons (like `mdi-magnify`).
+  - Loading states using a shared `<LoadingState>` component.
+  - Floating action buttons for mobile layouts (`lg:hidden`).
+  - **Premium Tailwind gradients, subtle shadows, and borders**: Use premium aesthetics.
+  - **Card Background & Border Standard (Dark Mode Pop)**: All layout cards, panel blocks, and table containers must use `bg-white dark:bg-slate-800` backgrounds (rather than `dark:bg-slate-900` which blends flatly into the body background in dark mode), paired with borders using `border-slate-200/60 dark:border-slate-700` and soft shadow styling (e.g., `shadow-sm` or `shadow-md`).
+  - **Portal-Specific Accent Colors**: All layout accent classes, welcome banner gradients, button styles (hovers/active borders), and active sidebar link classes MUST be synchronized based on the target portal theme:
+    - **Employee**: Amber/Orange (e.g. `bg-amber-600`, `from-amber-700 via-amber-600 to-orange-600`, `active-class="nav-link-active-employee"`)
+    - **Manager**: Red (e.g. `bg-red-600`, `from-red-700 via-red-650 to-rose-600`, `active-class="nav-link-active-manager"`)
+    - **HR**: Emerald (e.g. `bg-emerald-600`, `from-emerald-700 via-emerald-600 to-teal-600`, `active-class="nav-link-active-hr"`)
+    - **Timekeeping**: Blue (e.g. `bg-blue-600`, `from-blue-700 via-blue-600 to-indigo-600`, `active-class="nav-link-active-timekeeping"`)
+    - **Payroll**: Cyan (e.g. `bg-cyan-600`, `from-cyan-700 via-cyan-600 to-sky-600`, `active-class="nav-link-active-payroll"`)
+    - **Admin**: Slate (e.g. `bg-slate-700`, `from-slate-700 via-slate-600 to-zinc-700`, `active-class="nav-link-active-admin"`)
+    Avoid using hardcoded values of other portals unless they represent standard semantic states (e.g., Red for errors/alerts, Emerald for active check-ins, Amber for warnings).
+  - Responsive alignment (flex layouts, responsive grids).
+
+### 5. Reusable & Global Components Guideline
+- **Prioritize Reuse**: Always check for existing global or cross-module components before writing components locally:
+  - **Codebase Search**: Search the workspace using grep or listing commands for pre-existing UI modules or table representations (e.g., `TimesheetTable`, `EmployeeSelector`, `LeavesCredit` panels).
+  - **Cross-Module Imports**: If a reusable component is found in another module, import it directly instead of copying its code or generating local duplicates.
+  - **Modals/Dialogs**: Use `Modal` (imported from `@/src/components/Modal.vue` or React equivalent). Do not write custom backdrop overlays or custom modal frames in the local page/component files.
+  - **Dropdowns & Selectors**: Check if `CSelect` (registered globally) can be used.
+  - **Pagination**: Use `Pagination` (registered globally) for lists and grids.
+  - **Loaders**: Use `LoadingState` or `Spinner` / `Loading` (registered globally).
+  - **Status Badges**: Use `<StatusBadge>` (registered globally) for all state indicators (Active/Inactive, Approved/Pending/Rejected, etc.) to keep status representations consistent. No import is needed.
+  - **Empty Result States**: Use `<EmptyState>` (registered globally) when tables, selectors, or search listings return zero records. No import is needed.
+  - **Skeleton Loaders**: Use `<TableSkeleton>` (registered globally) for visual-friendly loading states in tabular listings. No import is needed.
+- **Global Utilities**: Leverage shared functions in `@/src/utils/` instead of writing custom inline parsing/formatting logic:
+  - `debounce` (from `@/src/utils/debounce`): Debouncing text inputs.
+  - `throttle` (from `@/src/utils/throttle`): Throttling fast-firing scroll/resize events.
+  - `formatDate`, `daysBetween`, `timeAgo` (from `@/src/utils/dateFormatter`): Managing dates, calculating leave durations, and relative log timestamps.
+  - `formatCurrency`, `parseCurrency` (from `@/src/utils/currency`): Formatting currency rates (e.g. PHP `₱12,500.00`) and payroll parsing.
+- **Global Composables**:
+  - `useLocalStorage` (from `@/src/composables/useLocalStorage`): For persistent reactive state syncing (like saving active tabs, table views, or search filter states).
+- **Custom Directives**:
+  - `v-click-outside` (registered globally): For closing custom dropdowns, select options, and context menus when clicking outside the bound element. No manual import or registration is needed.
+- **Creating New Global Components**: If you are implementing a modular page and realize a component is general-purpose enough to be useful elsewhere (e.g. a custom date range picker, user profile card, file uploader widget), create it inside `resources/views/web/src/components/` (for Web portal) or the corresponding mobile components directory. Make sure to:
+  - Follow the styling patterns of other components in that folder.
+  - Document its props and usage so other components/pages can easily consume it.
+
+### 6. System Design & Performance Optimization Guidelines
+- **Lazy Loading**:
+  - **Dynamic Route Importing**: Always dynamic-import page components in route files (`webRoute.js` / `routes.js`) using `() => import(...)`.
+  - **Async/Lazy Components**: For large, heavy, or secondary components (e.g., Modals, Charts, rich editors, document viewers), load them asynchronously (Vue: `defineAsyncComponent()`, React: `React.lazy()`) to reduce initial package size.
+  - **Images & Media**: Use native `loading="lazy"` on all off-screen images to save network bandwidth and speed up page rendering.
+- **Search & Input Optimization (Debouncing/Throttling)**:
+  - **Debounced Inputs**: When text input triggers dynamic searches, lists, or suggestions, always apply a debounce (usually 300ms) to wait until the user stops typing before making API calls.
+  - **Throttling UI Listeners**: Limit execution frequency of scroll, resize, or drag events using throttling to keep frame rates steady.
+- **Resource Management & Memory Leak Prevention**:
+  - **Lifecycle Cleanup**: Always clean up timeouts, intervals, resize observers, custom event listeners, and subscriptions inside `onUnmounted` (Vue) or the cleanup function of `useEffect` (React) to avoid memory leaks.
+  - **API Request Cancellation**: Cancel pending requests when filters change or when the component unmounts using `AbortController` to avoid race conditions and save network bandwidth.
+- **Data Rendering & Computations**:
+  - **Pagination**: Implement pagination for lists and grids to avoid high-volume payload rendering issues.
+  - **Virtual Scrolling**: Use virtual list rendering for non-paginated lists with hundreds of elements to keep the DOM clean.
+  - **Memoization**: Cache heavy values using computed properties (`computed` in Vue) or memoization hooks (`useMemo`, `useCallback` in React) to prevent recalculating on every redraw.
+
+---
+
+## Incremental Generation & Updates
+
+Before modifying any existing frontend files:
+- Verify if the target file exists.
+- If it exists, update only the missing blocks or inject new handlers. Never overwrite working UI layouts or complete page modules.
+- **Preserve**: Existing business logic, custom layout setups, developer comments, formatting styles, and file imports.
+- Generate only the missing pieces to keep modifications minimal.
