@@ -40,6 +40,24 @@ The agent MUST minimize workspace scanning and token consumption.
 
 ---
 
+## Existing Module Discovery
+
+Before generating any backend code:
+- Search for the most similar existing backend module.
+- Mirror:
+  - Controller structure
+  - Service/Repository/Domain pattern
+  - Validation approach
+  - API response format
+  - Route organization
+  - Query style
+  - Business logic placement
+  - Model relationships
+- Use the existing module as the implementation template.
+- Only deviate when explicitly instructed by the user.
+
+---
+
 ## Context Loading Strategy
 
 Only load context that is required.
