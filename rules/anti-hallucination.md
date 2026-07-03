@@ -21,13 +21,21 @@ Applicable to all file referencing, variable usage, route mapping, and schema in
   - Permission rules, status enums, or configurations.
   - Environment keys (`.env`).
 2. **Verify Before Referencing**: Search the codebase (using grep or direct file reads) to check for the existence of any method, table, or helper before referencing it in code edits.
-3. **Strict Conformity to Project Conventions**: If a new class or script is required, scaffold it strictly matching the namespace, file casing, and directory structure of similar existing classes.
-4. **Ask When Unsure**: If schemas, model properties, or configuration variables cannot be verified confidently, stop and ask the user for clarification. Do not guess.
+3. **Mandatory System Awareness Scan**: Before generating any backend code (controller, query, handler, migration, model, or route), perform a System Awareness Scan:
+  - **Models**: List `app/Models/` and identify relevant Eloquent models. Read `$fillable`, `$casts`, `$table`, and relationships.
+  - **Migrations**: Search `database/migrations/` (including subdirectories `table/`, `F00013/`, `alters/`, etc.) for existing `Schema::create()` definitions matching the target domain.
+  - **Routes**: Read `routes/api.php` and grep for existing route groups matching the portal (e.g., `tk`, `hr`, `payroll`, `employee`).
+  - **Controllers/Domain Classes**: Check `app/Http/Controllers/<portal>/` and `app/Domain/Queries/` or `app/Domain/Handlers/` for existing implementations.
+  - Only proceed with new file creation if the scan confirms no existing implementation covers the requirement.
+4. **Strict Conformity to Project Conventions**: If a new class or script is required, scaffold it strictly matching the namespace, file casing, and directory structure of similar existing classes.
+5. **Ask When Unsure**: If schemas, model properties, or configuration variables cannot be verified confidently, stop and ask the user for clarification. Do not guess.
 
 ## Best Practices
 - **Inspect DB Migrations/Schema Logs**: Read migration files or run database checks to verify actual column names.
 - **Inspect API Registrations**: Check routing files (`routes/api.php` or routing files) to verify endpoint layouts.
+- **Use Model `$fillable` as Ground Truth**: When building queries, validators, API resources, or frontend mock data, use the model's `$fillable` and `$casts` arrays as the authoritative field list — never invent columns.
 
 ## AI Behavior Expectations
 - **Clarification Trigger**: The agent must prompt the user with questions if a referenced table, file, or key is missing from the workspace searches.
 - **No Mock Assumptions**: Do not use placeholders or hypothetical dependencies; only write verified project references.
+- **No New Table Without Proof**: The agent must not generate a `Schema::create()` migration unless it has confirmed — via model/migration scan — that no existing table covers the same data domain. If uncertain, it must ask the user.

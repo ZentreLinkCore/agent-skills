@@ -3,7 +3,9 @@ name: webkit-frontend-implement
 description: >
   Generates and implements modular base structure folder and files for frontend modules.
   Detects the target framework (Vue, React, etc.) based on package.json, file extensions, or config files, and scaffolds appropriately.
-  Focuses primarily on the frontend UI, setting up pages, components, hooks/composables, and routes (static mockup/UI first).
+  Focuses primarily on the frontend UI, setting up pages, components, hooks/composables, and routes.
+  ALWAYS connects to existing backend models, tables, and API routes — never creates new database tables or endpoints
+  unless explicitly instructed and confirmed that no existing implementation covers the need.
   Supports dragging folder or file paths into the command to specify the target module.
   Triggered when the user runs the command `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
 ---
@@ -21,10 +23,11 @@ When the user requests to implement or scaffold the frontend structure of a modu
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
 4. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
-5. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
-6. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
-7. Generate the complete frontend folder structure and UI views matching the discovered framework (mock static data first).
-8. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
+5. **Mandatory System Awareness**: Before designing API calls or data shapes, perform the System Awareness Phase — scan existing Laravel Models, database migrations, and registered API routes to understand what data is already available. The frontend design MUST be driven by existing backend structures. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
+6. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
+7. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
+8. Generate the complete frontend folder structure and UI views matching the discovered framework, connecting to real or realistic API shapes derived from existing backend models.
+9. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
 
 ---
 
@@ -45,6 +48,51 @@ Before generating any code, directories, or styles, perform an Architecture Disc
 - **TypeScript or JavaScript**: Determine file extensions (`.js`/`.vue` vs. `.ts`/`.tsx`/`.vue`).
 
 The discovered architecture MUST become the implementation blueprint.
+
+---
+
+## System Awareness Phase (MANDATORY — Run Before Any Code Generation)
+
+Before generating any API call shapes, mock data, state fields, or UI columns, the agent MUST perform a System Awareness scan of the existing Laravel backend to understand what data structures are already implemented.
+
+> [!IMPORTANT]
+> **The frontend implementation MUST be driven by existing backend structures.** Never design a UI around assumed or fabricated data models. Always verify what exists first.
+
+### Step 1 — Scan Existing Laravel Models
+- List and read relevant files in `app/Models/` to identify existing Eloquent models.
+- For each relevant model, note:
+  - The table name (`protected $table` or inferred from class name).
+  - Key `$fillable` / `$casts` fields (these become the API response fields and UI column names).
+  - Existing relationships (`belongsTo`, `hasMany`, `belongsToMany`, etc.) that may be needed for joins or nested UI.
+- **Hard Rule**: If a model already exists that covers the feature's data (e.g., `Timesheet`, `AppLeave`, `EmployeeMasterlist`), use it. Do NOT design the UI around a new table.
+
+### Step 2 — Scan Existing Migrations (If Model Fields Are Unclear)
+- If a model's fields are not fully declared in `$fillable`, scan its corresponding migration in `database/migrations/` or `database/migrations/table/` to understand all available columns.
+- Use these columns to define accurate mock data shapes and real API payload structures.
+
+### Step 3 — Scan Registered API Routes
+- Read `routes/api.php` to identify already-registered endpoints related to the module being built.
+- Search by keyword (e.g., `timekeeping`, `leave`, `employee`, `payroll`) to find relevant route groups.
+- **If a matching route already exists**: Use it as the API endpoint in `useApiRequest.js`. Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
+- **If no matching route exists**: Use realistic mock data shaped after the identified model's fields, and note in a code comment that the backend endpoint is pending.
+
+### Step 4 — Map Fields to UI
+After discovery, build a field-to-UI mapping:
+| Backend Field | UI Usage |
+|---|---|
+| Model `$fillable` or migration columns | Table columns, form fields, filter options |
+| `$casts` types | Date pickers, number inputs, toggles |
+| Relationship names | Dropdowns, nested panels, linked records |
+
+### System Awareness Output (Internal)
+Before writing code, summarize (internally or in a brief comment):
+- **Model(s) used**: e.g., `Timesheet`, `EmployeeMasterlist`
+- **Table(s) used**: e.g., `timesheets`, `employee_masterlists`
+- **Route(s) used**: e.g., `GET /api/tk/timesheets`
+- **New tables needed**: YES / NO — only YES if no existing model covers the requirement
+
+> [!CAUTION]
+> If you are about to create mock data with field names that do not exist in any model or migration, STOP. Re-scan to find the correct model or ask the user to confirm the new table is intentional.
 
 ---
 
@@ -228,23 +276,29 @@ export default [
 - **For React**: Export standard React routes matching the project's routing system (e.g. React Router config).
 
 ### 2. API Request Layer (`useApiRequest.js` / `.ts`)
-Create functions/hooks to communicate with the backend. 
+Create functions/hooks to communicate with the backend.
 - **CRITICAL**: Check if the HTTP client (e.g., axios/fetch wrapper) is globally registered. Do not import it if it's already bound globally.
-- **Mock Setup**: For the frontend-only phase, return mockup data resembling the final expected JSON response structure.
+- **System Awareness First**: Before writing any API functions, complete the System Awareness Phase (Step 3). If a matching route already exists in `routes/api.php`, wire the real endpoint directly — do not use mock data for that call.
+- **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet for the feature. Mock field names MUST match the actual model fields discovered in `app/Models/` or migrations. Never invent field names.
+- **Endpoint Comment**: Always add a comment indicating the intended backend route, e.g. `// GET /api/tk/timesheets` so it's clear what endpoint the function will eventually call.
 
 ```javascript
 export function useApiRequest() {
   return {
+    // GET /api/<portal>/<module> — connects to existing route or mock pending backend
     getData: async (params = {}) => {
+      // TODO: Replace with real API call when backend route is registered
+      // Field names below are derived from the <ModelName> model ($fillable / migration columns)
       return {
         data: [
-          { id: 1, name: 'Mock Item 1', status: 1, created_at: '2026-06-19' },
-          { id: 2, name: 'Mock Item 2', status: 0, created_at: '2026-06-19' }
+          { id: 1, /* field: value matching model */ created_at: '2026-06-19' },
+          { id: 2, /* field: value matching model */ created_at: '2026-06-19' }
         ],
         total: 2
       };
     },
     saveData: async (params = {}) => {
+      // POST /api/<portal>/<module>
       return { success: true };
     }
   };

@@ -3,6 +3,8 @@ name: webkit-backend-implement
 description: >
   Generates and implements modular backend setup for Vue.js modules using Laravel, creating controllers,
   domain query/handler classes, registering routes in routes/api.php, and integrating the backend endpoints with the frontend components.
+  ALWAYS scans existing Eloquent models, database migrations, and registered routes before generating anything.
+  Never creates a new migration or model when an existing one already covers the feature's data needs.
   Supports dragging folder or file paths into the command to specify the target module.
   Triggered when the user runs the command `/webkit.backend-implement <target_path> <prompt>` or `/webkit.backend-implement <prompt>`.
 ---
@@ -20,11 +22,12 @@ When the user requests to implement or scaffold the backend structure of a modul
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
 4. **Mandatory Architecture Discovery**: Before generating any backend code or migrations, perform the Architecture Discovery step to identify the project's Laravel design pattern.
-5. **Verify Frontend Existence**: Check if the frontend UI components, page files, or request composables/hooks exist. If the frontend structure/UI has not been created yet, **stop and instruct the user to run the frontend implementation first**, as the backend relies on the frontend fields and logic to design optimized database schemas and endpoints.
-6. Check if the database table for the module exists. If the table does not exist, create the Laravel migration, model, and ensure the Eloquent model is created.
-7. Scaffold and optimize the queries, controller logic, validations, and routes matching the detected architecture.
-8. Update the frontend composable or React API request layer to replace mock data with live HTTP requests.
-9. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Laravel Standards](../../rules/laravel-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [HRMS Domain Rules](../../rules/hrms-rules.md).
+5. **Mandatory System Awareness**: Before writing any controller, query, migration, or model, perform the System Awareness Phase — scan `app/Models/`, `database/migrations/`, and `routes/api.php` to identify what already exists. The backend implementation MUST reuse existing models and tables. Never create a new migration or model when an existing one already satisfies the data requirement.
+6. **Verify Frontend Existence**: Check if the frontend UI components, page files, or request composables/hooks exist. If the frontend structure/UI has not been created yet, **stop and instruct the user to run the frontend implementation first**, as the backend relies on the frontend fields and logic to design optimized database schemas and endpoints.
+7. If and only if no existing model/table covers the requirement (confirmed in Step 5), create the Laravel migration and Eloquent model.
+8. Scaffold and optimize the queries, controller logic, validations, and routes matching the detected architecture.
+9. Update the frontend composable or React API request layer to replace mock data with live HTTP requests.
+10. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Laravel Standards](../../rules/laravel-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [HRMS Domain Rules](../../rules/hrms-rules.md).
 
 ---
 
@@ -55,6 +58,55 @@ Before generating any backend code:
   - Model relationships
 - Use the existing module as the implementation template.
 - Only deviate when explicitly instructed by the user.
+
+---
+
+## System Awareness Phase (MANDATORY — Run Before Any Code Generation)
+
+Before creating any controller, query class, handler, migration, or model, the agent MUST perform a full System Awareness scan of the existing Laravel backend.
+
+> [!IMPORTANT]
+> **Never create a new database table or Eloquent model if an existing one already covers the feature's data needs.** Reuse and extend existing structures. Creating redundant tables is a critical error.
+
+### Step 1 — Scan Existing Eloquent Models (`app/Models/`)
+- List all files in `app/Models/` and identify candidates relevant to the module being built.
+- For each candidate model, inspect:
+  - `protected $table` — the actual table name.
+  - `protected $fillable` — all writable columns.
+  - `protected $casts` — column type hints (dates, integers, booleans, etc.).
+  - Relationships (`belongsTo`, `hasMany`, `hasOne`, `belongsToMany`, `morphTo`, etc.).
+  - Traits used (e.g., `SoftDeletes`, `CastNumericStrings`, `HasFactory`).
+- **Hard Rule**: If a model already covers the domain entity (e.g., `Timesheet`, `AppLeave`, `AttendanceException`, `EmployeeMasterlist`), reuse it. Do NOT create a parallel model or table.
+
+### Step 2 — Scan Existing Migrations (Resolve Column Details)
+- If the model's `$fillable` or `$casts` does not fully document all columns, locate the corresponding migration in:
+  - `database/migrations/`
+  - `database/migrations/table/`
+  - `database/migrations/F00013/` or other versioned subdirectories.
+- Read the migration's `Schema::create()` or `Schema::table()` block to identify all columns, types, nullability, defaults, and indices.
+- Use this as the authoritative column list for query building, validation rules, and API resources.
+
+### Step 3 — Scan Registered Routes (`routes/api.php`)
+- Read `routes/api.php` and search by portal keyword (e.g., `tk`, `hr`, `payroll`, `employee`, `manager`) to find existing route groups.
+- Check if an endpoint that serves the same feature already exists.
+- **If a matching route exists**: Extend or wire the existing controller method. Do NOT register a duplicate route.
+- **If no matching route exists**: Add the new route in the correct existing route group (never create a new top-level group unless the portal is entirely new).
+
+### Step 4 — Scan Existing Controllers & Domain Classes
+- Check `app/Http/Controllers/<portal_namespace>/` for an existing controller for the module.
+- Check `app/Domain/Queries/<DomainName>/` and `app/Domain/Handlers/<DomainName>/` for existing query/handler classes.
+- **If a controller or domain class already exists**: Add methods to it. Do NOT create a new parallel controller.
+
+### System Awareness Output (Internal Checklist)
+Before writing any code, confirm and document internally:
+- **Model(s) reused**: e.g., `AttendanceException`, `Timesheet`
+- **Table(s) reused**: e.g., `attendance_exceptions`, `timesheets`
+- **New migration needed**: YES / NO — YES only when no existing table covers the requirement
+- **Controller reused / created**: e.g., `ResolutionCenterController` (extended)
+- **Route registered**: e.g., `GET /api/tk/exceptions` (new in existing `tk` group)
+
+> [!CAUTION]
+> If you are about to generate a `Schema::create('...')` migration for a table that already exists or is covered by an existing model — **STOP**. Re-scan `app/Models/` and `database/migrations/`. If still uncertain, ask the user to confirm before proceeding.
 
 ---
 
@@ -168,7 +220,9 @@ routes/
 ## Backend Implementation Guidelines
 
 ### 1. Database Safety & Optimization
-- **Do NOT Run Migrations Automatically**: Generate migration files and Eloquent models. Explain that migrations must only be run upon explicit request.
+- **Reuse Before Create**: Always complete the System Awareness Phase (Steps 1–2) before deciding to create a new migration. If an existing table covers the requirement, use it directly.
+- **Do NOT Run Migrations Automatically**: Generate migration files and Eloquent models only when a new table is confirmed necessary. Explain that migrations must only be run upon explicit user request.
+- **No Duplicate Tables**: Never create a migration for a table name that already exists. Search `database/migrations/` for any prior `Schema::create('<table_name>')` definition before generating a new one.
 - **Optimization Standard**: Add indices on foreign keys and frequently filtered columns. Incorporate foreign key constraints, `SoftDeletes`, and timestamps. Avoid duplicate schema definitions.
 
 ### 2. Validation Detection & Standards
