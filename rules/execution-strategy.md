@@ -17,13 +17,8 @@ Applicable to all search commands, directory traversals, and file scanning activ
   3. **Sibling Modules**: Scan adjacent modules within the same workspace namespace.
   4. **Current Portal**: Look across adjacent portal directories.
   5. **Entire Project**: Check the whole repository **only** when explicitly requested.
-2. **Backend Infrastructure Scan (Mandatory for Any Implementation Task)**: Before writing any feature code — frontend or backend — perform a targeted backend scan:
-  - **Models**: List `app/Models/` and identify entities relevant to the feature.
-  - **Migrations**: Grep `database/migrations/` for existing `Schema::create()` blocks matching the domain.
-  - **Routes**: Scan `routes/api.php` for existing endpoints matching the portal/module.
-  - **Controllers & Domain**: Check `app/Http/Controllers/<portal>/` and `app/Domain/` for existing logic.
-  - Use the results to drive all implementation decisions. Stop and reuse if existing coverage is found.
-3. **Early Exit (Hard Stop Rule)**: If a reusable component or helper with $\ge 80\%$ feature match is found, stop searching and reuse it immediately unless a new implementation is requested.
+2. **Backend Infrastructure Scan (Mandatory for Any Implementation Task)**: Before writing any feature code — frontend or backend — run the [System Awareness](./system-awareness.md) scan and use its results to drive all implementation decisions. This is a read-only exception to portal/module scope limits below; it does not permit editing across boundaries (see [Context Loading](./context-loading.md)).
+3. **Early Exit**: If an existing component or helper clearly covers the core requirement, stop searching and reuse or extend it immediately instead of holding out for a closer or "cleaner" match. Only build new when nothing covers the requirement, or the user explicitly asks for a separate implementation.
 4. **No Redundant Scanning**: Never continue searching the repository after finding an acceptable reusable component.
 5. **No Repository-Wide Scans**: Never run project-wide greps or file lists for normal implementation tasks.
 

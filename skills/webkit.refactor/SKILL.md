@@ -16,7 +16,8 @@ This skill coordinates the safe refactoring of existing source code within the w
 When code duplication, architectural drift, or complex logic needs cleanup:
 
 ```
-          Target Selection
+   Target Selection / Investigation Report
+       (.agents/reports/*.md, optional)
                  │
                  ▼
           webkit.refactor
@@ -27,6 +28,17 @@ When code duplication, architectural drift, or complex logic needs cleanup:
                  ▼
        Regression Verification
 ```
+
+This skill is also the natural follow-up `webkit.investigate` suggests for "Architecture & Code Quality" findings — see that report's "Recommended Solution" and "High-Level Implementation Plan" sections when one exists.
+
+---
+
+## Target & Context Discovery
+
+Before restructuring anything:
+1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it — its scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
+2. **Locate Target Files**: Parse the command argument path, or the report's "Affected Files" section if one was loaded, or search the workspace for the described duplication/drift.
+3. **Verify Constraints**: Review relevant project rules in `.agents/rules/`, particularly [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), and [Duplicate Prevention](../../rules/duplicate-prevention.md).
 
 ---
 

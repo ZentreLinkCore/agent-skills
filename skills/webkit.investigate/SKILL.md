@@ -23,16 +23,20 @@ When a user reports a bug, error, or requests a feature review, the typical work
        webkit.investigate
                │
                ▼
-     Investigation Report
+  Investigation Report (saved to
+   .agents/reports/*.md — see
+   Phase 9)
                │
                ▼
          User Decision
   ┌────────────┼────────────┬────────────┐
   ▼            ▼            ▼            ▼
-webkit.fix  webkit.    webkit.    webkit.     ...
-            backend-   frontend-  refactor/
-            implement  implement  optimize
+webkit.fix  webkit.    webkit.    webkit.refactor
+            backend-   frontend-
+            implement  implement
 ```
+
+The report is a **file on disk**, not just chat output — `webkit.fix`, `webkit.backend-implement`, `webkit.frontend-implement`, and `webkit.refactor` are commonly invoked in a new session with no memory of this conversation, so they can only pick up the investigation's findings if it was actually persisted (see Phase 9).
 
 > [!IMPORTANT]
 > **This skill itself MUST NOT modify files or generate code, migrations, routes, or patches.** Its sole responsibility is to analyze, document, and plan.
@@ -95,7 +99,7 @@ Only inspect files and directories directly related to the issue. Protect token 
 
 Analyze the discovered context to form a chain of reasoning:
 
-$$\text{Symptoms} \longrightarrow \text{Possible Causes} \longrightarrow \text{Evidence} \longrightarrow \text{Most Likely Cause}$$
+`Symptoms → Possible Causes → Evidence → Most Likely Cause`
 
 - **Symptoms**: What triggers the problem, and how does it manifest?
 - **Possible Causes**: Formulate hypotheses explaining the symptoms.
@@ -119,7 +123,7 @@ Evaluate the ripple effects of potential changes. Document the impact of fixing 
 
 Do not reinvent the wheel. Before recommending a change or scaffolding a new solution:
 - Search for existing components, services, queries, handlers, helpers, or traits that solve the same or a similar problem.
-- **Hard Rule**: Reuse existing infrastructure. If a utility class or component can cover $\ge 80\%$ of the need, extend it rather than creating a duplicate file.
+- **Hard Rule**: Reuse existing infrastructure. If a utility class or component clearly covers the core need, extend it rather than creating a duplicate file.
 - Refer to [.agents/rules/duplicate-prevention.md](../../rules/duplicate-prevention.md).
 
 ---
@@ -216,13 +220,21 @@ Explain why the recommended option is superior (e.g., matching existing architec
 - [ ] Manual test case: ...
 ```
 
+### Persist the Report (MANDATORY)
+
+Displaying the report in chat is not enough — `webkit.fix` and `webkit.refactor` are frequently invoked in a **separate session** and have no access to this conversation's history. If the report isn't written to disk, the handoff silently breaks and the next skill re-investigates from scratch (or worse, guesses).
+
+- Write the full report to `.agents/reports/<portal>-<module>-<slug>-<YYYYMMDD>.md` (e.g. `.agents/reports/tk-timesheet-late-log-miscalculation-20260708.md`). Create the `.agents/reports/` directory if it doesn't exist.
+- Use today's date and a short kebab-case slug of the issue/feature name for the filename so multiple investigations on the same module don't collide.
+- If this investigation is a re-run or follow-up on an existing report for the same issue, update that file in place rather than creating a near-duplicate.
+
 ---
 
 ## Follow-up Commands
 
-At the end of the report, suggest next steps to the user:
+At the end of the report, suggest next steps to the user, **always including the saved report path** so the next skill invocation can load it directly instead of relying on chat memory:
 
-- "To apply the recommended fix automatically, you can run: `/webkit.fix <target_path> <prompt>`"
-- "To scaffold the frontend implementation, you can run: `/webkit.frontend-implement <target_path> <prompt>`"
-- "To scaffold the backend implementation, you can run: `/webkit.backend-implement <target_path> <prompt>`"
-- "To refactor/optimize the affected module, run: `/webkit.refactor <target_path> <prompt>` or `/webkit.optimize <target_path> <prompt>`"
+- "To apply the recommended fix automatically, you can run: `/webkit.fix <target_path> <prompt> using .agents/reports/<report_file>.md`"
+- "To scaffold the frontend implementation, you can run: `/webkit.frontend-implement <target_path> <prompt> using .agents/reports/<report_file>.md`"
+- "To scaffold the backend implementation, you can run: `/webkit.backend-implement <target_path> <prompt> using .agents/reports/<report_file>.md`"
+- "To refactor or optimize the affected module, run: `/webkit.refactor <target_path> <prompt> using .agents/reports/<report_file>.md`"

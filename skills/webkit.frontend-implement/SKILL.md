@@ -22,12 +22,13 @@ When the user requests to implement or scaffold the frontend structure of a modu
 1. Check if a folder or file path was dragged/passed into the command.
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
-4. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
-5. **Mandatory System Awareness**: Before designing API calls or data shapes, perform the System Awareness Phase — scan existing Laravel Models, database migrations, and registered API routes to understand what data is already available. The frontend design MUST be driven by existing backend structures. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
-6. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
-7. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
-8. Generate the complete frontend folder structure and UI views matching the discovered framework, connecting to real or realistic API shapes derived from existing backend models.
-9. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
+4. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
+5. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
+6. **Mandatory System Awareness**: Before designing API calls or data shapes, run the scan defined in [System Awareness](../../rules/system-awareness.md) to understand what backend data is already available. The frontend design MUST be driven by existing backend structures where they exist. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
+7. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
+8. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
+9. Generate the complete frontend folder structure and UI views matching the discovered framework, connecting to real or realistic API shapes derived from existing backend models.
+10. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
 
 ---
 
@@ -53,43 +54,18 @@ The discovered architecture MUST become the implementation blueprint.
 
 ## System Awareness Phase (MANDATORY — Run Before Any Code Generation)
 
-Before generating any API call shapes, mock data, state fields, or UI columns, the agent MUST perform a System Awareness scan of the existing Laravel backend to understand what data structures are already implemented.
+Before generating any API call shapes, mock data, state fields, or UI columns, run the full scan defined in [System Awareness](../../rules/system-awareness.md) (models → migrations → routes). The frontend implementation MUST be driven by existing backend structures where they exist — never design a UI around assumed or fabricated data models.
 
-> [!IMPORTANT]
-> **The frontend implementation MUST be driven by existing backend structures.** Never design a UI around assumed or fabricated data models. Always verify what exists first.
+Once the scan is done, map backend fields to UI directly:
 
-### Step 1 — Scan Existing Laravel Models
-- List and read relevant files in `app/Models/` to identify existing Eloquent models.
-- For each relevant model, note:
-  - The table name (`protected $table` or inferred from class name).
-  - Key `$fillable` / `$casts` fields (these become the API response fields and UI column names).
-  - Existing relationships (`belongsTo`, `hasMany`, `belongsToMany`, etc.) that may be needed for joins or nested UI.
-- **Hard Rule**: If a model already exists that covers the feature's data (e.g., `Timesheet`, `AppLeave`, `EmployeeMasterlist`), use it. Do NOT design the UI around a new table.
-
-### Step 2 — Scan Existing Migrations (If Model Fields Are Unclear)
-- If a model's fields are not fully declared in `$fillable`, scan its corresponding migration in `database/migrations/` or `database/migrations/table/` to understand all available columns.
-- Use these columns to define accurate mock data shapes and real API payload structures.
-
-### Step 3 — Scan Registered API Routes
-- Read `routes/api.php` to identify already-registered endpoints related to the module being built.
-- Search by keyword (e.g., `timekeeping`, `leave`, `employee`, `payroll`) to find relevant route groups.
-- **If a matching route already exists**: Use it as the API endpoint in `useApiRequest.js`. Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
-- **If no matching route exists**: Use realistic mock data shaped after the identified model's fields, and note in a code comment that the backend endpoint is pending.
-
-### Step 4 — Map Fields to UI
-After discovery, build a field-to-UI mapping:
 | Backend Field | UI Usage |
 |---|---|
 | Model `$fillable` or migration columns | Table columns, form fields, filter options |
 | `$casts` types | Date pickers, number inputs, toggles |
 | Relationship names | Dropdowns, nested panels, linked records |
 
-### System Awareness Output (Internal)
-Before writing code, summarize (internally or in a brief comment):
-- **Model(s) used**: e.g., `Timesheet`, `EmployeeMasterlist`
-- **Table(s) used**: e.g., `timesheets`, `employee_masterlists`
-- **Route(s) used**: e.g., `GET /api/tk/timesheets`
-- **New tables needed**: YES / NO — only YES if no existing model covers the requirement
+- **If a matching route already exists**: use it as the API endpoint in `useApiRequest.js`. Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
+- **If no matching route exists yet**: this is not a blocker (see [System Awareness](../../rules/system-awareness.md)) — use realistic mock data shaped after the closest existing model's fields, and note in a code comment that the backend endpoint is pending.
 
 > [!CAUTION]
 > If you are about to create mock data with field names that do not exist in any model or migration, STOP. Re-scan to find the correct model or ask the user to confirm the new table is intentional.
@@ -145,8 +121,7 @@ The agent MUST minimize workspace scanning and token consumption.
 4. Current portal modules.
 5. Entire frontend project (ONLY if explicitly requested).
 
-- **Hard Stop Rule**: If a reusable component with $\ge 80\%$ feature match is found, stop searching and reuse it immediately unless the user explicitly requests a new/separate implementation.
-- Stop searching immediately after finding an acceptable reusable component. Never continue searching for "better" ones.
+- **Early Exit**: If a reusable component clearly covers the core requirement, reuse it immediately unless the user explicitly requests a new/separate implementation. Never keep searching for a "better" match once one is found.
 - Never scan the entire frontend unless explicitly requested.
 
 ---

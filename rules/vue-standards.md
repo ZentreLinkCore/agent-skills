@@ -15,11 +15,7 @@ Applicable to all Vue components (`.vue`), composables, and frontend scripts ins
 2. **Naming and Structure**: Use PascalCase for all component filenames (e.g., `CustomTable.vue`). Follow the existing directory structures for pages, sub-components, composables, and routes.
 3. **Props and Emits Validation**: Define strict validation rules for all component props using `defineProps`. Explicitly declare emitted events using `defineEmits` in kebab-case.
 4. **Scoped Styling**: Always scope CSS rules (`<style scoped>`) when styling is not handled by Tailwind CSS or active UI frameworks.
-5. **Backend Field Awareness Before Composable Design**: Before writing any composable (`use<Module>.js`) or API request layer (`useApiRequest.js`), scan the existing backend to derive accurate data shapes:
-  - Read relevant models in `app/Models/` to get `$fillable` and `$casts` — these define the API response field names.
-  - Grep `routes/api.php` to find registered endpoints for the module — use real endpoints instead of mock URLs when they already exist.
-  - Use model field names as state variable names and table column names in filter params. Never invent field names that don't exist in the backend.
-  - Mock data field names MUST match actual model `$fillable` columns — do not use generic placeholders like `name`, `title`, or `value` unless those are the real column names.
+5. **Backend Field Awareness Before Composable Design**: Before writing any composable (`use<Module>.js`) or API request layer (`useApiRequest.js`), run the scan defined in [System Awareness](./system-awareness.md) to derive accurate data shapes. Use model field names as state variable names and table column names in filter params — never invent field names that don't exist in the backend. Mock data field names MUST match actual model `$fillable` columns, not generic placeholders like `name`, `title`, or `value`, unless those are the real column names. This read-only backend lookup is allowed even though frontend and backend edits stay separated (see [Context Loading](./context-loading.md)).
 
 ## Best Practices
 - **Standardize Reactivity**: Prefer `ref` for general reactivity. Use `reactive` only for grouping form data or search filter objects. Do not destructure reactive objects directly.

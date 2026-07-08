@@ -16,7 +16,8 @@ This skill coordinates the application of bug fixes, logic corrections, and issu
 When a bug or issue has been investigated and a fix is approved, the developer/agent runs this skill:
 
 ```
-    Investigation Report / Approved Plan
+  Investigation Report (.agents/reports/*.md)
+        / Approved Plan / Direct Prompt
                      │
                      ▼
                 webkit.fix
@@ -28,14 +29,17 @@ When a bug or issue has been investigated and a fix is approved, the developer/a
            Testing & Verification
 ```
 
+A saved report is optional input, not a hard prerequisite — this skill also runs directly from a plain bug description or an explicit user prompt.
+
 ---
 
 ## Phase 1 — Target & Context Discovery
 
 Before writing any code:
-1. **Locate Target Files**: Parse the command argument path or search the workspace to identify the exact files needing the fix.
-2. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
-3. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
+1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report file, read it directly. Otherwise, check `.agents/reports/` for a report matching the target path or feature described in the prompt. If found, treat its Root Cause Analysis, Evidence, and Recommended Solution sections as the primary source of truth instead of re-deriving them — this skill is commonly invoked in a fresh session with no memory of a `webkit.investigate` run that happened earlier. If no report is referenced or found, proceed directly from the prompt/target path — a report is not required to run this skill.
+2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
+3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
+4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
 
 ---
 

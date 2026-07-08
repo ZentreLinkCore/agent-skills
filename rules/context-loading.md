@@ -20,11 +20,11 @@ Applicable to all file reads, context retrievals, and document inspections.
   6. **Entire Project**: Loaded **only** if requested.
 2. **Token Protection Limits**: Never load more than **2 full files** into the active context window simultaneously unless performing a merge or refactor operation.
 3. **Snippet-First Inspections**: Always prefer reading specific line ranges or targeted code snippets (using file boundaries) over loading full-file context.
-4. **Strict Boundary Separation**:
-  - Never load or inspect backend files when implementing frontend code.
-  - Never load or inspect frontend files when implementing backend code.
+4. **Strict Boundary Separation (Write Scope)**:
+  - Never *edit* backend files as a side effect of a frontend task, or *edit* frontend files as a side effect of a backend task.
   - Never inspect mobile code when implementing web code, and vice-versa.
   - Never inspect unrelated portals or modules unless requested.
+  - **Exception — System Awareness Scan**: Read-only lookups of `app/Models/`, `database/migrations/`, and `routes/api.php` are always permitted, even during frontend work, and are in fact mandatory before designing data shapes or API calls. See [System Awareness](./system-awareness.md). This exception covers *reading* only — it never authorizes editing files on the other side of the boundary.
 
 ## Best Practices
 - **Minimize Context Size**: Exclude comments, markup, or layout files that are unrelated to the logical execution of the task.

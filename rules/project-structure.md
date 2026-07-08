@@ -18,6 +18,7 @@ Applicable to all files, folders, layouts, routing files, and component location
   - Keep backend classes under their appropriate namespace directories (e.g., `app/`).
   - Do not copy or duplicate shared helpers inside local features folders.
 4. **Temporary / Scratch Directories**: Save developer logs, test templates, and scratch files in local `.agents/scratch/` or ignore directories — never commit scratch scripts to the project root.
+5. **Investigation Reports**: `webkit.investigate` persists its findings to `.agents/reports/<portal>-<module>-<slug>-<YYYYMMDD>.md`. This is a real, load-bearing handoff between skills (`webkit.fix`, `webkit.refactor`, `webkit.backend-implement`, and `webkit.frontend-implement` all check this directory) — do not treat it as disposable scratch output.
 
 ## Best Practices
 - **Domain Separation**: Group related files by feature domains where the project implements modular architecture.

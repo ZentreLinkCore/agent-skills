@@ -17,12 +17,7 @@ Applicable to all backend components, including Controllers, Models, FormRequest
   - **API Response Pattern**: Eloquent API Resources (`JsonResource`), response wrappers, success/error traits, or raw JsonResponses.
   - **Database Access Pattern**: Direct Eloquent queries, Repositories, query builders, or custom scopes.
   - **Route Organization**: Grouping, middleware prefixes, route naming conventions, and API versioning.
-2. **Mandatory System Awareness Before Any Migration or Model**: Before creating any migration, model, controller, query class, or handler, scan the existing backend:
-  - List `app/Models/` and read candidate models — check `$table`, `$fillable`, `$casts`, and relationships.
-  - If the model's fields are ambiguous, scan the corresponding migration in `database/migrations/` (including subdirs: `table/`, `F00013/`, `alters/`, `views/`).
-  - Read `routes/api.php` to verify no existing endpoint already covers the feature.
-  - Check `app/Http/Controllers/<portal>/` and `app/Domain/` for existing controller/query/handler classes.
-  - **Only proceed with new file generation if this scan confirms no existing implementation satisfies the requirement.**
+2. **Mandatory System Awareness Before Any Migration or Model**: Before creating any migration, model, controller, query class, or handler, run the scan defined in [System Awareness](./system-awareness.md). Only proceed with new file generation if this scan confirms no existing implementation satisfies the requirement. This does not require a frontend to already exist — backend/API-first work is valid.
 3. **Architecture Lock**: Conform strictly to the detected architecture. Never introduce another architectural pattern, move files to a new pattern, or mix Repositories with Domain patterns unless the codebase already implements both.
 4. **Database Safety & Optimization**:
   - **Reuse Before Create**: If an existing Eloquent model and its table already cover the feature's data, use them directly. Do NOT create a parallel table.

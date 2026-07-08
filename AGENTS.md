@@ -1,6 +1,6 @@
 # HRMS Agent Rules & Customizations
 
-This workspace contains specialized coding, design, and business rules located in the [.agents/rules/](./rules/) directory.
+This workspace contains specialized coding, design, and business rules located in the [.agents/rules/](./rules/) directory, plus a set of end-to-end workflow skills in [.agents/skills/](./skills/).
 
 The agent MUST read, load, and follow these rules files:
 
@@ -21,5 +21,16 @@ The agent MUST read, load, and follow these rules files:
 15. [Duplicate Prevention](./rules/duplicate-prevention.md) - Logic and file reuse rules.
 16. [Incremental Generation](./rules/incremental-generation.md) - Guidelines for minimal diffs and safe file modification.
 17. [Anti-Hallucination](./rules/anti-hallucination.md) - Constraints to reduce fabricated routes, databases, or variables.
+18. [System Awareness](./rules/system-awareness.md) - The canonical models/migrations/routes discovery scan referenced by the rules and skills above; update scan steps here only.
 
+## Workflow Skills
 
+For end-to-end feature work, prefer the skills in [.agents/skills/](./skills/) over ad-hoc edits — they encode the rules above into a concrete sequence:
+
+1. [webkit.investigate](./skills/webkit.investigate/SKILL.md) - Root-cause analysis and a written plan. Never edits files.
+2. [webkit.backend-implement](./skills/webkit.backend-implement/SKILL.md) - Laravel controllers, models, migrations, routes.
+3. [webkit.frontend-implement](./skills/webkit.frontend-implement/SKILL.md) - Vue/React pages, components, composables.
+4. [webkit.fix](./skills/webkit.fix/SKILL.md) - Applies an approved fix from an investigation report.
+5. [webkit.refactor](./skills/webkit.refactor/SKILL.md) - Behavior-preserving cleanup and restructuring.
+
+Typical flow: `webkit.investigate` → `webkit.backend-implement` and/or `webkit.frontend-implement` (either order — see [System Awareness](./rules/system-awareness.md) for how each handles the other layer not existing yet) → `webkit.fix` or `webkit.refactor` as needed.

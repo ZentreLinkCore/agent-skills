@@ -25,8 +25,7 @@ Applicable to all file creation, component writing, database structuring, and ut
   - Extend the existing file (e.g. adding a method, prop, or column) instead of creating a new duplicate file.
 3. **No Duplicate Logic**: Never write identical business logic (e.g. calculation engines, rates, formatting steps) in different files. Refer to a single source of truth.
 4. **Shared Refactoring**: If a feature-specific helper is needed in a sibling module, refactor it to a global/shared folder instead of duplicating its code.
-5. **No Duplicate Database Tables**: Before generating any migration with `Schema::create()`, scan `app/Models/` and `database/migrations/` to confirm no existing table or model covers the same domain entity. If one exists, reuse it. Creating a parallel table for data that already has a model is a critical violation.
-6. **No Duplicate API Endpoints**: Before registering a new route in `routes/api.php`, scan existing route groups by portal keyword (e.g., `tk`, `hr`, `payroll`). If a route for the same resource already exists, extend the controller method instead of adding a duplicate route definition.
+5. **No Duplicate Database Tables or Endpoints**: Run the [System Awareness](./system-awareness.md) scan before generating any migration or route. Creating a parallel table for data that already has a model, or a duplicate route for a resource that already has one, is a critical violation — extend the existing table/model or controller method instead.
 
 ## Best Practices
 - **Conform to Shared Structures**: Check global folders (e.g. `components/`, `utils/`) before starting any feature implementation.
@@ -36,5 +35,4 @@ Applicable to all file creation, component writing, database structuring, and ut
 ## AI Behavior Expectations
 - **Proactive Verification**: The agent must run grep queries to check for existing filenames or helper terms before writing new code blocks.
 - **Refusal to Duplicate**: Reject requests to copy and paste logic from one module to another. Use imports or refactor to shared helpers.
-- **Table Scan Before Migration**: When any migration creation is considered, the agent must first list `app/Models/` and grep `database/migrations/` for existing `Schema::create('<table_name>')` calls. Generating a migration for an already-existing table is a hard violation.
-- **Route Scan Before Registration**: When any new route is being added, grep `routes/api.php` for existing routes matching the same URI pattern. Never register duplicate routes.
+- **Scan Before Migration or Route Registration**: Run the [System Awareness](./system-awareness.md) scan before any migration or route creation. Generating a migration for an already-existing table, or registering a duplicate route, is a hard violation.
