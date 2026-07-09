@@ -32,6 +32,12 @@ When the user requests to implement or scaffold the backend structure of a modul
 
 ---
 
+## Branch Discipline
+
+Before scaffolding anything, confirm work is happening on a `feature/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this module, continue there instead of creating a new one.
+
+---
+
 ## Execution Strategy (Performance Optimized)
 
 The agent MUST minimize workspace scanning and token consumption.
@@ -306,3 +312,19 @@ export function useApiRequest() {
   };
 }
 ```
+
+---
+
+## Verification (Lightweight)
+
+Automated PHPUnit execution is out of scope for this skill for now — pair with `/webkit.fix`'s test-running verification phase when regression coverage is actually needed. Still confirm the following before considering the work done:
+1. **Syntax Check**: The new/edited PHP files parse cleanly (e.g. `php -l <file>`) and match the surrounding code's formatting.
+2. **Route Sanity Check**: The new/modified route is correctly grouped in `routes/api.php`, doesn't collide with an existing URI, and carries the right middleware.
+3. **Manual Verification Steps**: Give the user concrete steps to hit the new endpoint (e.g. via curl/Postman) and confirm the response shape matches the API Resource / JSON structure implemented.
+
+---
+
+## Close the Loop
+
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
+2. **Suggested Next Step**: If Step 7 found no existing frontend for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` next to wire up the UI against the endpoints just created. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add leave-conversion endpoint`). Do not stage or commit automatically.

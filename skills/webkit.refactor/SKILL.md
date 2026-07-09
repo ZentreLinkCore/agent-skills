@@ -39,6 +39,7 @@ Before restructuring anything:
 1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it — its scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
 2. **Locate Target Files**: Parse the command argument path, or the report's "Affected Files" section if one was loaded, or search the workspace for the described duplication/drift.
 3. **Verify Constraints**: Review relevant project rules in `.agents/rules/`, particularly [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), and [Duplicate Prevention](../../rules/duplicate-prevention.md).
+4. **Branch Discipline**: Confirm work is happening on a `refactor/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this cleanup, continue there.
 
 ---
 
@@ -80,3 +81,10 @@ Refactoring is only successful if no functionality is broken:
 1. **Pre-Check**: Run existing Vitest or PHPUnit tests before modifying anything to establish a baseline.
 2. **Post-Check**: Execute the same tests after applying changes. Ensure 100% pass rate.
 3. **Compare Response Payloads**: If API structures were refactored, verify that the before-and-after JSON shapes are identical.
+
+---
+
+## Phase 4 — Close the Loop
+
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `.agents/reports/<file>.md` stays current for whoever reads it next.
+2. **Suggested Next Step**: Point the user to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `refactor(hr): extract shared leave-credit calculation`). Do not stage or commit automatically.

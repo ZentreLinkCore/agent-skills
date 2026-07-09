@@ -40,6 +40,7 @@ Before writing any code:
 2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
 3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
 4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
+5. **Branch Discipline**: Confirm work is happening on a `bugfix/` or `hotfix/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this issue, continue there — don't create a new one unnecessarily.
 
 ---
 
@@ -61,6 +62,10 @@ Before writing any code:
   - Frontend: Vue Composition API, Tailwind/Vanilla CSS variables.
 - Do not introduce new libraries, packages, or architectural patterns unless explicitly instructed.
 
+### 4. System Awareness (If the Fix Touches Data Structures)
+- If the fix requires adding a column, route, model, or table (not just editing existing logic), run the scan defined in [System Awareness](../../rules/system-awareness.md) first. A bug fix is not exempt from duplicate-prevention — it's easy to "fix" a symptom by fabricating a parallel column or endpoint instead of reusing the one that's already there but misused.
+- If the scan turns up an existing structure that's simply being read/written incorrectly, fix the usage, not the schema.
+
 ---
 
 ## Phase 3 — Verification
@@ -71,3 +76,10 @@ Immediately after applying the code changes:
    - For backend fixes: Run PHPUnit filter tests (`vendor/bin/phpunit --filter <test_name>`).
    - For frontend fixes: Run Vitest tests (`npm run test -- <file_name>`).
 3. **Manual Verification**: Specify step-by-step instructions for the developer/user to verify that the fix resolves the issue without introducing side effects.
+
+---
+
+## Phase 4 — Close the Loop
+
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `.agents/reports/<file>.md` reflects current status instead of going stale for whoever reads it next.
+2. **Suggested Next Step**: Point the user to `vendor/bin/phpunit`/`npm run test` if not already run in Phase 3, and to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `fix(tk): correct late computation grace period`). Do not stage or commit automatically — that decision belongs to the user.

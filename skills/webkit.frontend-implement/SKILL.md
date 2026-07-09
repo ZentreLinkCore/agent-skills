@@ -32,6 +32,12 @@ When the user requests to implement or scaffold the frontend structure of a modu
 
 ---
 
+## Branch Discipline
+
+Before scaffolding anything, confirm work is happening on a `feature/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this module, continue there instead of creating a new one.
+
+---
+
 ## Architecture Discovery Phase (MANDATORY)
 
 Before generating any code, directories, or styles, perform an Architecture Discovery step to inspect the project. Do not assume Vue or modular folders by default.
@@ -432,3 +438,19 @@ Before modifying any existing frontend files:
 - If it exists, update only the missing blocks or inject new handlers. Never overwrite working UI layouts or complete page modules.
 - **Preserve**: Existing business logic, custom layout setups, developer comments, formatting styles, and file imports.
 - Generate only the missing pieces to keep modifications minimal.
+
+---
+
+## Verification (Lightweight)
+
+Automated Vitest execution is out of scope for this skill for now. Still confirm the following before considering the work done:
+1. **Syntax/Lint Check**: The new/edited components and composables have no syntax errors and match the project's linting config if one is detected.
+2. **Render Sanity Check**: The new page/component mounts without console errors and the route resolves.
+3. **Manual Verification Steps**: Give the user concrete steps to navigate to the new page and confirm the expected UI/behavior, including both light/dark mode if relevant.
+
+---
+
+## Close the Loop
+
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
+2. **Suggested Next Step**: If the API layer used mock data because no backend route existed yet (see System Awareness Phase), tell the user to run `/webkit.backend-implement <target_path> <prompt>` next to implement it. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(hr): add employee masterlist page`). Do not stage or commit automatically.
