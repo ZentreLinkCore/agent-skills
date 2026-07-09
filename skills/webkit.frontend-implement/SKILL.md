@@ -38,23 +38,45 @@ Before scaffolding anything, confirm work is happening on a `feature/` branch pe
 
 ---
 
-## Architecture Discovery Phase (MANDATORY)
+## Decision Playbook
 
-Before generating any code, directories, or styles, perform an Architecture Discovery step to inspect the project. Do not assume Vue or modular folders by default.
+The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (cached in [Project Profile](../../rules/project-profile.md)) — after a quick confirm (see Architecture Discovery Phase), work top-to-bottom. If the project actually uses a different framework, follow that instead; the steps below assume the cached Vue setup:
 
-### Items to Detect:
-- **Frontend Framework**: Vue, React, Next.js, Nuxt, Angular, or standard HTML/JS.
-- **Folder Organization**: Feature-based, module-based, domain-driven, atomic design, or layered architecture.
-- **Routing Strategy**: Vue Router, React Router, Next Router, file-based routing, etc.
-- **State Management**: Pinia, Vuex, Redux, Zustand, Recoil, Context API, etc.
-- **API Layer**: Axios instances, standard fetch wrappers, TanStack Query (React/Vue Query), custom hooks, or raw composables.
-- **Shared Component Structure**: Global buttons, modals, input elements, tables, status indicators.
-- **Styling System**: Tailwind CSS, Bootstrap, Vuetify, PrimeVue, MUI, Ant Design, CSS Modules, or SCSS.
-- **Naming Conventions**: PascalCase, kebab-case, or snake_case for component files, hooks, or assets.
-- **Build Tool**: Vite, Webpack, Nuxt build, Next build.
-- **TypeScript or JavaScript**: Determine file extensions (`.js`/`.vue` vs. `.ts`/`.tsx`/`.vue`).
+1. **Does a similar module already exist?** Find the closest `resources/views/web/src/module/<portal>/<module>/` and mirror its `pages/ components/ script/ webRoute.js` layout exactly.
+2. **Does a global component cover the UI need?** (see the global list in the profile) → use it without importing. Else check other modules for a reusable one → import it. Only then build local.
+3. **Does the backend route exist?** (System Awareness scan)
+   - Yes → `useApiRequest.js` calls `http.get/post("api/<url-prefix>/...")` for real. Mind `timekeeping` ≠ `tk`.
+   - No → mock in `useApiRequest.js` with field names from the model's `$fillable`, comment the pending endpoint, and suggest `/webkit.backend-implement` as follow-up.
+4. **State** → `use<ModuleName>.js` composable with `ref`/`reactive`, debounced search (`@/src/utils/debounce`, 300ms), cleanup in `onUnmounted`.
+5. **Route** → add the module's entry to `webRoute.js` with a lazy `() => import(...)`.
+6. **Styling** → Tailwind only, portal accent color for this portal (see UI section), `bg-white dark:bg-slate-800` cards, dark-mode classes on everything.
 
-The discovered architecture MUST become the implementation blueprint.
+---
+
+## Architecture Discovery Phase (Follow the Existing Setup)
+
+**Governing rule: follow whatever framework, state solution, and styling the project actually uses right now — never impose a stack of your own.** This skill is framework-aware (Vue, React, Next, Angular, plain JS); it detects what exists and matches it.
+
+To save re-detecting on every run, [Project Profile](../../rules/project-profile.md) records the *cached result* of that detection. **As of the last profile update, detection resolves to:**
+
+| Aspect | Current setup |
+|---|---|
+| Framework | Vue 3 `<script setup>` + Composition API |
+| Folder org | Module-based: `module/<portal>/<module>/{pages,components,script}` + `webRoute.js` |
+| Routing | Vue Router, lazy `() => import(...)` in `webRoute.js` |
+| State | Plain composables (`use<Module>.js`) — no Pinia/Vuex |
+| API layer | `import http from '@/app/axios/axiosInstance'` (imported, not global) |
+| Styling | Tailwind CSS (+ portal accent colors, dark mode) |
+| Files | JavaScript + `.vue` (not TypeScript) |
+
+The profile is a shortcut, not a lock. Precedence when they disagree:
+1. **The target folder / closest sibling module wins.** If it uses a different convention (e.g. an older module on the Options API), match that folder.
+2. **If the project genuinely uses a different framework than the profile says** (e.g. you find a React/`.jsx` app, or `package.json` shows `react`/`next`/`@angular`), follow *that* framework's idioms — do not force Vue. Then flag the drift and update the profile so the cache is correct next time.
+3. **Only when there's no signal either way** do you fall back to the profile's cached answer (Vue).
+
+The one thing you must NOT do is introduce a framework/state/styling system the project doesn't already use anywhere.
+
+**Quick confirm step** (cheap — do it, don't skip): glance at `package.json` and the target/sibling folder's file extensions to confirm the profile still matches before scaffolding. If it does (the normal case), proceed on the cached answer above without a deeper hunt.
 
 ---
 
@@ -154,7 +176,7 @@ If the budget is exceeded:
 Only load context that is required.
 
 ### Context Priority
-Current file $\to$ Current folder $\to$ Shared components $\to$ Related module $\to$ Portal $\to$ Entire workspace (explicit request only)
+Current file → Current folder → Shared components → Related module → Portal → Entire workspace (explicit request only)
 
 - **Token Protection**: Never load more than 2 full files simultaneously unless performing a merge or refactor operation. Prefer targeted snippets over full-file context whenever possible.
 - Never load unrelated modules or inspect backend files when implementing frontend code.
@@ -256,32 +278,40 @@ export default [
 ```
 - **For React**: Export standard React routes matching the project's routing system (e.g. React Router config).
 
-### 2. API Request Layer (`useApiRequest.js` / `.ts`)
-Create functions/hooks to communicate with the backend.
-- **CRITICAL**: Check if the HTTP client (e.g., axios/fetch wrapper) is globally registered. Do not import it if it's already bound globally.
-- **System Awareness First**: Before writing any API functions, complete the System Awareness Phase (Step 3). If a matching route already exists in `routes/api.php`, wire the real endpoint directly — do not use mock data for that call.
-- **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet for the feature. Mock field names MUST match the actual model fields discovered in `app/Models/` or migrations. Never invent field names.
-- **Endpoint Comment**: Always add a comment indicating the intended backend route, e.g. `// GET /api/tk/timesheets` so it's clear what endpoint the function will eventually call.
+### 2. API Request Layer (`useApiRequest.js`)
+Create functions to communicate with the backend. This project's verified conventions ([Project Profile](../../rules/project-profile.md)):
+- **Import the HTTP client** — it is NOT globally bound: `import http from '@/app/axios/axiosInstance';`. Interceptors + error handling are already wired inside that instance.
+- **Endpoint strings** are lowercase `api/<url-prefix>/<...>` using the **URL prefix** from the profile's portal table. Timekeeping is **`api/timekeeping/...`**, never `api/tk/...`.
+- **System Awareness First**: Before writing API functions, run the [System Awareness](../../rules/system-awareness.md) scan. If a matching route already exists in `routes/api.php`, wire the real endpoint directly — no mock.
+- **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet. Mock field names MUST match the actual model `$fillable` / migration columns — never invent field names. Add a comment noting the intended endpoint.
 
+Real endpoint (route exists):
+```javascript
+import http from '@/app/axios/axiosInstance';
+
+export function useApiRequest() {
+  return {
+    getData: async (params = {}) => {
+      const response = await http.get("api/<url-prefix>/<module_endpoint>", { params });
+      return response.data;
+    },
+    saveData: async (payload = {}) => {
+      const response = await http.post("api/<url-prefix>/<module_endpoint>/save", payload);
+      return response.data;
+    }
+  };
+}
+```
+
+Mock fallback (backend route pending — field names mirror `<ModelName>` `$fillable`):
 ```javascript
 export function useApiRequest() {
   return {
-    // GET /api/<portal>/<module> — connects to existing route or mock pending backend
-    getData: async (params = {}) => {
-      // TODO: Replace with real API call when backend route is registered
-      // Field names below are derived from the <ModelName> model ($fillable / migration columns)
-      return {
-        data: [
-          { id: 1, /* field: value matching model */ created_at: '2026-06-19' },
-          { id: 2, /* field: value matching model */ created_at: '2026-06-19' }
-        ],
-        total: 2
-      };
-    },
-    saveData: async (params = {}) => {
-      // POST /api/<portal>/<module>
-      return { success: true };
-    }
+    // TODO: replace with http.get("api/<url-prefix>/<module_endpoint>") once the route is registered
+    getData: async (params = {}) => ({
+      data: [{ id: 1, /* real model columns here */ created_at: '2026-06-19' }],
+      total: 1
+    })
   };
 }
 ```
@@ -390,16 +420,12 @@ export function use<ModuleName>() {
   - Responsive alignment (flex layouts, responsive grids).
 
 ### 5. Reusable & Global Components Guideline
+The authoritative list of globally-registered components, directives, utils, and composables is in [Project Profile](../../rules/project-profile.md). Do not guess whether something is global — check that list.
 - **Prioritize Reuse**: Always check for existing global or cross-module components before writing components locally:
-  - **Codebase Search**: Search the workspace using grep or listing commands for pre-existing UI modules or table representations (e.g., `TimesheetTable`, `EmployeeSelector`, `LeavesCredit` panels).
-  - **Cross-Module Imports**: If a reusable component is found in another module, import it directly instead of copying its code or generating local duplicates.
-  - **Modals/Dialogs**: Use `Modal` (imported from `@/src/components/Modal.vue` or React equivalent). Do not write custom backdrop overlays or custom modal frames in the local page/component files.
-  - **Dropdowns & Selectors**: Check if `CSelect` (registered globally) can be used.
-  - **Pagination**: Use `Pagination` (registered globally) for lists and grids.
-  - **Loaders**: Use `LoadingState` or `Spinner` / `Loading` (registered globally).
-  - **Status Badges**: Use `<StatusBadge>` (registered globally) for all state indicators (Active/Inactive, Approved/Pending/Rejected, etc.) to keep status representations consistent. No import is needed.
-  - **Empty Result States**: Use `<EmptyState>` (registered globally) when tables, selectors, or search listings return zero records. No import is needed.
-  - **Skeleton Loaders**: Use `<TableSkeleton>` (registered globally) for visual-friendly loading states in tabular listings. No import is needed.
+  - **Codebase Search**: grep for pre-existing UI modules or table representations (e.g., `TimesheetTable`, `EmployeeSelector`, `LeavesCredit` panels).
+  - **Cross-Module Imports**: If a reusable component is found in another module, import it directly instead of copying its code.
+  - **Use WITHOUT importing (globally registered in `main.js`)**: `CSelect` (dropdowns), `Pagination`, `Spinner` / `Loading` (loaders), `VDatePicker`, `StatusBadge` (all state indicators — Active/Inactive, Approved/Pending/Rejected), `EmptyState` (zero-record states), `TableSkeleton` (tabular loading states).
+  - **Must be IMPORTED (not global)**: `Modal` from `@/src/components/Modal.vue` — do not write custom backdrop overlays. `LoadingState`, and anything else not in the global list above.
 - **Global Utilities**: Leverage shared functions in `@/src/utils/` instead of writing custom inline parsing/formatting logic:
   - `debounce` (from `@/src/utils/debounce`): Debouncing text inputs.
   - `throttle` (from `@/src/utils/throttle`): Throttling fast-firing scroll/resize events.

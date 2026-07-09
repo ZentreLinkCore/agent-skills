@@ -138,20 +138,15 @@ If a file already exists:
 
 ## Architecture & Convention Detection
 
-### Laravel Architecture Detection
-Before generating new classes, inspect the existing project setup. Detect whether the project implements:
-- **Domain Query/Handler Pattern** (Query/Handler classes in `app/Domain/`)
-- **Service Layer**
-- **Repository Pattern**
-- **Action Classes**
-- **Jobs / Queues**
-- **API Resources**
-- **Form Requests**
-
-Always follow the discovered architecture. Do not introduce new architectural patterns or layers unless requested.
+### Laravel Architecture — Already Known
+This project's backend architecture is documented in [Project Profile](../../rules/project-profile.md). **Read it and follow it — do not re-detect or introduce a different pattern.** Summary:
+- **Thin controllers + Domain Query/Handler** (`app/Domain/Queries/<Domain>/` for reads, `app/Domain/Handlers/<Domain>/` for writes, static `execute()`). Do NOT add Service / Repository / Action classes for standard CRUD.
+- **NO API Resources** — return `response()->json(...)` directly inside `try/catch`. Never scaffold a `JsonResource`.
+- **Validation** is mostly inline (`$request->all()`); FormRequests are rare and flat in `app/Http/Requests/`.
+- **Routes** grouped by portal prefix inside one `auth:sanctum` group. Mind the `tk` (namespace) vs `timekeeping` (URL prefix) gotcha.
 
 ### Naming Convention Detection
-Follow existing backend casing and class suffixes (e.g., standardizing on `<ModuleName>Controller.php`, `Store<ModelName>Request.php`, `<ModelName>Resource.php`, `<QueryName>Query.php`).
+Follow existing backend casing and class suffixes: `<ModuleName>Controller.php`, `Get<X>Query.php`, `Save<X>Handler.php`, and (only where already used) `Store<ModelName>Request.php`. Do NOT invent `*Resource.php` classes — they don't exist in this project.
 
 ---
 
@@ -173,17 +168,18 @@ database/migrations/           # Database migrations
 app/Models/                    # Eloquent models
 └── <ModelName>.php            # The Eloquent model representation
 app/Http/Controllers/
-└── <Namespace>/               # e.g., hr, payroll, tk, employee, manager, admin
-    └── <ModuleName>Controller.php # The Laravel controller handling the endpoints
-app/Http/Requests/
-└── <Namespace>/               # Dedicated FormRequests
-    └── Store<ModuleName>Request.php
+└── <namespace>/               # e.g., hr, payroll, tk, employee, manager, admin (tk = timekeeping)
+    └── <ModuleName>Controller.php # Thin controller: dispatches to Query/Handler in try/catch
+app/Http/Requests/             # FormRequests are FLAT here (no portal subfolder) and RARE
+└── Store<ModuleName>Request.php  #   only add if the target controller already uses one
 app/Domain/
-├── Handlers/                  # Business logic actions/handlers
-└── Queries/                   # Database queries classes
+├── Queries/<Domain>/          # Read logic:  Get<X>Query.php   (extends Query, static execute)
+└── Handlers/<Domain>/         # Write logic: Save<X>Handler.php (extends Handler, static execute, DB::transaction)
 routes/
-└── api.php                    # Route definitions for all endpoints
+└── api.php                    # One auth:sanctum group → per-portal prefix sub-groups
 ```
+
+> There are **no** `app/Http/Resources/` API Resource classes in this project — do not create that directory. See [Project Profile](../../rules/project-profile.md).
 
 ---
 
@@ -195,13 +191,11 @@ routes/
 - **No Duplicate Tables**: Never create a migration for a table name that already exists. Search `database/migrations/` for any prior `Schema::create('<table_name>')` definition before generating a new one.
 - **Optimization Standard**: Add indices on foreign keys and frequently filtered columns. Incorporate foreign key constraints, `SoftDeletes`, and timestamps. Avoid duplicate schema definitions.
 
-### 2. Validation Detection & Standards
-- Detect if the project standard is FormRequests, inline validations, DTO validations, or custom validators. Follow the discovered pattern.
-- If FormRequests are used, search for and extend existing requests if possible.
+### 2. Validation Standards
+- This project validates **inline** by default (`Request $request` → `$request->all()`). FormRequests are rare and flat in `app/Http/Requests/`. Only create/extend a FormRequest if the target controller already uses one — otherwise validate inline to match siblings.
 
 ### 3. API Response & Exception Formatting
-- Detect whether the project uses Eloquent API Resources, custom JSON helper methods, success/error wrappers, or traits. Reuse the existing response formats.
-- Match existing custom exception handlers and validation error formats.
+- Return `response()->json($data)` (or `['data' => $data]`) on success and `response()->json(['message' => $e->getMessage()], 400)` on error, inside `try/catch (Exception $e)`. **Do NOT create or use API Resources** — there are none in this project. See [Project Profile](../../rules/project-profile.md).
 
 ### 4. Route Grouping
 - Inspect existing API routes grouping. Detect prefix rules, version groupings, middleware namespaces, and naming styles.
@@ -215,17 +209,15 @@ routes/
 
 ---
 
-## Technical Standards & Code Templates (Reference Examples)
+## Code Templates (This Project's Actual Pattern)
 
-*Note: These templates are reference patterns. If the project implements a different architecture, follow the project blueprint.*
+*These mirror the verified conventions in [Project Profile](../../rules/project-profile.md). Before writing, open the closest sibling Query/Handler/Controller for your portal and match it exactly — arg shapes and response wrappers vary slightly per module.*
 
-### Pattern A: Domain Query/Handler Pattern (If Discovered)
-
-#### 1. Domain Query
+#### 1. Domain Query (reads) — `app/Domain/Queries/<Domain>/Get<X>Query.php`
 ```php
 <?php
 
-namespace App\Domain\Queries\<DomainName>;
+namespace App\Domain\Queries\<Domain>;
 
 use App\Domain\Queries\Query;
 use App\Models\<ModelName>;
@@ -235,61 +227,98 @@ class Get<ModuleName>Query extends Query
     public static function execute($params = [])
     {
         return <ModelName>::query()
-            ->with(['relations'])
+            ->with(['relations'])            // eager-load to avoid N+1
             ->paginate($params['entries'] ?? 10);
     }
 }
 ```
 
-#### 2. Controller Boilerplate
+#### 2. Domain Handler (writes) — `app/Domain/Handlers/<Domain>/Save<X>Handler.php`
 ```php
 <?php
 
-namespace App\Http\Controllers\<Namespace>;
+namespace App\Domain\Handlers\<Domain>;
+
+use App\Domain\Handlers\Handler;
+use App\Models\<ModelName>;
+use Illuminate\Support\Facades\DB;
+
+class Save<ModuleName>Handler extends Handler
+{
+    public static function execute($params = [])
+    {
+        return DB::transaction(function () use ($params) {
+            return <ModelName>::updateOrCreate(
+                ['id' => $params['id'] ?? null],
+                $params
+            );
+        });
+    }
+}
+```
+
+#### 3. Controller (thin dispatcher) — `app/Http/Controllers/<namespace>/<ModuleName>Controller.php`
+```php
+<?php
+
+namespace App\Http\Controllers\<namespace>;   // e.g. tk, hr, payroll, employee, manager, admin
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\<Namespace>\Store<ModuleName>Request;
-use App\Domain\Queries\<DomainName>\Get<ModuleName>Query;
-use App\Domain\Handlers\<DomainName>\Save<ModuleName>Handler;
+use App\Domain\Queries\<Domain>\Get<ModuleName>Query;
+use App\Domain\Handlers\<Domain>\Save<ModuleName>Handler;
+use Illuminate\Http\Request;
+use Exception;
 
 class <ModuleName>Controller extends Controller
 {
     public function index(Request $request)
     {
-        $results = Get<ModuleName>Query::execute($request->all());
-        return response()->json(['data' => $results]);
+        try {
+            $data = Get<ModuleName>Query::execute($request->all());
+            return response()->json(['data' => $data]);      // NO API Resource wrapper
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 
-    public function store(Store<ModuleName>Request $request)
+    public function store(Request $request)                   // inline validation is the norm; add a FormRequest only if the module already uses one
     {
-        $result = Save<ModuleName>Handler::execute($request->validated());
-        return response()->json(['success' => true, 'data' => $result]);
+        try {
+            $result = Save<ModuleName>Handler::execute($request->all());
+            return response()->json($result);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
     }
 }
 ```
 
-### Pattern B: Service / Action Pattern (If Discovered)
-
-If the project uses service and actions layers (e.g. `app/Services/` or `app/Actions/`), conform to that pattern:
-
-#### 1. Service/Action Class
+#### 4. Route — add inside the matching portal prefix group in `routes/api.php`
 ```php
-<?php
-
-namespace App\Actions\<DomainName>;
-
-use App\Models\<ModelName>;
-
-class Create<ModelName>Action
-{
-    public function execute(array $data): <ModelName>
-    {
-        return \DB::transaction(function () use ($data) {
-            return <ModelName>::create($data);
-        });
-    }
-}
+// inside Route::middleware(['auth:sanctum'])->group(...) → Route::prefix('timekeeping')->group(...)
+Route::get('/<module_endpoint>', [<ModuleName>Controller::class, 'index']);
+Route::post('/<module_endpoint>/save', [<ModuleName>Controller::class, 'store']);
 ```
+Remember: Timekeeping's URL prefix is **`timekeeping`** even though the controller namespace is `tk`.
+
+---
+
+## Decision Playbook
+
+Work top-to-bottom; stop at the first branch that applies.
+
+1. **Does a Model + table already cover this entity?** (System Awareness scan)
+   - Yes → reuse it. Skip migration/model creation entirely.
+   - No → scaffold migration + model (indexes on FKs + filtered columns, `SoftDeletes`, timestamps). Do NOT run the migration — tell the user to.
+2. **Does a route for this resource already exist in the portal's prefix group?**
+   - Yes → add a method to the existing controller; wire it to a new/existing Query or Handler. Do NOT add a duplicate route.
+   - No → add the route inside the correct existing prefix group (never a new top-level group).
+3. **Read or write?**
+   - Read → `Get<X>Query` under `app/Domain/Queries/<Domain>/`.
+   - Write → `Save<X>Handler` (or `Update.../Delete...`) under `app/Domain/Handlers/<Domain>/`, wrapped in `DB::transaction`.
+4. **Controller** → thin method, `try/catch`, `response()->json(...)`. Never a `JsonResource`.
+5. **Frontend wiring** → if `useApiRequest.js` exists for this module, swap its mock for `http.get/post("api/<prefix>/...")`. If not, stop and suggest `/webkit.frontend-implement`.
+6. **Domain calculations** (payroll, OT, leave credits) → follow [HRMS Domain Rules](../../rules/hrms-rules.md) for exact rates/factors; do not hardcode ad-hoc numbers.
 
 ---
 

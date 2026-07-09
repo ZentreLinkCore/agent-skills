@@ -44,6 +44,24 @@ Before writing any code:
 
 ---
 
+## Fix Playbook
+
+Match the layer of the bug to the right file, using this project's known structure ([Project Profile](../../rules/project-profile.md)):
+
+| Symptom is in… | Fix lives in… |
+|---|---|
+| Wrong data returned / query logic | The `Get<X>Query` in `app/Domain/Queries/<Domain>/` |
+| Wrong write / save / calculation | The `Save<X>Handler` in `app/Domain/Handlers/<Domain>/` (keep it in `DB::transaction`) |
+| Wrong HTTP status / response shape | The controller method — keep `try/catch` + `response()->json(...)`, no API Resource |
+| 404 / wrong endpoint | `routes/api.php` — check the portal prefix (Timekeeping = `timekeeping`, not `tk`) |
+| Wrong value on screen / UI glitch | The module's `pages/` or `components/` `.vue` file |
+| Wrong API call / mock still in use | The module's `script/useApiRequest.js` (`http.get/post("api/<prefix>/...")`) |
+| Wrong payroll/OT/leave number | Verify the formula against [HRMS Domain Rules](../../rules/hrms-rules.md) before editing |
+
+Then apply the smallest diff that resolves it (Phase 2), verify (Phase 3), close the loop (Phase 4).
+
+---
+
 ## Phase 2 — Implementation Principles (Strict Safety)
 
 ### 1. Minimal Footprint & Incremental Generation
