@@ -10,7 +10,7 @@ Applicable to all Vue components (`.vue`), composables, and frontend scripts ins
 - **AI Agent**: Discovers existing Vue conventions (Options API vs. Composition API, Vue 2 vs. Vue 3, Pinia vs. Vuex, JS vs. TS) before writing code.
 - **Developer/User**: Resolves any version-related or library-related build configurations.
 
-> **Known Stack — Follow the Profile**: This is a Vue 3 `<script setup>` + Composition API + Tailwind + Vite project using plain composables for state (no Pinia). Concrete facts (HTTP client import path, globally-registered components, module folder layout, shared utils/composables) are recorded in [Project Profile](./project-profile.md). Confirm against it rather than re-detecting.
+> **Known Stack — Follow the Profile**: This is a Vue 3 `<script setup>` + Composition API + Tailwind + Vite project written in **TypeScript**. State lives in composables by default; Pinia is used for shared/global state (e.g. auth) and per-feature `store/` files when state must be shared across pages. New features use the per-feature TS layout (`index.ts` barrel + `route/ api/ composables/ pages/ components/`); older modules use the legacy layout (`script/` + `webRoute.js`, plain JS) — match the folder you're editing. Concrete facts (HTTP client import path, globally-registered components, module folder layout, route aggregation, shared utils/composables) are recorded in [Project Profile](./project-profile.md). Confirm against it rather than re-detecting.
 
 ## Actionable Rules
 1. **Composition API & `<script setup>`**: By default, use Vue 3 `<script setup>` with Composition API unless adjacent files in the target folder implement the Options API or Vue 2 structure.

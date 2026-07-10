@@ -42,14 +42,15 @@ Before scaffolding anything, confirm work is happening on a `feature/` branch pe
 
 The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (cached in [Project Profile](../../rules/project-profile.md)) — after a quick confirm (see Architecture Discovery Phase), work top-to-bottom. If the project actually uses a different framework, follow that instead; the steps below assume the cached Vue setup:
 
-1. **Does a similar module already exist?** Find the closest `resources/views/web/src/module/<portal>/<module>/` and mirror its `pages/ components/ script/ webRoute.js` layout exactly.
+1. **Does a similar module already exist?** Find the closest `resources/views/web/src/module/<portal>/<feature>/` and mirror its layout exactly. New features use the **TS structure**: `index.ts` barrel + `route/ api/ composables/ pages/ components/` (+ `types/ utils/ store/` when needed). If the closest sibling is still on the **legacy** layout (`script/ webRoute.js`, plain JS), match that folder instead — don't mix conventions within a module.
 2. **Does a global component cover the UI need?** (see the global list in the profile) → use it without importing. Else check other modules for a reusable one → import it. Only then build local.
 3. **Does the backend route exist?** (System Awareness scan)
-   - Yes → `useApiRequest.js` calls `http.get/post("api/<url-prefix>/...")` for real. Mind `timekeeping` ≠ `tk`.
-   - No → mock in `useApiRequest.js` with field names from the model's `$fillable`, comment the pending endpoint, and suggest `/webkit.backend-implement` as follow-up.
-4. **State** → `use<ModuleName>.js` composable with `ref`/`reactive`, debounced search (`@/src/utils/debounce`, 300ms), cleanup in `onUnmounted`.
-5. **Route** → add the module's entry to `webRoute.js` with a lazy `() => import(...)`.
-6. **Styling** → Tailwind only, portal accent color for this portal (see UI section), `bg-white dark:bg-slate-800` cards, dark-mode classes on everything.
+   - Yes → `api/<feature>.api.ts` calls `http.get/post("api/<url-prefix>/...")` for real. Mind `timekeeping` ≠ `tk`.
+   - No → mock in `api/<feature>.api.ts` with field names from the model's `$fillable`, comment the pending endpoint, and suggest `/webkit.backend-implement` as follow-up.
+4. **State** → `composables/use<Feature>.ts` with typed `ref`/`reactive`, debounced search (`@/src/utils/debounce`, 300ms), cleanup in `onUnmounted`. Add a Pinia `store/<feature>.store.ts` only when state is shared across pages/components.
+5. **Route** → add `route/<feature>.routes.ts` (default-export `RouteRecordRaw[]`, lazy `() => import('../pages/...')`). It is auto-registered by the portal's `useApiWebRoute.ts` glob — do NOT edit the aggregator.
+6. **Barrel** → export the feature's surface (composables, api hook, routes) from `index.ts`.
+7. **Styling** → Tailwind only, portal accent color for this portal (see UI section), `bg-white dark:bg-slate-800` cards, dark-mode classes on everything.
 
 ---
 
@@ -62,12 +63,14 @@ To save re-detecting on every run, [Project Profile](../../rules/project-profile
 | Aspect | Current setup |
 |---|---|
 | Framework | Vue 3 `<script setup>` + Composition API |
-| Folder org | Module-based: `module/<portal>/<module>/{pages,components,script}` + `webRoute.js` |
-| Routing | Vue Router, lazy `() => import(...)` in `webRoute.js` |
-| State | Plain composables (`use<Module>.js`) — no Pinia/Vuex |
-| API layer | `import http from '@/app/axios/axiosInstance'` (imported, not global) |
+| Folder org | Module-based, per-feature: `module/<portal>/<feature>/{route,api,composables,pages,components}` + `index.ts` barrel (+ `types,utils,store` on demand) |
+| Routing | Vue Router; `route/<feature>.routes.ts` (`RouteRecordRaw[]`), auto-aggregated by each portal's `useApiWebRoute.ts` via `import.meta.glob('./*/route/*.routes.ts')` |
+| State | Composables (`composables/use<Feature>.ts`); Pinia `store/` only when state is shared across pages |
+| API layer | `api/<feature>.api.ts` → `use<Feature>Api()`, `import http from '@/app/axios/axiosInstance'` (imported, not global; returns `AxiosResponse`, so `return response.data`) |
 | Styling | Tailwind CSS (+ portal accent colors, dark mode) |
-| Files | JavaScript + `.vue` (not TypeScript) |
+| Files | **TypeScript** (`.ts`) + `.vue` |
+
+> **Mid-migration:** the project is moving JS → TS. Newer modules (most of `hr/`) use the TS structure above; older ones still have the legacy layout (`script/useApiRequest.js` + `use<Module>.js`, `webRoute.js`, plain JS), and some contain both. **Rule of thumb:** new feature → TS structure; extending a legacy module → match that folder's existing files.
 
 The profile is a shortcut, not a lock. Precedence when they disagree:
 1. **The target folder / closest sibling module wins.** If it uses a different convention (e.g. an older module on the Options API), match that folder.
@@ -92,7 +95,7 @@ Once the scan is done, map backend fields to UI directly:
 | `$casts` types | Date pickers, number inputs, toggles |
 | Relationship names | Dropdowns, nested panels, linked records |
 
-- **If a matching route already exists**: use it as the API endpoint in `useApiRequest.js`. Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
+- **If a matching route already exists**: use it as the API endpoint in `api/<feature>.api.ts` (legacy modules: `script/useApiRequest.js`). Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
 - **If no matching route exists yet**: this is not a blocker (see [System Awareness](../../rules/system-awareness.md)) — use realistic mock data shaped after the closest existing model's fields, and note in a code comment that the backend endpoint is pending.
 
 > [!CAUTION]
@@ -236,16 +239,30 @@ If a path parameter is passed in the command (e.g. `/webkit.frontend-implement @
 
 Adapt the structure, file naming, and coding syntax to the detected project framework:
 
-### 1. Vue.js Project Pattern (Composition API + `<script setup>`)
+### 1. Vue.js Project Pattern (Composition API + `<script setup>` + TypeScript — current standard)
 
+```
+<feature>/
+├── index.ts                        # Public API barrel — re-exports composables, api hook, routes
+├── route/<feature>.routes.ts       # RouteRecordRaw[] (default export); auto-registered by the portal glob
+├── api/<feature>.api.ts            # use<Feature>Api() — API service layer
+├── composables/use<Feature>.ts     # reactive state machine (filters, lists, actions)
+├── pages/<Feature>.vue             # main view(s), PascalCase
+├── components/                     # Vue sub-components (.vue)
+├── types/types.<feature>.ts        # TS interfaces / DTOs / enums (add when the feature has real shapes)
+├── utils/<feature>.utils.ts        # feature-specific helpers (add when needed)
+└── store/<feature>.store.ts        # Pinia store (add ONLY when state is shared across pages/components)
+```
+
+> `types/`, `utils/`, and `store/` are **on-demand** — create them only when the feature needs them (see Folder Generation Rules). Every new feature needs `route/`, `api/`, `composables/`, `pages/`, and `index.ts`.
+
+**Legacy layout** (older modules, plain JS — match it only when extending such a module):
 ```
 <module_name>/
 ├── components/           # Vue sub-components (.vue)
-├── pages/                # Main Vue views/pages (e.g., <ModuleName>.vue)
-├── script/               # Composable files and API requests
-│   ├── useApiRequest.js  # API request functions utilizing global client
-│   └── use<ModuleName>.js # Composable state machine managing filters, lists, and actions
-└── webRoute.js           # Route configuration for dynamic route importing
+├── pages/                # Main views (e.g., <ModuleName>.vue)
+├── script/               # useApiRequest.js + use<ModuleName>.js
+└── webRoute.js           # default-exported route array
 ```
 
 ### 2. React / Next.js Project Pattern (Functional Hooks + TypeScript/JSX)
@@ -263,110 +280,107 @@ Adapt the structure, file naming, and coding syntax to the detected project fram
 
 ## Frontend Implementation Guidelines
 
-### 1. Routes Definition (`webRoute.js` / `routes.js`)
-Export a default array or route list for the module's pages.
-- **For Vue**:
-```javascript
-export default [
+### 1. Routes Definition (`route/<feature>.routes.ts`)
+Default-export a typed `RouteRecordRaw[]`. **Do NOT touch the portal aggregator** — `<portal>/useApiWebRoute.ts` globs `./*/route/*.routes.ts` eagerly, so a new route file is auto-registered.
+- **For Vue** (TS, current standard):
+```typescript
+import type { RouteRecordRaw } from 'vue-router';
+
+const routes: RouteRecordRaw[] = [
   {
-    path: '<portal_name>/<module_name>',
-    name: '<portal_name>_<module_name>',
-    component: () => import('@/src/module/<portal_name>/<module_name>/pages/<ModuleName>.vue'),
-    meta: { title: '<Module Title>' }
-  }
+    path: '<portal_name>/<feature-kebab>',
+    name: '<portal_name>_<feature>',
+    component: () => import('../pages/<Feature>.vue'), // relative to the feature root
+    meta: { title: '<Feature Title>' },
+  },
 ];
+
+export default routes;
 ```
+- **Legacy modules**: keep using `webRoute.js` (default-exported array) if that's what the module already has.
 - **For React**: Export standard React routes matching the project's routing system (e.g. React Router config).
 
-### 2. API Request Layer (`useApiRequest.js`)
-Create functions to communicate with the backend. This project's verified conventions ([Project Profile](../../rules/project-profile.md)):
-- **Import the HTTP client** — it is NOT globally bound: `import http from '@/app/axios/axiosInstance';`. Interceptors + error handling are already wired inside that instance.
+### 2. API Service Layer (`api/<feature>.api.ts`)
+Create a `use<Feature>Api()` factory returning async methods. This project's verified conventions ([Project Profile](../../rules/project-profile.md)):
+- **Import the HTTP client** — it is NOT globally bound: `import http from '@/app/axios/axiosInstance';`. Interceptors, auth-token attach, HTML guard, and 401/419 handling are already wired inside that instance. Methods get the full `AxiosResponse`, so `return response.data`.
+- **Composables call the api hook**, never `http` directly.
 - **Endpoint strings** are lowercase `api/<url-prefix>/<...>` using the **URL prefix** from the profile's portal table. Timekeeping is **`api/timekeeping/...`**, never `api/tk/...`.
 - **System Awareness First**: Before writing API functions, run the [System Awareness](../../rules/system-awareness.md) scan. If a matching route already exists in `routes/api.php`, wire the real endpoint directly — no mock.
 - **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet. Mock field names MUST match the actual model `$fillable` / migration columns — never invent field names. Add a comment noting the intended endpoint.
 
 Real endpoint (route exists):
-```javascript
+```typescript
 import http from '@/app/axios/axiosInstance';
 
-export function useApiRequest() {
+export function use<Feature>Api() {
   return {
-    getData: async (params = {}) => {
-      const response = await http.get("api/<url-prefix>/<module_endpoint>", { params });
+    getData: async (params: Record<string, any> = {}): Promise<any> => {
+      const response = await http.get('api/<url-prefix>/<endpoint>', { params });
       return response.data;
     },
-    saveData: async (payload = {}) => {
-      const response = await http.post("api/<url-prefix>/<module_endpoint>/save", payload);
+    saveData: async (payload: Record<string, any> = {}): Promise<any> => {
+      const response = await http.post('api/<url-prefix>/<endpoint>/save', payload);
       return response.data;
-    }
+    },
   };
 }
 ```
 
 Mock fallback (backend route pending — field names mirror `<ModelName>` `$fillable`):
-```javascript
-export function useApiRequest() {
+```typescript
+export function use<Feature>Api() {
   return {
-    // TODO: replace with http.get("api/<url-prefix>/<module_endpoint>") once the route is registered
-    getData: async (params = {}) => ({
+    // TODO: replace with http.get("api/<url-prefix>/<endpoint>") once the route is registered
+    getData: async (_params: Record<string, any> = {}): Promise<any> => ({
       data: [{ id: 1, /* real model columns here */ created_at: '2026-06-19' }],
-      total: 1
-    })
+      total: 1,
+    }),
   };
 }
 ```
 
-### 3. State Management (Vue Composable or React Custom Hook)
-Manage reactive states, active filters, loading indicators, and actions:
-- **For Vue**: Use Vue's reactive refs and watchers in `use<ModuleName>.js`.
-- **For React**: Use custom hook state (`useState`, `useEffect`, `useMemo`) in `hooks/use<ModuleName>.js`.
+### 3. State Management (`composables/use<Feature>.ts`)
+Manage reactive states, active filters, loading indicators, and actions. Import the api hook from `../api/<feature>.api`. Use a Pinia `store/<feature>.store.ts` only when the state must be shared across multiple pages/components; otherwise keep it in the composable.
+- **For Vue**: typed reactive refs and watchers in `composables/use<Feature>.ts`.
+- **For React**: Use custom hook state (`useState`, `useEffect`, `useMemo`) in `hooks/use<Feature>.ts`.
 
-```javascript
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import { useRoute } from "vue-router";
-import { useApiRequest } from "./useApiRequest";
-import { debounce } from "@/src/utils/debounce";
+```typescript
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { use<Feature>Api } from '../api/<feature>.api';
+import { debounce } from '@/src/utils/debounce';
 
-export function use<ModuleName>() {
+export function use<Feature>() {
   const route = useRoute();
-  const apiRequest = useApiRequest();
+  const api = use<Feature>Api();
 
   const isLoading = ref(false);
-  const dataList = ref({ data: [] });
+  const dataList = ref<{ data: any[] }>({ data: [] });
   const totalItems = ref(0);
   const isModalOpen = ref(false);
 
-  // Filter States
+  // Filter states
   const searchQuery = ref('');
   const selectedStatus = ref('');
 
-  // Create a debounced function for fetching data
-  const debouncedFetch = debounce((params) => {
+  const debouncedFetch = debounce((params: Record<string, any>) => {
     fetchData(params);
   }, 300);
 
-  // Watch search query with debounce to prevent excessive API calls
+  // Debounce text search to avoid excessive API calls
   watch(searchQuery, (newVal) => {
-    debouncedFetch({
-      search: newVal,
-      status: selectedStatus.value,
-      page: 1
-    });
+    debouncedFetch({ search: newVal, status: selectedStatus.value, page: 1 });
   });
 
-  // Watch non-text filters for immediate update
+  // Non-text filters update immediately
   watch(selectedStatus, (newVal) => {
-    fetchData({
-      search: searchQuery.value,
-      status: newVal,
-      page: 1
-    });
+    fetchData({ search: searchQuery.value, status: newVal, page: 1 });
   });
 
-  async function fetchData(params = {}) {
+  async function fetchData(params: Record<string, any> = {}) {
     isLoading.value = true;
     try {
-      const res = await apiRequest.getData(params);
+      const res = await api.getData(params);
       dataList.value = res.data || { data: [] };
       totalItems.value = res.total || 0;
     } catch (err) {
@@ -377,9 +391,7 @@ export function use<ModuleName>() {
   }
 
   onMounted(() => {
-    fetchData({
-      page: route.query.page || 1
-    });
+    fetchData({ page: route.query.page || 1 });
   });
 
   onUnmounted(() => {
@@ -393,9 +405,18 @@ export function use<ModuleName>() {
     totalItems,
     isModalOpen,
     searchQuery,
-    selectedStatus
+    selectedStatus,
   };
 }
+```
+
+### 3b. Public API Barrel (`index.ts`)
+Re-export the feature's public surface so other modules import from the feature root, not deep paths:
+```typescript
+export { use<Feature> } from './composables/use<Feature>';
+export { use<Feature>Api } from './api/<feature>.api';
+export { default as <feature>Routes } from './route/<feature>.routes';
+// export type { ... } from './types/types.<feature>';  // when a types/ file exists
 ```
 
 ### 4. UI Components & Layouts
@@ -441,7 +462,7 @@ The authoritative list of globally-registered components, directives, utils, and
 
 ### 6. System Design & Performance Optimization Guidelines
 - **Lazy Loading**:
-  - **Dynamic Route Importing**: Always dynamic-import page components in route files (`webRoute.js` / `routes.js`) using `() => import(...)`.
+  - **Dynamic Route Importing**: Always dynamic-import page components in route files (`route/<feature>.routes.ts`; legacy `webRoute.js` / `routes.js`) using `() => import(...)`.
   - **Async/Lazy Components**: For large, heavy, or secondary components (e.g., Modals, Charts, rich editors, document viewers), load them asynchronously (Vue: `defineAsyncComponent()`, React: `React.lazy()`) to reduce initial package size.
   - **Images & Media**: Use native `loading="lazy"` on all off-screen images to save network bandwidth and speed up page rendering.
 - **Search & Input Optimization (Debouncing/Throttling)**:

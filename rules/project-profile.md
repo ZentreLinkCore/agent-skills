@@ -98,31 +98,60 @@ public function getRequests(Request $request)
 
 ## Frontend Architecture
 
-**Module structure** — `resources/views/web/src/module/<portal>/<module_name>/`:
+**Module structure (current standard — TypeScript)** — `resources/views/web/src/module/<portal>/<feature>/`:
 ```
-<module_name>/
-├── pages/          # Main view(s), PascalCase (e.g. EmployeeMasterlist.vue)
-├── components/     # Sub-components
-├── script/         # useApiRequest.js + use<ModuleName>.js (+ optional *Styles.js)
-└── webRoute.js     # Route config (default-exported array)
+<feature>/
+├── index.ts                        # Public API barrel — re-exports composables, api hook, routes
+├── route/<feature>.routes.ts       # RouteRecordRaw[] (default export)
+├── api/<feature>.api.ts            # use<Feature>Api() — service layer
+├── composables/use<Feature>.ts     # reactive state + actions (composition functions)
+├── pages/<Feature>.vue             # main view(s), PascalCase
+├── components/                     # sub-components (.vue)
+├── utils/<feature>.utils.ts        # feature-specific helpers (when needed)
+├── types/types.<feature>.ts        # TS interfaces / DTOs / enums (add when the feature has real shapes)
+└── store/<feature>.store.ts        # Pinia store (add ONLY when state is shared across pages/components)
 ```
-Note: composables/API live under `script/` (not `hooks/` or `services/`).
+- Files are **TypeScript** (`.ts`) + `.vue`. State lives in **composables** by default; reach for a Pinia `store/` only when the state must be shared beyond a single page tree. `types/` and `store/` are added on demand, not by default.
+- **Migration note:** older modules still use the legacy layout (`script/useApiRequest.js` + `use<Module>.js`, `webRoute.js`, plain JS). When extending one of those, match the sibling files in that folder; when creating a **new** feature, use the TS structure above. Some modules are mid-migration and contain both — prefer the `.ts` files.
 
-**HTTP client — IMPORT it, it is NOT global**
-```js
+**Routing is auto-aggregated — no manual registration.** Each portal's `<portal>/useApiWebRoute.ts` globs every module's route file:
+```ts
+const modules = import.meta.glob<{ default: RouteRecordRaw[] }>('./*/route/*.routes.ts', { eager: true });
+```
+So dropping a `route/<feature>.routes.ts` (default-exporting `RouteRecordRaw[]`) auto-registers it. Do **not** edit the aggregator.
+```ts
+// route/<feature>.routes.ts
+import type { RouteRecordRaw } from 'vue-router';
+const routes: RouteRecordRaw[] = [
+  { path: '<portal>/<feature-kebab>', name: '<portal>_<feature>',
+    component: () => import('../pages/<Feature>.vue'), meta: { title: '<Feature Title>' } },
+];
+export default routes;
+```
+
+**HTTP client — IMPORT it, it is NOT global.** The API service layer lives in `api/<feature>.api.ts`:
+```ts
 import http from '@/app/axios/axiosInstance';
 
-export function useApiRequest() {
+export function use<Feature>Api() {
   return {
-    getData: async (params = {}) => {
-      const response = await http.get("api/manager/myteam/attendance", { params });
+    getData: async (params: Record<string, any> = {}): Promise<any> => {
+      const response = await http.get('api/<prefix>/<endpoint>', { params });
       return response.data;
     },
   };
 }
 ```
-- Path alias `@` → `resources/views/web/src/`. The axios instance is at `@/app/axios/axiosInstance` (interceptors + error handling already wired there).
+- Path alias `@` → `resources/views/web/src/`. The axios instance is at `@/app/axios/axiosInstance` — interceptors, auth-token attach, HTML guard, and 401/419 handling are already wired there (see the modular chain `axiosInstance` / `axiosInterceptors` / `axiosApiErrors`). Callers get the full `AxiosResponse`, so return `response.data`.
+- Composables import the api hook (`import { use<Feature>Api } from '../api/<feature>.api'`) — never call `http` directly from a composable or component.
 - Endpoint strings are lowercase `api/<prefix>/<...>` and MUST use the URL prefix from the table above (e.g. `api/timekeeping/...`, not `api/tk/...`).
+
+**Public API barrel (`index.ts`)** — re-export the feature's surface so consumers import from the module root:
+```ts
+export { use<Feature> } from './composables/use<Feature>';
+export { use<Feature>Api } from './api/<feature>.api';
+export { default as <feature>Routes } from './route/<feature>.routes';
+```
 
 **Globally-registered components (use WITHOUT importing)** — registered in `resources/views/web/main.js`:
 `CSelect`, `Pagination`, `Spinner`, `Loading`, `VDatePicker`, `StatusBadge`, `EmptyState`, `TableSkeleton`.
@@ -134,15 +163,3 @@ export function useApiRequest() {
 **Shared utils** (`@/src/utils/`): `debounce`, `throttle`, `dateFormatter` (date helpers), `currency` (`formatCurrency`/`parseCurrency`), `constants`, `theme`, `useFileUpload`, `formatNumberInput`.
 
 **Shared composables** (`@/src/composables/`): `useLocalStorage`, `useResponsive`, `useCalendar`, `useSidebarLinks`, `useInitialProfile`.
-
-**webRoute.js**:
-```js
-export default [
-  {
-    path: '<portal>/<module_name>',
-    name: '<portal>_<module_name>',
-    component: () => import('@/src/module/<portal>/<module_name>/pages/<ModuleName>.vue'),
-    meta: { title: '<Module Title>' }
-  }
-];
-```
