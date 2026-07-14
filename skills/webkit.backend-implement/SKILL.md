@@ -3,6 +3,8 @@ name: webkit-backend-implement
 description: >
   Generates and implements modular backend setup for Vue.js modules using Laravel, creating controllers,
   domain query/handler classes, registering routes in routes/api.php, and integrating the backend endpoints with the frontend components.
+  SPEC-DRIVEN: when a spec exists under `.agents/specs/`, that spec is the primary source of truth for the tables, queries, handlers, routes, and API contract to build.
+  GATE 2 of the design-first flow: runs AFTER `/webkit.frontend-implement` has built the hard-coded design and the user has validated it — its job is to ADD THE DYNAMIC DATA, replacing the frontend's hard-coded `api/<feature>.api.ts` methods with live HTTP calls.
   ALWAYS scans existing Eloquent models, database migrations, and registered routes before generating anything.
   Never creates a new migration or model when an existing one already covers the feature's data needs.
   Supports dragging folder or file paths into the command to specify the target module.
@@ -21,14 +23,32 @@ When the user requests to implement or scaffold the backend structure of a modul
 1. Check if a folder or file path was dragged/passed into the command.
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
-4. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
-5. **Mandatory Architecture Discovery**: Before generating any backend code or migrations, perform the Architecture Discovery step to identify the project's Laravel design pattern.
-6. **Mandatory System Awareness**: Before writing any controller, query, migration, or model, run the scan defined in [System Awareness](../../rules/system-awareness.md) to identify what already exists. The backend implementation MUST reuse existing models and tables. Never create a new migration or model when an existing one already satisfies the data requirement.
-7. **Check Frontend Alignment (Non-Blocking)**: Check if frontend UI components, page files, or request composables/hooks already exist for this module. If they do, mirror their field names and expected shapes in the schema/API design. If they don't yet, this is **not a blocker** — backend/API-first implementation is valid; design the schema from the model/domain requirements in the prompt and note that `/webkit.frontend-implement` is the natural follow-up.
-8. If and only if no existing model/table covers the requirement (confirmed in Step 6), create the Laravel migration and Eloquent model.
-9. Scaffold and optimize the queries, controller logic, validations, and routes matching the detected architecture.
-10. If a frontend composable or API request layer already exists for this module, update it to replace mock data with live HTTP requests. If it doesn't exist yet, skip this step — it becomes part of the follow-up `/webkit.frontend-implement` run.
-11. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Laravel Standards](../../rules/laravel-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [HRMS Domain Rules](../../rules/hrms-rules.md).
+4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/subhrms/`) for a spec matching the target module/feature. If one exists, **read it in full and build to it** — the tables/columns, Query & Handler classes, controller methods, routes, gating rules, and API contract all come from the spec's backend design. The spec supersedes ad-hoc schema guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
+6. **Confirm the design was validated (Gate 2 precondition)**: This skill is the second gate of the design-first flow. Confirm the hard-coded frontend design exists (from `/webkit.frontend-implement`) and the user has reviewed it. If the frontend design doesn't exist yet, backend/API-first is still valid — but prefer building the design first so the schema is validated against a reviewed UI.
+7. **Mandatory Architecture Discovery**: Before generating any backend code or migrations, perform the Architecture Discovery step to identify the project's Laravel design pattern.
+8. **Mandatory System Awareness**: Before writing any controller, query, migration, or model, run the scan defined in [System Awareness](../../rules/system-awareness.md) to identify what already exists. The backend implementation MUST reuse existing models and tables. Never create a new migration or model when an existing one already satisfies the data requirement.
+9. **Match the Hard-Coded Frontend Contract**: Read the frontend's `api/<feature>.api.ts` (and `types/`) produced in Gate 1. The live endpoints you build MUST return the **same shape** the hard-coded methods returned, so replacing them is a drop-in swap. Any field the design relied on must be produced by the backend (or the mismatch flagged).
+10. If and only if no existing model/table covers the requirement (confirmed in Step 8, per the spec), create the Laravel migration and Eloquent model.
+11. Scaffold and optimize the queries, controller logic, validations, and routes matching the detected architecture and the spec.
+12. **Add the dynamic data (the core job of this gate)**: Update the frontend `api/<feature>.api.ts` — replace each hard-coded / `TODO(backend)` method with a live `http.get/post("api/<url-prefix>/...")` call. Preserve the composable, page, and component logic untouched. If the frontend layer doesn't exist yet, skip this and note `/webkit.frontend-implement` as the follow-up.
+13. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Laravel Standards](../../rules/laravel-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [HRMS Domain Rules](../../rules/hrms-rules.md).
+
+---
+
+## Spec-Driven & Gate 2 of Design-First
+
+This skill is the **second gate** of the design-first flow. The first gate (`/webkit.frontend-implement`) built the UI with hard-coded data and the user validated the design against the spec. This gate turns that validated design into a working, data-backed feature.
+
+```
+Spec (.agents/specs/…)  ──►  GATE 1: /webkit.frontend-implement   ──►  user validates design  ──►  GATE 2: /webkit.backend-implement  ← YOU ARE HERE
+                              hard-coded UI                             (add / adjust / OK)          build tables/queries/handlers/routes
+                                                                                                     + swap hard-coded api → live calls
+```
+
+- **The spec is the blueprint.** Build exactly the tables, columns, Query/Handler classes, controller methods, routes, gating rules, and API response shapes the spec defines. Don't re-derive the schema.
+- **The hard-coded frontend contract is the acceptance test.** The live endpoints must return the same shape the Gate-1 `api/<feature>.api.ts` methods returned, so the swap is drop-in. Read that file before designing responses.
+- **"Add dynamic data" is the deliverable.** The visible outcome of this gate is: the same validated page, now driven by real DB data instead of hard-coded values.
 
 ---
 
@@ -317,27 +337,30 @@ Work top-to-bottom; stop at the first branch that applies.
    - Read → `Get<X>Query` under `app/Domain/Queries/<Domain>/`.
    - Write → `Save<X>Handler` (or `Update.../Delete...`) under `app/Domain/Handlers/<Domain>/`, wrapped in `DB::transaction`.
 4. **Controller** → thin method, `try/catch`, `response()->json(...)`. Never a `JsonResource`.
-5. **Frontend wiring** → if `useApiRequest.js` exists for this module, swap its mock for `http.get/post("api/<prefix>/...")`. If not, stop and suggest `/webkit.frontend-implement`.
-6. **Domain calculations** (payroll, OT, leave credits) → follow [HRMS Domain Rules](../../rules/hrms-rules.md) for exact rates/factors; do not hardcode ad-hoc numbers.
+5. **Frontend wiring (add dynamic data)** → if the design-first `api/<feature>.api.ts` (or legacy `useApiRequest.js`) exists, swap each hard-coded / `TODO(backend)` method for `http.get/post("api/<prefix>/...")`, keeping the response shape identical. If not, stop and suggest `/webkit.frontend-implement` first.
+6. **Domain calculations** (payroll, OT, leave credits) → follow the spec's compute step and [HRMS Domain Rules](../../rules/hrms-rules.md) for exact rates/factors; do not hardcode ad-hoc numbers.
 
 ---
 
-## Target Frontend Connection Setup
+## Target Frontend Connection Setup (Add the Dynamic Data)
 
-- **Preserve Frontend Logic**: Do not rewrite or modify frontend page scripts or UI layouts.
-- **Update Request Layer Only**: Update the API integration layer (`useApiRequest.js`, React hooks, or service layers) to replace mock responses with live parameters:
+This is the core deliverable of Gate 2: replace the hard-coded design data with live calls.
 
-```javascript
-export function useApiRequest() {
+- **Preserve Frontend Logic**: Do NOT rewrite or modify frontend page scripts, composables, components, or UI layouts. They were validated in Gate 1.
+- **Update the Request Layer Only**: In `api/<feature>.api.ts` (legacy: `script/useApiRequest.js`), replace each hard-coded / `TODO(backend)` method with a live call. Return `response.data` and keep the **same response shape** the hard-coded method returned so nothing downstream changes.
+- **Verify shape parity**: diff the live response against the hard-coded object the frontend expected. Any missing/renamed field is a bug to fix on the backend, not in the page.
+
+```typescript
+// api/<feature>.api.ts — Gate 2: hard-coded methods swapped for live calls.
+// Endpoint prefix per Project Profile portal table (timekeeping ≠ tk). Response shape unchanged.
+import http from '@/app/axios/axiosInstance';
+
+export function use<Feature>Api() {
   return {
-    getData: async (params = {}) => {
-      const response = await http.get("api/<portal_name>/<module_endpoint>", { params });
-      return response.data;
+    getRoster: async (params: Record<string, any> = {}): Promise<any> => {
+      const response = await http.get('api/<url-prefix>/<endpoint>', { params });
+      return response.data; // same shape the design-first stub returned
     },
-    saveData: async (params = {}) => {
-      const response = await http.post("api/<portal_name>/<module_endpoint>/save", params);
-      return response.data;
-    }
   };
 }
 ```
@@ -356,4 +379,5 @@ Automated PHPUnit execution is out of scope for this skill for now — pair with
 ## Close the Loop
 
 1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
-2. **Suggested Next Step**: If Step 7 found no existing frontend for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` next to wire up the UI against the endpoints just created. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add leave-conversion endpoint`). Do not stage or commit automatically.
+2. **Confirm the dynamic swap**: State which `api/<feature>.api.ts` methods are now live and that the page renders on real data with the same shape as the validated design. Call out any field that changed shape from the hard-coded version.
+3. **Suggested Next Step**: If no frontend existed for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` to build the design against these endpoints. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): wire payroll processing to live data`). Do not stage or commit automatically.

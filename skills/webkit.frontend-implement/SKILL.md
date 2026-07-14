@@ -2,9 +2,11 @@
 name: webkit-frontend-implement
 description: >
   Generates and implements modular base structure folder and files for frontend modules.
+  SPEC-DRIVEN: when a spec exists under `.agents/specs/`, that spec is the primary source of truth for the layout, components, filters, pagination, types, and API contract.
+  DESIGN-FIRST: builds the UI with HARD-CODED / static placeholder data first (no live API calls) so the design can be validated against the spec BEFORE any backend wiring — dynamic data is added later by `/webkit.backend-implement`.
   Detects the target framework (Vue, React, etc.) based on package.json, file extensions, or config files, and scaffolds appropriately.
   Focuses primarily on the frontend UI, setting up pages, components, hooks/composables, and routes.
-  ALWAYS connects to existing backend models, tables, and API routes — never creates new database tables or endpoints
+  ALWAYS aligns to existing backend models, tables, and API routes — never creates new database tables or endpoints
   unless explicitly instructed and confirmed that no existing implementation covers the need.
   Supports dragging folder or file paths into the command to specify the target module.
   Triggered when the user runs the command `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
@@ -22,13 +24,65 @@ When the user requests to implement or scaffold the frontend structure of a modu
 1. Check if a folder or file path was dragged/passed into the command.
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
-4. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
-5. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
-6. **Mandatory System Awareness**: Before designing API calls or data shapes, run the scan defined in [System Awareness](../../rules/system-awareness.md) to understand what backend data is already available. The frontend design MUST be driven by existing backend structures where they exist. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
-7. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
-8. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
-9. Generate the complete frontend folder structure and UI views matching the discovered framework, connecting to real or realistic API shapes derived from existing backend models.
-10. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
+4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/subhrms/`) for a spec matching the target module/feature (by filename, title, portal, or the connection point it documents). If one exists, **read it in full and let it drive the implementation** — folder structure, page layout, components, filters, pagination, sorting, TS types, stats, and the API contract all come from the spec. The spec supersedes ad-hoc design guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
+6. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
+7. **Mandatory System Awareness**: Before designing data shapes, run the scan defined in [System Awareness](../../rules/system-awareness.md) so the hard-coded design uses **real field names** (from the spec's data contract and/or existing models). Never invent field names — even for hard-coded placeholder data. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
+8. **Design-First (Hard-Coded) Build**: Implement the UI with **hard-coded / static placeholder data only** — no live HTTP calls. This is the default mode of this skill now (see [Design-First (Hard-Coded) Mode](#design-first-hard-coded-mode)). The goal is to render the design so the user can confirm it matches the spec and flag anything to add/adjust **before** any backend work.
+9. **Check for Global & Cross-Module Reusable Components**: Before implementing component files, check if there are global/shared components already defined in the project. Import and reuse these components directly instead of creating duplicate local copies.
+10. **Identify Potential Global Components**: If the current feature includes a component that is highly reusable, consider creating it inside the global/shared components directory as a global component and importing/registering it as needed.
+11. Generate the complete frontend folder structure and UI views matching the discovered framework and the spec, populated with hard-coded data shaped after real model/spec fields.
+12. **Strict Rules Adherence**: The generated code and files must strictly adhere to the guidelines defined in the [.agents/rules/](../../rules/) directory, specifically [Vue.js Standards](../../rules/vue-standards.md), [Naming Convention Standards](../../rules/naming-convention.md), and [UI & Design Standards](../../rules/ui-design.md).
+
+---
+
+## Spec-Driven & Design-First — How This Skill Runs Now
+
+The frontend flow has two gates. This skill owns **Gate 1 only**.
+
+```
+Spec (.agents/specs/…)  ──►  GATE 1: /webkit.frontend-implement   ──►  user validates design  ──►  GATE 2: /webkit.backend-implement
+                              build UI with HARD-CODED data              (add / adjust / OK)          wire dynamic/live data
+```
+
+1. **The spec drives the design.** If a spec exists for the target feature, its layout/components/filters/pagination/types/API-contract are the blueprint. Do not redesign around it.
+2. **Build hard-coded first.** Render the full design using static placeholder data (see below). No live API. This lets the user confirm the design is correct — what to add, remove, or adjust — cheaply, before any DB/endpoint work.
+3. **Hand off to backend.** Only after the user validates the design does `/webkit.backend-implement` run to add dynamic data (replacing the hard-coded values with live calls).
+
+### Design-First (Hard-Coded) Mode
+
+This is the **default** behavior of this skill. Even when the backend route already exists, build the design against hard-coded data first unless the user explicitly says "wire it live now."
+
+**Where the hard-coded data lives:** put it in the `api/<feature>.api.ts` hook so the swap to live calls later is a one-file change. Each method returns static data synchronously (wrapped in a resolved promise) instead of calling `http`.
+
+```typescript
+// api/<feature>.api.ts — DESIGN-FIRST: hard-coded data, no live calls yet.
+// Field names MUST match the spec's data contract / model $fillable — never invented.
+// TODO(backend): /webkit.backend-implement replaces these with http.get/post("api/<url-prefix>/...").
+export function use<Feature>Api() {
+  return {
+    getRoster: async (_params: Record<string, any> = {}): Promise<any> => ({
+      period: { period_start: '2026-07-01', period_end: '2026-07-15', tk_process_status: 1 },
+      employees: [
+        { empid: 'EMP001', fullname: 'Juan Dela Cruz', unit: 'Finance', reg_hrs: 88, ot_hrs: 4, gross_pay: 15000, payroll_status: 'Pending' },
+        // …enough rows to exercise pagination + every status the spec defines
+      ],
+      count: 1,
+    }),
+  };
+}
+```
+
+**Rules for the hard-coded build:**
+- **Real field names only.** Shape every placeholder object after the spec's data contract (or the model `$fillable` from the System Awareness scan). Invented fields are a critical error even in mock data.
+- **Cover the states the spec defines.** Seed enough rows/variants to visibly exercise pagination, every filter, empty state, and each status badge/branch — so design gaps surface now.
+- **Everything else is real.** Composable, filters (debounced search), client/server pagination shape, components, routes, types, styling, dark mode — all built for real per the spec. Only the *data source* is stubbed.
+- **Keep the swap trivial.** Composables call the api hook (never inline the mock in the component), so backend wiring only touches `api/<feature>.api.ts`.
+- **Flag it clearly.** Leave the `TODO(backend)` comment on each stubbed method and tell the user, at hand-off, exactly which methods are still hard-coded.
+
+### Present the design for validation
+
+After the hard-coded build renders cleanly, explicitly ask the user to review the design against the spec and confirm before any backend work: *what to add, what to adjust, what's missing.* Do **not** proceed to live wiring on your own — that is Gate 2 (`/webkit.backend-implement`).
 
 ---
 
@@ -44,9 +98,7 @@ The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (ca
 
 1. **Does a similar module already exist?** Find the closest `resources/views/web/src/module/<portal>/<feature>/` and mirror its layout exactly. New features use the **TS structure**: `index.ts` barrel + `route/ api/ composables/ pages/ components/` (+ `types/ utils/ store/` when needed). If the closest sibling is still on the **legacy** layout (`script/ webRoute.js`, plain JS), match that folder instead — don't mix conventions within a module.
 2. **Does a global component cover the UI need?** (see the global list in the profile) → use it without importing. Else check other modules for a reusable one → import it. Only then build local.
-3. **Does the backend route exist?** (System Awareness scan)
-   - Yes → `api/<feature>.api.ts` calls `http.get/post("api/<url-prefix>/...")` for real. Mind `timekeeping` ≠ `tk`.
-   - No → mock in `api/<feature>.api.ts` with field names from the model's `$fillable`, comment the pending endpoint, and suggest `/webkit.backend-implement` as follow-up.
+3. **Design-first: hard-code the data source regardless of whether the route exists.** Put static, real-field-name data in `api/<feature>.api.ts` with a `TODO(backend)` comment, so the design can be validated first. Live wiring (`http.get/post("api/<url-prefix>/...")`, minding `timekeeping` ≠ `tk`) is Gate 2's job (`/webkit.backend-implement`) — do it here only if the user explicitly asks to wire live now.
 4. **State** → `composables/use<Feature>.ts` with typed `ref`/`reactive`, debounced search (`@/src/utils/debounce`, 300ms), cleanup in `onUnmounted`. Add a Pinia `store/<feature>.store.ts` only when state is shared across pages/components.
 5. **Route** → add `route/<feature>.routes.ts` (default-export `RouteRecordRaw[]`, lazy `() => import('../pages/...')`). It is auto-registered by the portal's `useApiWebRoute.ts` glob — do NOT edit the aggregator.
 6. **Barrel** → export the feature's surface (composables, api hook, routes) from `index.ts`.
@@ -95,11 +147,12 @@ Once the scan is done, map backend fields to UI directly:
 | `$casts` types | Date pickers, number inputs, toggles |
 | Relationship names | Dropdowns, nested panels, linked records |
 
-- **If a matching route already exists**: use it as the API endpoint in `api/<feature>.api.ts` (legacy modules: `script/useApiRequest.js`). Do NOT generate a new endpoint unless backend implementation is also being done in the same task.
-- **If no matching route exists yet**: this is not a blocker (see [System Awareness](../../rules/system-awareness.md)) — use realistic mock data shaped after the closest existing model's fields, and note in a code comment that the backend endpoint is pending.
+In **Design-First (Hard-Coded) Mode** (the default), the scan is used to get **field names right**, not to wire endpoints:
+- **Whether or not a matching route exists**: seed `api/<feature>.api.ts` with hard-coded data using real field names (from the spec's data contract and/or model `$fillable`), and mark each method `TODO(backend)`. Endpoint wiring is deferred to Gate 2 (`/webkit.backend-implement`).
+- **If a matching route already exists** and the user explicitly asks to wire live now: use it as the endpoint in `api/<feature>.api.ts` (legacy modules: `script/useApiRequest.js`). Otherwise leave it hard-coded.
 
 > [!CAUTION]
-> If you are about to create mock data with field names that do not exist in any model or migration, STOP. Re-scan to find the correct model or ask the user to confirm the new table is intentional.
+> If you are about to create hard-coded/mock data with field names that do not exist in the spec's data contract, any model, or any migration, STOP. Re-scan to find the correct fields or ask the user to confirm the new shape is intentional.
 
 ---
 
@@ -500,4 +553,5 @@ Automated Vitest execution is out of scope for this skill for now. Still confirm
 ## Close the Loop
 
 1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
-2. **Suggested Next Step**: If the API layer used mock data because no backend route existed yet (see System Awareness Phase), tell the user to run `/webkit.backend-implement <target_path> <prompt>` next to implement it. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(hr): add employee masterlist page`). Do not stage or commit automatically.
+2. **Present the design for validation (Gate 1 exit)**: State plainly that the page is built with **hard-coded data** and list which `api/<feature>.api.ts` methods are still stubbed (`TODO(backend)`). Give the user concrete steps to view the page and ask them to confirm the design against the spec — what to **add / adjust / remove** — before any backend work.
+3. **Suggested Next Step (Gate 2)**: Once the user is happy with the design, tell them to run `/webkit.backend-implement <target_path> <prompt>` to add the dynamic data (create/verify the tables, queries, handlers, routes per the spec, and replace the hard-coded api methods with live calls). Point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add payroll processing page (design)`). Do not stage or commit automatically.

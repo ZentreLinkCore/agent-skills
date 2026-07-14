@@ -24,14 +24,18 @@ The agent MUST read, load, and follow these rules files:
 18. [System Awareness](./rules/system-awareness.md) - The canonical models/migrations/routes discovery scan referenced by the rules and skills above; update scan steps here only.
 19. [Project Profile](./rules/project-profile.md) - **Read this first for any implementation.** Verified ground-truth architecture of THIS codebase: Domain Query/Handler pattern, no API Resources, portal route prefixes (`tk` namespace vs `timekeeping` URL), frontend module layout, HTTP client import, globally-registered components. Follow it instead of re-detecting.
 
+## Specs
+
+Feature designs live in [.agents/specs/](./specs/) (e.g. [.agents/specs/subhrms/](./specs/subhrms/)). **When a spec exists for the feature you're building, it is the primary source of truth** — the implement skills read it and build to it (tables, queries, handlers, routes, API contract on the backend; layout, components, filters, pagination, types on the frontend). The spec supersedes ad-hoc design decisions; only a rule in [.agents/rules/](./rules/) overrides it, and any genuine conflict should be flagged.
+
 ## Workflow Skills
 
 For end-to-end feature work, prefer the skills in [.agents/skills/](./skills/) over ad-hoc edits — they encode the rules above into a concrete sequence:
 
 1. [webkit.investigate](./skills/webkit.investigate/SKILL.md) - Root-cause analysis and a written plan. Never edits files.
-2. [webkit.backend-implement](./skills/webkit.backend-implement/SKILL.md) - Laravel controllers, models, migrations, routes.
-3. [webkit.frontend-implement](./skills/webkit.frontend-implement/SKILL.md) - Vue/React pages, components, composables.
+2. [webkit.frontend-implement](./skills/webkit.frontend-implement/SKILL.md) - **Gate 1 (design-first):** Vue/React pages, components, composables, built with **hard-coded data** so the design is validated against the spec before any backend work.
+3. [webkit.backend-implement](./skills/webkit.backend-implement/SKILL.md) - **Gate 2:** Laravel controllers, models, migrations, routes — then **adds the dynamic data**, swapping the hard-coded frontend api methods for live calls.
 4. [webkit.fix](./skills/webkit.fix/SKILL.md) - Applies an approved fix from an investigation report.
 5. [webkit.refactor](./skills/webkit.refactor/SKILL.md) - Behavior-preserving cleanup and restructuring.
 
-Typical flow: `webkit.investigate` → `webkit.backend-implement` and/or `webkit.frontend-implement` (either order — see [System Awareness](./rules/system-awareness.md) for how each handles the other layer not existing yet) → `webkit.fix` or `webkit.refactor` as needed.
+**Typical spec-driven flow:** write/read the spec in `.agents/specs/` → `webkit.frontend-implement` builds the **hard-coded design** → user validates the design (add / adjust / OK) → `webkit.backend-implement` builds the backend and **wires the dynamic data** → `webkit.fix` or `webkit.refactor` as needed. (`webkit.investigate` up front for bug/RCA work.)
