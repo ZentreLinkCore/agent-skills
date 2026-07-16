@@ -56,7 +56,7 @@ Payroll — Final Pay cycle
 | `filed_date` | date | when filed/received |
 | `last_working_day` | date | last day physically worked |
 | `effective_date` | date | separation effectivity (→ `accountjob.sdate` on approval) |
-| `status` | string | `Filed` → `Approved` → `For Clearance` → `Cleared` → `Endorsed` → `Completed` |
+| `status` | string | `Filed` → `Approved` → `For Clearance` → `Cleared` → `Endorsed` → `Completed`. Written by: File/Approve/SignClearance (HR) → up to `Cleared`; **`Endorsed`** by TK `UpdateFinalPayWorkflowStatusHandler` on "Endorsed to Payroll"; **`Completed`** by Payroll `ProcessFinalPayHandler` when the final pay is committed. |
 | `approved_by` | int nullable | HR approver account id |
 | `approved_date` | date nullable | |
 | `remarks` | text nullable | |
