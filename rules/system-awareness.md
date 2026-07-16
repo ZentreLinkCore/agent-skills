@@ -12,7 +12,7 @@ This scan is a **read-only exception** to the frontend/backend boundary separati
 ## The Scan
 1. **Models** — List `app/Models/` and identify entities relevant to the feature. Read `$table`, `$fillable`, `$casts`, and relationships. These are the authoritative field names for queries, validation rules, API resources, and frontend state/mock data — never invent column names.
 2. **Migrations** — If a model's fields are ambiguous or incomplete, resolve them against `database/migrations/` (including subdirectories such as `table/`, `alters/`, `views/`, or versioned folders). Treat the `Schema::create()`/`Schema::table()` block as the ground truth for columns, types, nullability, defaults, and indexes.
-3. **Routes** — Grep `routes/api.php` by portal keyword (e.g. `tk`, `hr`, `payroll`, `employee`, `manager`) for an existing endpoint covering the feature.
+3. **Routes** — Grep the `routes/api/` tree (each portal has its own file: `routes/api/<portal>.php`; `routes/api.php` is only the orchestrator) by portal keyword (e.g. `hr`, `payroll`, `employee`, `manager`, `timekeeping`) for an existing endpoint covering the feature. `php artisan route:list --path=api` is the ground truth for what is registered.
 4. **Controllers / Domain classes** — Check `app/Http/Controllers/<portal>/` and `app/Domain/Queries|Handlers/` for an existing implementation.
 
 ## Decision Rule (Reuse vs. Create)

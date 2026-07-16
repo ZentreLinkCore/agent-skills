@@ -24,7 +24,7 @@ Applicable to all file reads, context retrievals, and document inspections.
   - Never *edit* backend files as a side effect of a frontend task, or *edit* frontend files as a side effect of a backend task.
   - Never inspect mobile code when implementing web code, and vice-versa.
   - Never inspect unrelated portals or modules unless requested.
-  - **Exception — System Awareness Scan**: Read-only lookups of `app/Models/`, `database/migrations/`, and `routes/api.php` are always permitted, even during frontend work, and are in fact mandatory before designing data shapes or API calls. See [System Awareness](./system-awareness.md). This exception covers *reading* only — it never authorizes editing files on the other side of the boundary.
+  - **Exception — System Awareness Scan**: Read-only lookups of `app/Models/`, `database/migrations/`, and the `routes/api/` tree (per-portal route files + the `routes/api.php` orchestrator) are always permitted, even during frontend work, and are in fact mandatory before designing data shapes or API calls. See [System Awareness](./system-awareness.md). This exception covers *reading* only — it never authorizes editing files on the other side of the boundary.
 
 ## Best Practices
 - **Minimize Context Size**: Exclude comments, markup, or layout files that are unrelated to the logical execution of the task.

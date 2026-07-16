@@ -85,14 +85,14 @@ Backend:
 ```
 app/Domain/Queries/Payroll/GetPayrollSummaryQuery.php           # NEW
 app/Http/Controllers/payroll/PayrollReportsController.php       # NEW (or add method to an existing payroll reports controller if one exists)
-routes/api.php  →  inside the existing Route::prefix('payroll') group  # ADD route
+routes/api/payroll.php  →  add beside the sibling payroll routes  # ADD route
 ```
 
 ---
 
 ## 5. Backend Design
 
-### 5.1 Route — add inside `Route::prefix('payroll')->group(...)` in [routes/api.php](../../../routes/api.php)
+### 5.1 Route — add in the payroll portal file [routes/api/payroll.php](../../../routes/api/payroll.php)
 
 ```php
 // Payroll Summary (payroll register report)

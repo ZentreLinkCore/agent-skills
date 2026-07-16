@@ -37,6 +37,6 @@ Applicable to all backend components, including Controllers, Models, FormRequest
 
 ## AI Behavior Expectations
 - **Strict Architecture Discovery**: The agent must inspect the controllers, models, and requests directories first to establish the architectural lock.
-- **System Awareness Before Creation**: The agent must scan `app/Models/`, `database/migrations/`, `routes/api.php`, and `app/Http/Controllers/` before generating any new file. Skipping this step is a violation.
+- **System Awareness Before Creation**: The agent must scan `app/Models/`, `database/migrations/`, the `routes/api/` tree (per-portal route files + the `routes/api.php` orchestrator), and `app/Http/Controllers/` before generating any new file. Skipping this step is a violation.
 - **Minimal Route Diff**: When registering routes, append to matching groupings instead of recreating routing blocks.
 - **Stop on Existing Match**: If an existing model, table, or controller already covers the requirement, the agent must reuse it and must NOT generate a new parallel implementation.

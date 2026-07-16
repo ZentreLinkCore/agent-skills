@@ -27,7 +27,7 @@ Applicable to all file referencing, variable usage, route mapping, and schema in
 
 ## Best Practices
 - **Inspect DB Migrations/Schema Logs**: Read migration files or run database checks to verify actual column names.
-- **Inspect API Registrations**: Check routing files (`routes/api.php` or routing files) to verify endpoint layouts.
+- **Inspect API Registrations**: Check the routing files (`routes/api.php` orchestrator + the per-portal `routes/api/<portal>.php` files) to verify endpoint layouts.
 - **Use Model `$fillable` as Ground Truth**: When building queries, validators, API resources, or frontend mock data, use the model's `$fillable` and `$casts` arrays as the authoritative field list — never invent columns.
 
 ## AI Behavior Expectations

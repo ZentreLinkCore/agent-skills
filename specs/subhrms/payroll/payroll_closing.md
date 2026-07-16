@@ -111,14 +111,14 @@ app/Domain/Handlers/Payroll/UnlockPayrollPeriodHandler.php       # NEW
 app/Http/Controllers/payroll/PayrollClosingController.php        # NEW (thin)
 app/Models/PayPeriodLockHistory.php                             # NEW
 database/migrations/table/payroll/xxxx_create_pay_period_lock_history_table.php  # NEW
-routes/api.php  →  inside the existing Route::prefix('payroll') group  # ADD routes
+routes/api/payroll.php  →  add beside the sibling payroll routes  # ADD routes
 ```
 
 ---
 
 ## 5. Backend Design
 
-### 5.1 Routes — add inside `Route::prefix('payroll')->group(...)` in [routes/api.php](../../../routes/api.php)
+### 5.1 Routes — add in the payroll portal file [routes/api/payroll.php](../../../routes/api/payroll.php)
 
 ```php
 // Payroll Closing (finalize / lock the payroll period)

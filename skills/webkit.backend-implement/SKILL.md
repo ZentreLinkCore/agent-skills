@@ -2,7 +2,7 @@
 name: webkit-backend-implement
 description: >
   Generates and implements modular backend setup for Vue.js modules using Laravel, creating controllers,
-  domain query/handler classes, registering routes in routes/api.php, and integrating the backend endpoints with the frontend components.
+  domain query/handler classes, registering routes in the matching per-portal file under routes/api/, and integrating the backend endpoints with the frontend components.
   SPEC-DRIVEN: when a spec exists under `.agents/specs/`, that spec is the primary source of truth for the tables, queries, handlers, routes, and API contract to build.
   GATE 2 of the design-first flow: runs AFTER `/webkit.frontend-implement` has built the hard-coded design and the user has validated it — its job is to ADD THE DYNAMIC DATA, replacing the frontend's hard-coded `api/<feature>.api.ts` methods with live HTTP calls.
   ALWAYS scans existing Eloquent models, database migrations, and registered routes before generating anything.
@@ -109,7 +109,7 @@ Only load context that is required.
 2. Related model (e.g., `app/Models/<ModelName>.php`)
 3. Related domain classes (in `app/Domain/`)
 4. Controller
-5. Routes (`routes/api.php` or custom route groups)
+5. Routes (`routes/api.php` orchestrator + the per-portal files in `routes/api/`)
 6. Request classes (FormRequests)
 7. API Resources
 8. Policies & Gates
@@ -196,7 +196,10 @@ app/Domain/
 ├── Queries/<Domain>/          # Read logic:  Get<X>Query.php   (extends Query, static execute)
 └── Handlers/<Domain>/         # Write logic: Save<X>Handler.php (extends Handler, static execute, DB::transaction)
 routes/
-└── api.php                    # One auth:sanctum group → per-portal prefix sub-groups
+├── api.php                    # Orchestrator: public routes, auth:sanctum group, per-portal group() loaders
+└── api/
+    └── <portal>.php           # One file per portal (employee|manager|hr|timekeeping|payroll|admin)
+                               #   holds that portal's routes + its own controller `use` imports
 ```
 
 > There are **no** `app/Http/Resources/` API Resource classes in this project — do not create that directory. See [Project Profile](../../rules/project-profile.md).
@@ -313,13 +316,18 @@ class <ModuleName>Controller extends Controller
 }
 ```
 
-#### 4. Route — add inside the matching portal prefix group in `routes/api.php`
+#### 4. Route — add inside the matching portal file `routes/api/<portal>.php`
 ```php
-// inside Route::middleware(['auth:sanctum'])->group(...) → Route::prefix('timekeeping')->group(...)
+// in routes/api/timekeeping.php (loaded by api.php under prefix('timekeeping') + auth:sanctum).
+// Add the controller `use` import at the top of THIS file, then the routes:
 Route::get('/<module_endpoint>', [<ModuleName>Controller::class, 'index']);
 Route::post('/<module_endpoint>/save', [<ModuleName>Controller::class, 'store']);
+
+// Standard CRUD → prefer apiResource, with custom domain actions beside it:
+Route::apiResource('<resource>', <ModuleName>Controller::class)->only(['index', 'store', 'update', 'destroy']);
+Route::post('/<resource>/{id}/<action>', [<ModuleName>Controller::class, '<action>']);
 ```
-Remember: Timekeeping's URL prefix is **`timekeeping`** even though the controller namespace is `tk`.
+Do NOT add routes to `routes/api.php` for an existing portal — it only holds the per-portal `group()` loaders. Remember: Timekeeping's file is `routes/api/timekeeping.php` and its URL prefix is **`timekeeping`** even though the controller namespace is `tk`.
 
 ---
 
@@ -330,9 +338,9 @@ Work top-to-bottom; stop at the first branch that applies.
 1. **Does a Model + table already cover this entity?** (System Awareness scan)
    - Yes → reuse it. Skip migration/model creation entirely.
    - No → scaffold migration + model (indexes on FKs + filtered columns, `SoftDeletes`, timestamps). Do NOT run the migration — tell the user to.
-2. **Does a route for this resource already exist in the portal's prefix group?**
+2. **Does a route for this resource already exist in the portal file (`routes/api/<portal>.php`)?**
    - Yes → add a method to the existing controller; wire it to a new/existing Query or Handler. Do NOT add a duplicate route.
-   - No → add the route inside the correct existing prefix group (never a new top-level group).
+   - No → add the route inside the correct portal file (+ its `use` import there). Never a new top-level group or a new portal loader in `api.php`.
 3. **Read or write?**
    - Read → `Get<X>Query` under `app/Domain/Queries/<Domain>/`.
    - Write → `Save<X>Handler` (or `Update.../Delete...`) under `app/Domain/Handlers/<Domain>/`, wrapped in `DB::transaction`.
@@ -371,7 +379,7 @@ export function use<Feature>Api() {
 
 Automated PHPUnit execution is out of scope for this skill for now — pair with `/webkit.fix`'s test-running verification phase when regression coverage is actually needed. Still confirm the following before considering the work done:
 1. **Syntax Check**: The new/edited PHP files parse cleanly (e.g. `php -l <file>`) and match the surrounding code's formatting.
-2. **Route Sanity Check**: The new/modified route is correctly grouped in `routes/api.php`, doesn't collide with an existing URI, and carries the right middleware.
+2. **Route Sanity Check**: The new/modified route sits in the correct `routes/api/<portal>.php` file (with its `use` import added there), doesn't collide with an existing URI, and — confirm with `php artisan route:list --path=api` — resolves under the right prefix with `auth:sanctum`.
 3. **Manual Verification Steps**: Give the user concrete steps to hit the new endpoint (e.g. via curl/Postman) and confirm the response shape matches the API Resource / JSON structure implemented.
 
 ---

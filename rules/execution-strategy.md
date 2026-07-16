@@ -29,4 +29,4 @@ Applicable to all search commands, directory traversals, and file scanning activ
 ## AI Behavior Expectations
 - **Immediate Termination**: The agent must abort execution of searches as soon as an acceptable match is found.
 - **Minimum Scanning**: Avoid general directory listings; target queries explicitly.
-- **Backend Scan Is Not Optional**: Even for purely frontend tasks, the agent must scan `app/Models/` and `routes/api.php` before designing API composables or mock data. Skipping this step risks generating data shapes that contradict the real backend.
+- **Backend Scan Is Not Optional**: Even for purely frontend tasks, the agent must scan `app/Models/` and the `routes/api/` tree (per-portal route files; `routes/api.php` is just the orchestrator) before designing API composables or mock data. Skipping this step risks generating data shapes that contradict the real backend.

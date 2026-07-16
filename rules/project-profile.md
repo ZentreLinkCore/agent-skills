@@ -9,7 +9,7 @@ This is the **ground-truth architecture reference** for this specific HRMS codeb
 ---
 
 ## Stack
-- **Backend**: Laravel (PHP), Sanctum auth. Entry: `app/`, routes in `routes/api.php`.
+- **Backend**: Laravel (PHP), Sanctum auth. Entry: `app/`, routes in `routes/api.php` (orchestrator) + per-portal files under `routes/api/`.
 - **Frontend**: Vue 3 `<script setup>` + Composition API, Vue Router, Tailwind CSS, Vite. Root: `resources/views/web/src/`.
 - **Testing**: PHPUnit (`vendor/bin/phpunit`), Vitest (`npm run test`). `tests/` at project root.
 
@@ -76,7 +76,18 @@ public function getRequests(Request $request)
 
 ## Portals & Route Prefixes
 
-`routes/api.php` — everything (except a couple of biometric endpoints) is inside one `Route::middleware(['auth:sanctum'])->group(...)`. Inside it, routes are grouped by portal prefix.
+`routes/api.php` is a thin **orchestrator**: public routes (login, biometric) + one `Route::middleware(['auth:sanctum'])->group(...)`. Inside that group, each portal's routes live in **its own file** under `routes/api/`, loaded with `Route::prefix('<portal>')->group(base_path('routes/api/<portal>.php'))`. Each portal file holds just its route bodies + its own controller `use` imports and inherits the prefix + `auth:sanctum` from the orchestrator — so URLs are identical to a single flat file.
+
+```text
+routes/api.php               # orchestrator: public routes, auth group, per-portal group() loaders,
+                             #   plus small inline groups (attendance, ai) that have no portal file
+routes/api/employee.php      # /api/employee/...
+routes/api/manager.php       # /api/manager/...
+routes/api/hr.php            # /api/hr/...
+routes/api/timekeeping.php   # /api/timekeeping/...  (controller namespace tk)
+routes/api/payroll.php       # /api/payroll/...
+routes/api/admin.php         # /api/admin/...        (contains the `database` sub-prefix)
+```
 
 | Portal | Controller namespace | Route prefix (URL) | Frontend module folder |
 |---|---|---|---|
@@ -91,8 +102,8 @@ public function getRequests(Request $request)
 > [!CAUTION]
 > **Timekeeping gotcha**: the controller namespace is `tk` (`App\Http\Controllers\tk\...`) but the URL prefix and frontend folder are **`timekeeping`** (`api/timekeeping/...`). Do not register `api/tk/...` routes — grep confirms the real prefix is `timekeeping`.
 
-- Add new routes **inside the matching existing prefix group**. Never create a new top-level group for an existing portal.
-- Route definitions are explicit per-method (`Route::get('/x', [XController::class, 'method'])`); `apiResource` is used occasionally. Match the sibling routes' style.
+- Add new routes **inside the matching portal file** (`routes/api/<portal>.php`), and add the controller's `use` import at the top of that same file. Never create a new top-level group or a new portal loader for an existing portal.
+- Route definitions are explicit per-method (`Route::get('/x', [XController::class, 'method'])`); `apiResource` is used for standard CRUD (`index`/`store`/`update`/`destroy`), with non-RESTful domain actions (e.g. `/{id}/approve`) added as explicit routes beside it. Match the sibling routes' style.
 
 ---
 

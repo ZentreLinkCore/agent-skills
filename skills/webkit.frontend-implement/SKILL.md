@@ -358,7 +358,7 @@ Create a `use<Feature>Api()` factory returning async methods. This project's ver
 - **Import the HTTP client** — it is NOT globally bound: `import http from '@/app/axios/axiosInstance';`. Interceptors, auth-token attach, HTML guard, and 401/419 handling are already wired inside that instance. Methods get the full `AxiosResponse`, so `return response.data`.
 - **Composables call the api hook**, never `http` directly.
 - **Endpoint strings** are lowercase `api/<url-prefix>/<...>` using the **URL prefix** from the profile's portal table. Timekeeping is **`api/timekeeping/...`**, never `api/tk/...`.
-- **System Awareness First**: Before writing API functions, run the [System Awareness](../../rules/system-awareness.md) scan. If a matching route already exists in `routes/api.php`, wire the real endpoint directly — no mock.
+- **System Awareness First**: Before writing API functions, run the [System Awareness](../../rules/system-awareness.md) scan. If a matching route already exists in the portal's route file (`routes/api/<portal>.php`), wire the real endpoint directly — no mock.
 - **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet. Mock field names MUST match the actual model `$fillable` / migration columns — never invent field names. Add a comment noting the intended endpoint.
 
 Real endpoint (route exists):

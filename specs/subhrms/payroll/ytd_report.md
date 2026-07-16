@@ -45,7 +45,7 @@ Backend (Domain pattern):
 ```
 app/Domain/Queries/Payroll/GetYtdReportQuery.php        # NEW
 app/Http/Controllers/payroll/PayrollReportsController.php # add method
-routes/api.php → Route::get('/payroll-reports/ytd', [PayrollReportsController::class, 'ytd']);
+routes/api/payroll.php → Route::get('/payroll-reports/ytd', [PayrollReportsController::class, 'ytd']);
 ```
 
 ---

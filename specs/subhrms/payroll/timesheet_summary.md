@@ -150,7 +150,7 @@ Backend — Domain Query/Handler + thin controller (project-profile §"Backend A
 app/Domain/Queries/Payroll/GetPayrollProcessingRosterQuery.php       # NEW
 app/Domain/Handlers/Payroll/ProcessPayrollHandler.php                # NEW
 app/Http/Controllers/payroll/PayrollProcessingController.php         # NEW (thin)
-routes/api.php  →  inside the existing Route::prefix('payroll') group # ADD routes
+routes/api/payroll.php  →  add beside the sibling payroll routes # ADD routes
 ```
 
 New tables (migrations under `database/migrations/table/payroll/`):
@@ -164,7 +164,7 @@ payroll_run_detail    # NEW — one computed payslip line per employee
 
 ## 5. Backend Design
 
-### 5.1 Routes — add inside the existing `Route::prefix('payroll')->group(...)` in [routes/api.php](../../../routes/api.php)
+### 5.1 Routes — add in the payroll portal file [routes/api/payroll.php](../../../routes/api/payroll.php)
 
 ```php
 // Payroll Processing (consumes timesheet_summary)

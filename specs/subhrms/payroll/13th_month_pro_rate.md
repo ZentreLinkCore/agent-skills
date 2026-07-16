@@ -56,7 +56,7 @@ Backend (Domain pattern):
 ```
 app/Domain/Queries/Payroll/GetThirteenthMonthProRateQuery.php  # NEW
 app/Http/Controllers/payroll/PayrollReportsController.php       # add method
-routes/api.php → Route::get('/payroll-reports/13th-month-pro-rate', [PayrollReportsController::class, 'thirteenthMonth']);
+routes/api/payroll.php → Route::get('/payroll-reports/13th-month-pro-rate', [PayrollReportsController::class, 'thirteenthMonth']);
 ```
 
 ---

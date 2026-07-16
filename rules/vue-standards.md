@@ -27,4 +27,4 @@ Applicable to all Vue components (`.vue`), composables, and frontend scripts ins
 ## AI Behavior Expectations
 - **Framework Detection**: Inspect dependencies in `package.json` to verify Vue versions, active routing, and state manager models.
 - **Incremental Code Updates**: Edit only the specific component tags, script variables, or style lines required. Do not replace entire templates when making minor changes.
-- **Model-Driven Composables**: Before generating `useApiRequest.js` or `use<Module>.js`, the agent must read the corresponding Laravel model's `$fillable` and scan `routes/api.php`. The composable's data shapes and endpoint URLs must be grounded in verified backend structures.
+- **Model-Driven Composables**: Before generating `useApiRequest.js` or `use<Module>.js`, the agent must read the corresponding Laravel model's `$fillable` and scan the portal's route file (`routes/api/<portal>.php`). The composable's data shapes and endpoint URLs must be grounded in verified backend structures.

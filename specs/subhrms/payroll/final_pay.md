@@ -35,6 +35,8 @@ FINAL PAY  ── per employee, sum:
 
 Rate basis: `accountjob.daysmonth` daily rate ([timesheet_summary.md](./timesheet_summary.md) §6.3 Step 0). Loan balances from [loans.md](./loans.md) (`payroll_loan.balance`). Leave balance from the leave ledger. Tax on the taxable components per BIR.
 
+**HR accountabilities feed (built):** the exit-clearance amounts flagged "With Accountability" flow in via [GetClearanceAccountabilitiesQuery](../../../app/Domain/Queries/hr/GetClearanceAccountabilitiesQuery.php) (`{ total, items:[{area, description, amount}] }`, sourced from `employee_clearance`) — HR records them, Payroll subtracts them (no double entry). Already surfaced in the TK Final Pay Processing endorsement view (`payroll.outstandingAdjustments` + `accountabilitiesTotal`); the Payroll `ProcessFinalPayHandler` should call the same query for the deduction line.
+
 ---
 
 ## 3. Backend (reuse + delta)

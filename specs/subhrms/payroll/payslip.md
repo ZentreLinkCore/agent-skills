@@ -111,7 +111,7 @@ app/Domain/Queries/Payroll/GetPayslipRosterQuery.php      # NEW — employees w/
 app/Domain/Handlers/Payroll/ReleasePayslipsHandler.php    # NEW (optional) — mark released / notify
 app/Http/Controllers/payroll/PayrollReportsController.php # add methods (or reuse the payroll reports controller)
 app/Models/PayrollRunDetail.php                          # add `released_at` / `released_by` (optional, see §6)
-routes/api.php  →  inside the existing Route::prefix('payroll') group  # ADD routes
+routes/api/payroll.php  →  add beside the sibling payroll routes  # ADD routes
 ```
 
 ---

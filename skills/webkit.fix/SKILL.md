@@ -53,7 +53,7 @@ Match the layer of the bug to the right file, using this project's known structu
 | Wrong data returned / query logic | The `Get<X>Query` in `app/Domain/Queries/<Domain>/` |
 | Wrong write / save / calculation | The `Save<X>Handler` in `app/Domain/Handlers/<Domain>/` (keep it in `DB::transaction`) |
 | Wrong HTTP status / response shape | The controller method — keep `try/catch` + `response()->json(...)`, no API Resource |
-| 404 / wrong endpoint | `routes/api.php` — check the portal prefix (Timekeeping = `timekeeping`, not `tk`) |
+| 404 / wrong endpoint | `routes/api/<portal>.php` — check the portal prefix (Timekeeping = `timekeeping`, not `tk`); `php artisan route:list --path=api` to confirm |
 | Wrong value on screen / UI glitch | The module's `pages/` or `components/` `.vue` file |
 | Wrong API call / mock still in use | The module's `script/useApiRequest.js` (`http.get/post("api/<prefix>/...")`) |
 | Wrong payroll/OT/leave number | Verify the formula against [HRMS Domain Rules](../../rules/hrms-rules.md) before editing |
