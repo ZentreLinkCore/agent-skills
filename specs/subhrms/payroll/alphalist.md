@@ -39,7 +39,7 @@ ALPHALIST  ──►  per-schedule roster table  ──►  export (Excel/CSV �
 
 **Sources (verified this session):**
 - **Per-employee annualization** — `App\Models\YtdDetail` (table `ytd_details`), same row [bir_form_2316.md](./bir_form_2316.md) reads: `gross_amount`, `gov_contri`, `taxbasicsalary`, `tax_due`, `wtax`, `tax_refund`, `tax_payable`, `year`.
-- **Employee identity** — `App\Models\AccountDetailVW` (view `vw_accounts_details`): `tin_no`, `fullname`, `address`, `civil_status`, `dependents`, `bdate`. Same access pattern as [GetThirteenthMonthPayRosterQuery](../../../app/Domain/Queries/Payroll/GetThirteenthMonthPayRosterQuery.php).
+- **Employee identity** — `App\Models\AccountDetailVW` (view `vw_accounts_details`): `tin_no`, `fullname`, `address`, `civil_status`, `dependents`, `bdate`. Same access pattern as [GetThirteenthMonthPayRosterQuery](../../../app/Queries/Payroll/GetThirteenthMonthPayRosterQuery.php).
 - **Employer header** (for the alphalist's own header/export filename) — `App\Models\Company` (table `company`, `id=1`), same as [bir_form_2316.md](./bir_form_2316.md) §2.
 
 > [!CAUTION] **Gap — Minimum Wage Earner classification does not exist yet.** No model/column found anywhere in this codebase (`AccountDetailVW`, `AccountJob`, `Account`, `employee_status`) that flags an employee as a Minimum Wage Earner. `employee_type` (from `employee_status.type`, joined via `emptype_id`) is the closest candidate but its actual values were **not** confirmed against a definitive list during research — do not assume it already encodes "MWE" without checking `employee_status` table contents first. **Gate 2 must resolve this before Schedule 2 can be built**: either (a) confirm `employee_status.type` already has an MWE-equivalent value, or (b) add a boolean/flag column (e.g. `accounts.is_mwe` or an `employee_status` row dedicated to MWE) via a new migration — per [Anti-Hallucination](../../rules/anti-hallucination.md), do not invent this classification source without confirming it first. Until resolved, Schedule 2's roster query cannot be written correctly; Gate 1 (hard-coded design) can proceed using a placeholder boolean field, clearly flagged.
@@ -68,10 +68,10 @@ resources/views/web/src/module/payroll/government_routines/pages/bir/
 ```
 Both schedules share near-identical chrome (year selector, stat cards, export) but distinct table columns (§5) — keep them as **separate** composables/api files (matching the two already-separate registered routes/pages) rather than forcing one shared composable with branching, unless a clear common helper emerges during Gate 2 (e.g. a shared `alphalist.utils.ts` for the year-list fetch, since it's identical to [year_end.md](./year_end.md)'s `/year-end/years` shape and should reuse that endpoint rather than adding a third `/years` route — see Duplicate Prevention).
 
-Backend (Domain pattern, extend the existing reports controller):
+Backend (Query/Handler pattern, extend the existing reports controller):
 ```
-app/Domain/Queries/Payroll/GetAlphalistSchedule1Query.php   # NEW — non-MWE employees, full columns
-app/Domain/Queries/Payroll/GetAlphalistSchedule2Query.php   # NEW — MWE employees, exempt columns
+app/Queries/Payroll/GetAlphalistSchedule1Query.php   # NEW — non-MWE employees, full columns (namespace App\Queries\Payroll)
+app/Queries/Payroll/GetAlphalistSchedule2Query.php   # NEW — MWE employees, exempt columns (namespace App\Queries\Payroll)
 app/Http/Controllers/payroll/PayrollReportsController.php   # add alphalistSchedule1() + alphalistSchedule2() methods
 routes/api/payroll.php → add under the existing "payroll reports" section:
     Route::get('/payroll-reports/alphalist/schedule-1', [PayrollReportsController::class, 'alphalistSchedule1']);
