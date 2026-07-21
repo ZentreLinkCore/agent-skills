@@ -27,7 +27,7 @@ This project uses a **thin-controller + Query/Handler pattern**, with **Actions*
 
 **Reads → Query classes**
 - Location/namespace: `app/Queries/<Domain>/` → `App\Queries\<Domain>`
-- `<Domain>` is a PascalCase domain folder (`Timesheet`, `Leave`, `Overtime`) OR a portal-lowercase folder (`tk`, `hr`). Match the folder the sibling classes for your feature already use.
+- `<Domain>` is a **PascalCase domain-only** folder (`Timesheet`, `Leave`, `Overtime`, `Payroll`, `Holiday`, `Nsd`, `Shift`, `Separation`, `FinalPay`, `Biometric`, `Incident`, `TransactionLog`, …). The old portal-lowercase `tk/` and `hr/` Query folders have been folded into domain folders — do NOT create `App\Queries\tk\...` / `App\Queries\hr\...`. Match the folder the sibling classes for your feature already use.
 - Extends the empty base `App\Queries\Query`.
 - Signature: `public static function execute($params = [])` — called statically.
 
@@ -48,13 +48,14 @@ class GetLeavePolicyStatisticsQuery extends Query
 
 **Writes → Handler classes (the conductor)**
 - Location/namespace: `app/Handlers/<Domain>/` → `App\Handlers\<Domain>`
+- `<Domain>` is **PascalCase domain-only** — the old portal-lowercase `tk/` and `hr/` handler folders have been folded into domain folders (`Shift`, `Leave`, `Holiday`, `Nsd`, `Timesheet`, `FinalPay`, `Separation`, `Payroll`, …). Do NOT create `App\Handlers\tk\...` / `App\Handlers\hr\...`.
 - Extends the empty base `App\Handlers\Handler`.
 - Static `execute(...)` — args may be an array (`$request->all()`) or positional (`$employeeId, $date, $data`); match sibling handlers.
 - Wrap create/update/delete in `DB::transaction(function () { ... })`.
 - Orchestrates the operation: validates preconditions, coordinates the write, and delegates heavy or reusable sub-steps to **Actions** when the logic grows.
 
 **Actions → focused, reusable units (the musicians) — OPTIONAL**
-- Location/namespace: `app/Actions/<Domain>/` → `App\Actions\<Domain>` (mirror the Handler's domain/portal folder).
+- Location/namespace: `app/Actions/<Domain>/` → `App\Actions\<Domain>` (mirror the Handler's PascalCase domain folder, e.g. `Actions/Payroll`, `Actions/Shift`, `Actions/Timesheet`).
 - Extends the empty base `App\Actions\Action` (mirror the sibling base classes; match whatever the existing Action files use).
 - Same static-`execute(...)` convention as Handlers/Queries — called statically from within a Handler (or another Action).
 - **When to create one:** the Handler's `execute()` is getting big (rule of thumb: a cohesive block > ~40 lines per [Coding Standards](./coding-standards.md)#SRP), OR the same calculation/step is needed by more than one Handler. A single source of truth per [Duplicate Prevention](./duplicate-prevention.md).
