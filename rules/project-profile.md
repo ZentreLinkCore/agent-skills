@@ -15,20 +15,26 @@ This is the **ground-truth architecture reference** for this specific HRMS codeb
 
 ---
 
-## Backend Architecture: Domain Query/Handler Pattern
+## Backend Architecture: Query/Handler/Action Pattern
 
-This project uses a **thin-controller + Domain Query/Handler** pattern. Do NOT introduce Services, Repositories, or Action classes for new work (an `app/Services/` and `app/Domain/Services/` exist but are the exception — match the Query/Handler pattern for standard CRUD/read/write).
+> [!IMPORTANT]
+> **The `app/Domain/` folder is retired.** These classes now live at the **top level of `app/`** — `app/Queries/`, `app/Handlers/`, `app/Services/`, `app/Actions/` — with matching top-level namespaces (`App\Queries`, `App\Handlers`, `App\Services`, `App\Actions`). Do NOT reference `App\Domain\...` or write anything under `app/Domain/` for new work. (A few base/legacy files may still carry a stale `namespace App\Domain\Handlers;` mid-migration — the target is `App\Handlers`; don't copy the stale form.)
+
+This project uses a **thin-controller + Query/Handler pattern**, with **Actions** as an optional extension of Handlers. The mental model:
+- **Handler = the conductor** of the orchestra — orchestrates a full write/business operation.
+- **Action = an individual musician** — does one specific, focused job.
+- **Not every Handler needs an Action.** Reach for an Action only when a Handler's business logic starts getting large, or when a discrete step is reusable across other Handlers/parts of the system. Simple handlers keep their logic inline. See the Actions subsection below.
 
 **Reads → Query classes**
-- Location/namespace: `app/Domain/Queries/<Domain>/` → `App\Domain\Queries\<Domain>`
+- Location/namespace: `app/Queries/<Domain>/` → `App\Queries\<Domain>`
 - `<Domain>` is a PascalCase domain folder (`Timesheet`, `Leave`, `Overtime`) OR a portal-lowercase folder (`tk`, `hr`). Match the folder the sibling classes for your feature already use.
-- Extends the empty base `App\Domain\Queries\Query`.
+- Extends the empty base `App\Queries\Query`.
 - Signature: `public static function execute($params = [])` — called statically.
 
 ```php
-namespace App\Domain\Queries\tk;
+namespace App\Queries\tk;
 
-use App\Domain\Queries\Query;
+use App\Queries\Query;
 use App\Models\Leave;
 
 class GetLeavePolicyStatisticsQuery extends Query
@@ -40,11 +46,39 @@ class GetLeavePolicyStatisticsQuery extends Query
 }
 ```
 
-**Writes → Handler classes**
-- Location/namespace: `app/Domain/Handlers/<Domain>/` → `App\Domain\Handlers\<Domain>`
-- Extends the empty base `App\Domain\Handlers\Handler`.
+**Writes → Handler classes (the conductor)**
+- Location/namespace: `app/Handlers/<Domain>/` → `App\Handlers\<Domain>`
+- Extends the empty base `App\Handlers\Handler`.
 - Static `execute(...)` — args may be an array (`$request->all()`) or positional (`$employeeId, $date, $data`); match sibling handlers.
 - Wrap create/update/delete in `DB::transaction(function () { ... })`.
+- Orchestrates the operation: validates preconditions, coordinates the write, and delegates heavy or reusable sub-steps to **Actions** when the logic grows.
+
+**Actions → focused, reusable units (the musicians) — OPTIONAL**
+- Location/namespace: `app/Actions/<Domain>/` → `App\Actions\<Domain>` (mirror the Handler's domain/portal folder).
+- Extends the empty base `App\Actions\Action` (mirror the sibling base classes; match whatever the existing Action files use).
+- Same static-`execute(...)` convention as Handlers/Queries — called statically from within a Handler (or another Action).
+- **When to create one:** the Handler's `execute()` is getting big (rule of thumb: a cohesive block > ~40 lines per [Coding Standards](./coding-standards.md)#SRP), OR the same calculation/step is needed by more than one Handler. A single source of truth per [Duplicate Prevention](./duplicate-prevention.md).
+- **When NOT to:** small, single-purpose handlers keep their logic inline. Do not pre-emptively split every handler into actions.
+
+```php
+namespace App\Handlers\Payroll;
+
+use App\Handlers\Handler;
+use App\Actions\Payroll\ComputeStatutoryDeductionsAction;
+use Illuminate\Support\Facades\DB;
+
+class ProcessPayrollHandler extends Handler
+{
+    public static function execute($params = [])
+    {
+        return DB::transaction(function () use ($params) {
+            // ...orchestrate: the conductor delegates the reusable, heavy step to an Action
+            $deductions = ComputeStatutoryDeductionsAction::execute($params['employee_id']);
+            // ...persist payroll using $deductions
+        });
+    }
+}
+```
 
 **Controllers → thin dispatchers**
 - Location/namespace: `app/Http/Controllers/<portal>/` → `App\Http\Controllers\<portal>` (portals below).
