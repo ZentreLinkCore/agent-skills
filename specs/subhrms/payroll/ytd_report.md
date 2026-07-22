@@ -1,16 +1,16 @@
-# Spec — YTD Report (Year-to-Date payroll report)
+# Spec — YTD Report (Year-to-Date payroll report with BIR Tax Annualization)
 
-> **Kind:** Greenfield read-only report (page is a 4-line placeholder). Reads persisted payroll history; mirrors [payroll_summary.md](./payroll_summary.md).
-> **Portal:** Payroll. **Route:** `payroll/payroll-reports/ytd-report` (`payroll_payroll_reports_ytd_report`) — already registered → [ytd_report/YTDReport.vue](../../../resources/views/web/src/module/payroll/reports/pages/payroll_reports/ytd_report/YTDReport.vue).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md) (Domain Query/Handler, no API Resources).
+> **Kind:** Greenfield read-only report page. Reads persisted payroll history; incorporates detailed BIR tax calculations.
+> **Portal:** Payroll. **Route:** `payroll/payroll-reports/ytd-report` (`payroll_payroll_reports_ytd_report`) → [ytd_report/YTDReport.vue](../../../resources/views/web/src/module/payroll/reports/pages/payroll_reports/ytd_report/YTDReport.vue).
+> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md) (Domain Query/Handler pattern, no API Resources).
 
 ---
 
 ## 1. Purpose
 
-The **YTD Report** shows each employee's **year-to-date** payroll totals — cumulative earnings, deductions, and net pay across all processed pay periods in a calendar year — with per-employee drill-down and period breakdown. Payroll and employees use it for tax reconciliation, loan/benefit verification, and annualization inputs.
+The **YTD Report** shows each employee's **year-to-date** payroll totals and detailed **BIR Tax Annualization** computation. This includes cumulative regular earnings, non-taxable benefits, exclusions, taxable current compensation, previous employer histories, and progressive tax calculations (under TRAIN Law) across a calendar year.
 
-It reads the persisted `payroll_run_detail` produced by Payroll Processing ([timesheet_summary.md](./timesheet_summary.md)); it computes **no new payroll**, only **aggregates** across the year.
+It reads the persisted `payroll_run_detail` produced by Payroll Processing, along with previous employer values stored in `ytd_details`. It computes **no new payroll**, only **aggregates** and executes annualization calculations for tax reconciliation.
 
 ---
 
@@ -19,63 +19,79 @@ It reads the persisted `payroll_run_detail` produced by Payroll Processing ([tim
 ```text
 payroll_run_detail ──(join)── payroll_run ──(join)── payroll_period (filter: year_end = :year)
         │
+        ├──(left join)── ytd_details (previous employer details)
         ▼
-YTD REPORT  ──►  per employee: Σ gross, Σ each deduction (SSS/PhilHealth/Pag-IBIG/tax/loans), Σ net
-             ──►  per-period breakdown (drill-down), YTD totals footer, export
+YTD REPORT  ──►  Per employee: 30 columns mapping identity, earnings, non-taxable benefits,
+                 exclusions, taxable current employer, previous employer, and BIR tax calculations.
 ```
 
-Source: `payroll_run_detail` (fields per [timesheet_summary.md](./timesheet_summary.md) §6.2) joined to `payroll_run` → `payroll_period` (filter by `year_end`), and `vw_accounts_details` for employee display. Only **processed** periods contribute; typically **closed** (`pay_process_status = 1`) periods are the reportable set (offer a toggle to include drafts).
+### The 30 Report Columns:
+1. **Identity & Grouping:** Payroll Group, Emp No, Employee Name, Department, Tax Status, Employment Type
+2. **Gross Earnings:** Annual Gross Income
+3. **Non-Taxable Benefits:** 13th Month & Other Benefits (90K limit), De Minimis, Salaries & Other Forms of Comp, Total Non-Taxable
+4. **Exclusions:** Gov't Contributions (SSS + PhilHealth + Pag-IBIG) & Union Dues
+5. **Taxable Current Employer:** Taxable Basic Salary, 13th Month & Other Benefits, Salaries & Other Compensation, Gross Taxable Amount
+6. **Previous Employer Details:** Taxable Compensation, Non-Taxable, Additional Exclusion, 13th Month Exempt, De Minimis, Tax Withheld
+7. **BIR Tax Annual Computation:** Taxable Net Income, Bracket Minimum, Excess over Minimum, Tax Rate (%), Tax on Excess, Fixed Tax, Tax Due, Current YTD Withholding Tax, Tax Refund, Tax Payable
 
 ---
 
 ## 3. Target Files
 
-Frontend (fill the reserved page folder, self-contained sub-structure like the timekeeping report pages):
+Frontend:
 ```
 resources/views/web/src/module/payroll/reports/pages/payroll_reports/ytd_report/
 ├── index.ts
 ├── YTDReport.vue
-├── api/ytd_report.api.ts            # useYtdReportApi()
-├── composables/useYtdReport.ts      # year + filters + client pagination + export
-├── types/types.ytd_report.ts
-└── components/{YTDReportHeader.vue, YTDReportTable.vue}   # + reuse a breakdown modal
+├── api/ytd_report.api.ts            # useYtdReportApi() (Axios endpoints)
+├── composables/useYtdReport.ts      # year + filters + client pagination + totals calculations
+├── types/types.ytd_report.ts        # YtdEmployeeRow, YtdReportTotals, YtdReportResponse interfaces
+└── components/
+    ├── YTDReportHeader.vue          # Renders search, filter toolbar, and metrics
+    ├── YTDReportTable.vue           # Grouped 2-tier horizontal scroll table with click-and-drag
+    └── YTDBreakdownModal.vue        # Lists individual periodic paycheck breakdowns
 ```
 
-Backend (Domain pattern):
+Backend:
 ```
-app/Domain/Queries/Payroll/GetYtdReportQuery.php        # NEW
-app/Http/Controllers/payroll/PayrollReportsController.php # add method
-routes/api/payroll.php → Route::get('/payroll-reports/ytd', [PayrollReportsController::class, 'ytd']);
+app/Queries/Payroll/GetYtdReportQuery.php                 # Core database query
+app/Http/Controllers/payroll/PayrollReportsController.php # ytdReport endpoint
+routes/api/payroll.php                                    # Route registration
 ```
 
 ---
 
 ## 4. Backend — `GetYtdReportQuery`
 
-Extends `App\Domain\Queries\Query`, static `execute($params = [])`. Params: `year` (default current), plus optional `search`/`unit`. Steps:
-1. Resolve the target `year`; list `payroll_period` ids where `year_end = year` (optionally only `pay_process_status = 1`).
-2. Bulk-load `payroll_run_detail` for those periods, joined to `vw_accounts_details`, grouped by `idacct`.
-3. Per employee, sum `gross_pay`, each deduction column, `total_deductions`, `net_pay`; keep a per-period array for drill-down.
-4. Compute grand `totals` across the set.
-5. Return `{ year, years: [...distinct year_end], employees: [...], totals, count }`.
-
-Response mirrors [payroll_summary.md](./payroll_summary.md) §5.3 (add `year`/`years`). Bulk queries, no N+1.
+Extends `App\Queries\Query`, static `execute($params = [])`. Params: `year` (default current), `include_drafts` (bool), plus optional `search`/`department`. Steps:
+1. Resolve the target `year` and years list.
+2. Query employees (active plus historical employees with processed payrun rows in the selected year).
+3. Gather YTD totals per employee from regular pay cycles.
+4. Gather 13th Month Net Pays.
+5. Gather Previous Employer values from `ytd_details`.
+6. Load period-by-period paycheck breakdowns for modal drill-downs.
+7. Compute progressive tax tables under the TRAIN Law (`GetYearEndRosterQuery::computeAnnualTax` progressive tax table).
+8. Compute grand totals across the filtered set.
+9. Return `{ year, years, employees, totals, count }`.
 
 ---
 
 ## 5. Frontend Design
 
-- **Header** — title + **year** select (from `years`) + stat cards (Headcount / YTD Gross / YTD Deductions / YTD Net) + **Export** (CSV/print).
-- **Table** — Employee, YTD Gross, YTD SSS / PhilHealth / Pag-IBIG / Tax / Loans, YTD Total Deductions, **YTD Net**, row action → **breakdown modal** (per-period rows for the year). Peso via `formatCurrency`; wide table scrolls in its own `overflow-x-auto`. Totals footer from `totals`. Global `<Pagination>` (client-side), `<TableSkeleton>`, `<EmptyState>`.
-- **Filters:** search (name/empid), department — client-side over the loaded year set (debounced); year is the primary axis and re-fetches. Totals reflect the filtered set (label when filtered).
-- **Composable** mirrors [useTimesheetSummary](../../../resources/views/web/src/module/timekeeping/timesheet_reports/pages/timesheet_summary/composables/useTimesheetSummary.ts) (year instead of period range).
+- **Header Stat Cards:** Headcount, Annual Gross Income, Annual Tax Due, and Annual Refunds.
+- **Grouped Table Headers:** Visual 2-tier table headers grouping columns into:
+  - Employee Information
+  - Earnings
+  - Non-Taxable / Exempt Benefits
+  - Exclusions
+  - Taxable Current Compensation
+  - Previous Employer Details
+  - BIR Tax Annual Computation
+- **Interaction:** Horizontal drag scrolling, year re-fetch, client-side pagination, and XLS spreadsheet downloads.
 
 ---
 
-## 6. Edge Cases, Testing & Build Order
+## 6. Edge Cases & Testing
 
-- **No processed data for the year:** empty state, zero totals.
-- **Include-draft toggle:** default to closed periods only; document the toggle rather than silently mixing.
-- **Mid-year hire / separation:** YTD naturally reflects only periods with details — no special handling.
-- **Testing:** PHPUnit — `GetYtdReportQuery` sums per employee across a year, `year` filter, totals; empty year. Vitest — year switch refetch, filter+pagination, export contents.
-- **Build order (design-first):** Gate 1 hard-coded design (header/table/breakdown) for review → Gate 2 `GetYtdReportQuery` + controller + route, swap api to live. Depends on `payroll_run_detail` ([timesheet_summary.md](./timesheet_summary.md)).
+- **Include-Draft Toggle:** Controls whether unfinalized/draft payroll runs are aggregated.
+- **Progressive Tax Details:** Progressive computation details (bracket minimums, rates, fixed taxes) must calculate on the fly for both draft and processed runs to support preview and audit modes.
