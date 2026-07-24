@@ -18,6 +18,13 @@ Applicable to all frontend files, components, templates, stylesheet directories,
   - **Loaders**: Match existing spinner models, skeleton panels, or visual indicators.
 3. **Responsive Grid Alignment**: Build responsive templates using columns grids (e.g., `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`).
 4. **Dark Mode Integration**: Ensure all classes have active dark mode properties (e.g. `dark:...`) matching the project's styling system.
+5. **Portal Accent Color Standards**:
+   - **Employee**: Amber (`amber-600`)
+   - **Manager**: Red (`red-600`)
+   - **HR**: Emerald (`emerald-600`)
+   - **Timekeeping**: Blue (`blue-600`)
+   - **Payroll**: Cyan (`cyan-600`)
+   - **Admin**: **Enterprise Indigo / Slate (`indigo-600` / `slate-900`)** — *Strict Rule: Do NOT use violet or purple for Admin portal views, banners, active sidebar links, or controls.*
 
 ## Best Practices
 - **No Style Mixing**: Do not mix UI frameworks or introduce custom inline style blocks if the project uses a utility library like Tailwind CSS.
