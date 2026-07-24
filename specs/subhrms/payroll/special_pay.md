@@ -1,6 +1,7 @@
 # Spec — Special Pay (payroll processing cycle)
 
 > **Kind:** Greenfield (page is a 4-line placeholder). A **sibling cycle** of Regular Cycle — reuses the same processing infrastructure defined in [timesheet_summary.md](./timesheet_summary.md).
+> **⚠️ Hard dependency — cannot start yet:** the earnings source (`payroll_entry` table) does **not exist** in the system (only a `// → payroll_entry.id (future)` reference in the loan-schedule migration). This spec is **blocked** until the `payroll_entry` table is built ([batch_entries.md](./batch_entries.md)) and the special-earnings producer is in place ([bonus_special.md](./bonus_special.md)). Build those first.
 > **Portal:** Payroll. **Route:** `payroll/special-pay` (`payroll_special_pay`) — already registered → [special_pay/SpecialPay.vue](../../../resources/views/web/src/module/payroll/payroll_processing/pages/special_pay/SpecialPay.vue).
 > **`payroll_run.cycle = 'special'`** (the `payroll_run` table already carries a `cycle` column, unique per `(idpayperiod, cycle)`).
 > **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
@@ -31,7 +32,7 @@ Unlike Regular Cycle, Special Pay does **not** compute from `timesheet_summary` 
 
 ## 3. Backend (reuse + delta)
 
-Reuse the existing [GetPayrollProcessingRosterQuery](../../../app/Domain/Queries/Payroll/GetPayrollProcessingRosterQuery.php) and [ProcessPayrollHandler](../../../app/Domain/Handlers/Payroll/ProcessPayrollHandler.php) with a **`cycle` parameter** (currently hardcoded to `'regular'` — generalize it so `cycle='special'` resolves/creates the matching `payroll_run`).
+Reuse the existing [GetPayrollProcessingRosterQuery](../../../app/Queries/Payroll/GetPayrollProcessingRosterQuery.php) and [ProcessPayrollHandler](../../../app/Handlers/Payroll/ProcessPayrollHandler.php) with a **`cycle` parameter** (currently hardcoded to `'regular'` — generalize it so `cycle='special'` resolves/creates the matching `payroll_run`). Note: a `'retro'` cycle is already threaded through both classes — follow that precedent when adding `'special'`.
 
 - **Roster query (`cycle='special'`):** list active employees that have special earnings for the period (`payroll_entry` with `source in ('bonus','manual')` and `kind='earning'`), showing their special gross and processed status against the `special` run.
 - **Process handler (`cycle='special'`):** for each selected employee, `gross = Σ special earnings`, `deductions = applicable (statutory only if contribution flag set) + special deductions`, `net = gross − deductions`; upsert `payroll_run_detail` under the `special` run. Block when `pay_process_status = 1`.
