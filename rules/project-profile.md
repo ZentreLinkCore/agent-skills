@@ -109,6 +109,18 @@ public function getRequests(Request $request)
 
 ---
 
+## Database Schema Conventions
+
+> [!IMPORTANT]
+> **No DB-level foreign keys — index the relationship column instead.** This codebase has **zero** `->foreign()->references()` constraints. Referential integrity is enforced in the **Query/Handler layer**, not the database.
+
+- **Relationship columns**: use an `id`-prefixed name (`idacct`, `idpayperiod`, `idtranstype`, `idclass`, `idbonusrun`), typed `unsignedBigInteger`/`integer`, with a plain **`->index()`** — never `->foreign()`. Adding a real FK has repeatedly broken migrations (e.g. `payroll_entry.idacct` pointed a FK at a non-existent `account` table; the real table is **`accounts`** plural, and the view `vw_accounts_details.id` = `accounts.id`).
+- **Soft delete**: most tables use a **`status` column** (`0=Disable/Inactive, 1=Active`, sometimes with extra states) rather than Laravel `SoftDeletes`. Deleting a lookup row that's referenced by historical records (payroll, etc.) should be a `status=0` disable, not a hard delete. Only use the `SoftDeletes` trait when sibling tables in that domain already do.
+- **Always** add `timestamps()`. Index frequently filtered columns.
+- Lookup/reference tables (e.g. `transactionclass`, `transactiontype`) are pointed to by `id` from many other tables — **seed them by resolving the parent `id` via a stable key (e.g. `code`), never by hard-coding auto-increment ids.**
+
+---
+
 ## Portals & Route Prefixes
 
 `routes/api.php` is a thin **orchestrator**: public routes (login, biometric) + one `Route::middleware(['auth:sanctum'])->group(...)`. Inside that group, each portal's routes live in **its own file** under `routes/api/`, loaded with `Route::prefix('<portal>')->group(base_path('routes/api/<portal>.php'))`. Each portal file holds just its route bodies + its own controller `use` imports and inherits the prefix + `auth:sanctum` from the orchestrator — so URLs are identical to a single flat file.

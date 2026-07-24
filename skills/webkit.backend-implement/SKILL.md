@@ -212,7 +212,7 @@ routes/
 - **Reuse Before Create**: Always complete the System Awareness Phase (Steps 1–2) before deciding to create a new migration. If an existing table covers the requirement, use it directly.
 - **Do NOT Run Migrations Automatically**: Generate migration files and Eloquent models only when a new table is confirmed necessary. Explain that migrations must only be run upon explicit user request.
 - **No Duplicate Tables**: Never create a migration for a table name that already exists. Search `database/migrations/` for any prior `Schema::create('<table_name>')` definition before generating a new one.
-- **Optimization Standard**: Add indices on foreign keys and frequently filtered columns. Incorporate foreign key constraints, `SoftDeletes`, and timestamps. Avoid duplicate schema definitions.
+- **Optimization Standard**: Add `->index()` on relationship columns (e.g. `idacct`, `idpayperiod`, `idtranstype`, `idclass`) and frequently filtered columns, plus timestamps. **Do NOT add DB-level foreign key constraints (`->foreign()->references()`)** — this project has **zero** DB-level FKs; enforce referential integrity in the Query/Handler layer and just index the column instead. Adding `->foreign()` has repeatedly broken migrations here (e.g. an FK to a non-existent `account` table when the real one is `accounts`). For soft-delete, match sibling tables — most use a `status` column, not Laravel `SoftDeletes`. Avoid duplicate schema definitions.
 
 ### 2. Validation Standards
 - This project validates **inline** by default (`Request $request` → `$request->all()`). FormRequests are rare and flat in `app/Http/Requests/`. Only create/extend a FormRequest if the target controller already uses one — otherwise validate inline to match siblings.

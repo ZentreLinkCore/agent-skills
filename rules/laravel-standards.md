@@ -24,7 +24,8 @@ Applicable to all backend components, including Controllers, Models, FormRequest
   - **Reuse Before Create**: If an existing Eloquent model and its table already cover the feature's data, use them directly. Do NOT create a parallel table.
   - **No Duplicate Tables**: Never generate `Schema::create('<table>')` if that table already exists in any migration file. Search before creating.
   - Do NOT run migrations automatically. Scaffold migration files and Eloquent models and request the user to run them.
-  - Include indexes, foreign key constraints, soft deletes, and timestamps on tables.
+  - **Index relationship columns — do NOT add DB-level foreign key constraints.** This codebase has **zero** DB-level FKs (`->foreign()->references()`); referential integrity is enforced in the **Query/Handler layer**, not the database. On every relationship column (e.g. `idacct`, `idpayperiod`, `idtranstype`, `idclass`) add a plain `->index()` instead of `->foreign()`. Adding `->foreign()` has repeatedly broken migrations here (e.g. an `idacct` FK referencing a non-existent `account` table — the real table is `accounts`) and contradicts the established convention.
+  - Include **timestamps** on tables. For "soft delete", match sibling tables in the same domain: most use a **`status` column** (e.g. `0=Disable/Inactive, 1=Active`) rather than Laravel `SoftDeletes`. Only add the `SoftDeletes` trait if the sibling tables already use it.
   - Wrap create, update, delete, or batch actions inside database transactions (`DB::transaction`).
 5. **Validation Standards**: Match the detected validation style. If FormRequests are standard, create or extend them. Avoid inline validation unless it is the established codebase convention.
 6. **API Response Alignment**: Match the discovered API response layout. If API Resources are standard, wrap responses in matching resources. Reuse existing exception and error formatters.
