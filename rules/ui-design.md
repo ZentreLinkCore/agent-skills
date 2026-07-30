@@ -29,7 +29,10 @@ Applicable to all frontend files, components, templates, stylesheet directories,
 ## Best Practices
 - **No Style Mixing**: Do not mix UI frameworks or introduce custom inline style blocks if the project uses a utility library like Tailwind CSS.
 - **Micro-Transitions**: Apply smooth interactive states (`transition duration-200 hover:scale-[1.01]`) on buttons and cards.
+- **Table Drag-to-Scroll**: Wide data tables MUST support mouse drag-to-scroll (`cursor-grab active:cursor-grabbing select-none` + `@mousedown="startDrag"` with window `mousemove`/`mouseup` tracking) on their `overflow-x-auto` container.
+- **Government ID Column Formatting**: Statutory ID columns (SSS, PhilHealth, Pag-IBIG) MUST be formatted as straight, left-aligned, non-wrapping monospace text (`font-mono text-xs font-bold whitespace-nowrap flex items-center gap-1.5`) with an icon (`shrink-0`).
 
 ## AI Behavior Expectations
 - **Design Alignment**: The agent must inspect existing pages before building any UI views to ensure the generated blocks match the visual layout and padding standards.
 - **Minimal Style Diffs**: Only modify design variables or tailwind class strings required for the request.
+

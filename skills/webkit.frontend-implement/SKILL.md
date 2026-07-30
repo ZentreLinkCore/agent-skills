@@ -103,6 +103,7 @@ The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (ca
 5. **Route** → add `route/<feature>.routes.ts` (default-export `RouteRecordRaw[]`, lazy `() => import('../pages/...')`). It is auto-registered by the portal's `useApiWebRoute.ts` glob — do NOT edit the aggregator.
 6. **Barrel** → export the feature's surface (composables, api hook, routes) from `index.ts`.
 7. **Styling** → Tailwind only, portal accent color for this portal (see UI section), `bg-white dark:bg-slate-800` cards, dark-mode classes on everything.
+8. **Table Drag-to-Scroll & ID Formatting** → Wide data tables MUST support mouse drag-to-scroll on their `overflow-x-auto cursor-grab active:cursor-grabbing select-none` container (`@mousedown="startDrag"` with window `mousemove`/`mouseup` tracking). Statutory ID columns (SSS, PhilHealth, Pag-IBIG) MUST be formatted as straight, left-aligned, non-wrapping monospace text (`font-mono text-xs font-bold whitespace-nowrap flex items-center gap-1.5`) with an icon (`shrink-0`).
 
 ---
 
