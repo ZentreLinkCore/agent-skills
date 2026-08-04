@@ -13,13 +13,16 @@ Applicable to all file creation, component writing, database structuring, and ut
 ## Actionable Rules
 1. **Search Before Creation**: Before creating any new file or class, search the active module and global directories to check for existing:
   - Components (Tables, Buttons, Modals, Forms, Lists)
-  - Controllers, Services, Repositories, Actions
+  - Query classes (`App\Queries\<Domain>`), Handlers (`App\Handlers\<Domain>`), Actions (`App\Actions\<Domain>`) — this project's read/write layer, per [Project Profile](./project-profile.md)
+  - Controllers, Services, Repositories
   - Models, Eloquent entities, Database tables
   - Requests (FormRequests, validator schemas)
   - Policies, Gates, middlewares
   - API Resources, JsonResponse structures
   - Utilities, date helpers, formatting libraries
   - Composables, hooks
+
+  This applies at the method level too, not just whole files: before adding a new static method to a Query/Handler class, check sibling classes in the same domain (and `App\Queries\PayPeriod\HandlePayPeriodQuery` for anything period/timesheet/payroll-related) for a method that already does the job. Example: `GetTimesheetClosingPeriodsQuery` initially grew its own private method duplicating a window-function query (`ROW_NUMBER() OVER (PARTITION BY tk_process_status ...)`) that already existed in `HandlePayPeriodQuery::timesheet_periods()`. It was refactored to extract the shared logic into `HandlePayPeriodQuery::rawTimesheetPeriods()`, which both call sites now use.
 2. **Reuse & Extension Rules**: If a similar asset exists:
   - Reuse it directly.
   - Extend the existing file (e.g. adding a method, prop, or column) instead of creating a new duplicate file.
