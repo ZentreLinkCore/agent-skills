@@ -4,7 +4,7 @@
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `timekeeping/daily_monitoring` frontend module).
 > **Route:** `timekeeping/daily-monitoring` (`timekeeping_daily_monitoring`) — unchanged.
 > **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
-> **System Awareness:** Models reused (Timelog, AttendanceException, AttendanceDispute, AppAdjustment, AccountDetailVW); Tables reused only; Routes reused (`/timekeeping/resolution-center` linked to, not duplicated); New migration: **no**.
+> **System Awareness:** Models reused (Timesheet — the real, currently-populated source; Timelog exists but is unpopulated/future; AttendanceException, AttendanceDispute, AppAdjustment, AccountDetailVW); Tables reused only; Routes reused (`/timekeeping/resolution-center` linked to, not duplicated); New migration: **no**.
 
 ---
 
@@ -13,9 +13,9 @@
 `daily_monitoring` is the Timekeeper/HR "control room" view for **today**: live headcount/checked-in health, a real-time roster (Attendance Board), and a per-employee Daily Time Record explorer (DTR Explorer). It is being redesigned because:
 
 1. **Misplaced/incomplete standards** — the page hand-rolls native `<select>` dropdowns, has no pagination on the Attendance Board roster, and its wide tables don't support the mandatory drag-to-scroll behavior ([ui-design.md](../../rules/ui-design.md) Best Practices) that every sibling report/roster table in this portal already has.
-2. **A duplicate, non-integrated "Adjust Log" action** — every tab currently opens `DtrAdjustmentModal.vue`, which calls a **mock** `submitAdjustment()` that always fakes success and writes nothing real. This duplicates two features that **already exist and are fully wired**:
-   - Employees file real attendance corrections themselves via the employee portal's existing **Attendance Adjustment** tab (`employee/timekeeping_applications/.../AttendanceAdjustment.vue` → `TKApplicationController` → `AppAdjustment` model). Once approved, `HandleTimesheet` **auto-merges** the correction into the day's computed totals via the `adj_aa_*` breakdown fields — this is the "auto detect" the requester is referring to.
-   - Timekeepers already resolve attendance anomalies (missing clock-out, unexcused absence, etc.) in the existing, fully-wired **Resolution Center** (`timekeeping/resolution-center`, backed by `AttendanceException`/`AttendanceDispute` + `ResolutionCenterController`). Daily Monitoring's "Exceptions Alert Feed" + "Resolve Log" button is a parallel, disconnected re-implementation of that same job.
+2. **A duplicate, non-integrated "Adjust Log" action** — every tab currently opens `DtrAdjustmentModal.vue`, which calls a **mock** `submitAdjustment()` that always fakes success and writes nothing real. This duplicates a feature that **already exists and is fully wired, end to end, with real data flowing through it today**:
+   - Employees file real attendance corrections themselves via the employee portal's existing **Attendance Adjustment** tab (`employee/timekeeping_applications/.../AttendanceAdjustment.vue` → `TKApplicationController` → `AppAdjustment` model, **182 real rows in the DB**). Once approved (via the Manager portal's Approval Requests, per the org's configured Approver Matrix), `HandleTimesheet` **auto-merges** the correction into the day's computed totals via the `adj_aa_*` breakdown fields — this is the "auto detect" the requester is referring to.
+   - Timekeepers have a dedicated **Resolution Center** (`timekeeping/resolution-center`, reachable from the sidebar, backed by `AttendanceException`/`AttendanceDispute` + `ResolutionCenterController`) for attendance anomalies. Its CRUD plumbing is real and live — the frontend hits real endpoints, not mocks, and the tables hold real rows (5 exceptions, 4 disputes). **Caveat, verified in code:** the "Run Auto-Audit Scan" action that's supposed to *detect* new exceptions (`RunAutoAuditScanHandler`) is currently a **random simulator** — it picks a random active employee and a random issue type roughly 40% of the time, with zero analysis of real attendance data. There is no real detection engine yet (e.g. one that scans `timesheet` for missing punches or schedule deviations). Daily Monitoring's "Exceptions Alert Feed" + "Resolve Log" button was a parallel, disconnected re-implementation of that same (currently half-built) job — the fix here is still to link out to Resolution Center rather than duplicate it, but building the *real* detection engine is separate, future work, not something to fake a second time in Daily Monitoring either.
 
 The redesign's job is to strip out the duplicate action, adopt the project's real global components, and turn Daily Monitoring into what it should be: a **read-only monitoring surface** that links out to the real filing/resolution flows instead of re-implementing them.
 
@@ -28,7 +28,7 @@ The redesign's job is to strip out the duplicate action, adopt the project's rea
 The module is currently **100% mock data** (`daily_monitoring.api.ts` generates everything client-side) — it has never gone through Gate 2 (`webkit.backend-implement`).
 
 **Option A — Redesign only, keep the API layer mocked (Recommended)**
-- Fix layout/components/adjust-action removal now. Reshape the mock response field names to mirror the real backend fields they'll eventually come from (`empid`, `issue_type`, `severity`, `status` from `AttendanceException`; `ip_address`/`time_type` from `Timelog`) so the future Gate 2 pass is a pure api-file swap, per [vue-standards.md](../../rules/vue-standards.md) "Mirror Backend Fields".
+- Fix layout/components/adjust-action removal now. Reshape the mock response field names to mirror the real backend fields they'll eventually come from (`empid`, `issue_type`, `severity`, `status` from `AttendanceException`; `timein`/`timeout`/`late`/`ut`/`reghrs`/`acthrs` from `Timesheet` — **not** `Timelog`, see Section 3) so the future Gate 2 pass is a pure api-file swap, per [vue-standards.md](../../rules/vue-standards.md) "Mirror Backend Fields".
 
 | Pros | Cons |
 |---|---|
@@ -36,7 +36,7 @@ The module is currently **100% mock data** (`daily_monitoring.api.ts` generates 
 | Small, reviewable diff; no risk to live payroll/timekeeping data paths | Two-step delivery (design now, wire later) |
 
 **Option B — Redesign and wire the real backend in the same pass**
-- Also build `GetDailyAttendanceBoardQuery`, `GetDailyMonitoringDashboardQuery`, `GetEmployeeDtrQuery` reusing `Timelog`, `AttendanceException`/`GetExceptionsQuery`, `AccountDetailVW`.
+- Also build `GetDailyAttendanceBoardQuery`, `GetDailyMonitoringDashboardQuery`, `GetEmployeeDtrQuery` reusing `Timesheet` (the live, 3,817-row source), `AttendanceException`/`GetExceptionsQuery`, `AccountDetailVW`.
 
 | Pros | Cons |
 |---|---|
@@ -94,15 +94,16 @@ The module is currently **100% mock data** (`daily_monitoring.api.ts` generates 
 
 ## 3. Database
 
-No new tables/columns. Existing tables this feature will eventually read from (Gate 2, per Decision 1):
+No new tables/columns. Existing tables this feature will eventually read from (Gate 2, per Decision 1) — **row counts verified against the live DB**, since two of these tables looked interchangeable on paper but are not:
 
-| Table | Model | Used for |
-|---|---|---|
-| `timelogs` | `Timelog` | Raw clock-in/out punches → Attendance Board clock-in/out, device/IP; DTR Explorer daily rows |
-| `attendance_exceptions` | `AttendanceException` | Exceptions preview feed (already fully modeled + queried by `GetExceptionsQuery`) |
-| `attendance_disputes` | `AttendanceDispute` | N/A directly on this page — owned by Resolution Center |
-| `app_adjustment` | `AppAdjustment` | Source of truth for the "Adjusted" auto-detect indicator (via `HandleAttendanceAdjustmentQuery`) |
-| `vw_accounts_details` | `AccountDetailVW` | Employee directory (name, unit, position) — already the standard join used across the portal |
+| Table | Model | Row count (verified) | Used for |
+|---|---|---|---|
+| `timesheet` | `Timesheet` | **3,817** — the real, currently-active source | Attendance Board clock-in/out (`timein`/`timeout`/`timein2`/`timeout2`), late/UT/hours (`late`, `ut`, `reghrs`, `acthrs`); DTR Explorer daily rows. This is what `HandleTimesheetQuery` and every payroll/timesheet calc in the app actually reads today. |
+| `timelogs` | `Timelog` | **0** — schema exists, nothing populates it yet | A future real-time/biometric punch-log table (has `ip_address`, `time_type`). Not a current data source — do **not** point Gate 2 at this table. The mock's "Device"/"IP" columns have no real backing field today (`Timesheet` has no device/IP columns); that data point stays fabricated until `timelogs` is actually populated by a future biometric integration. |
+| `attendance_exceptions` | `AttendanceException` | 5 (real, but seeded by manual/random test runs — see Section 1 caveat) | Exceptions preview feed (already modeled + queried by `GetExceptionsQuery`) |
+| `attendance_disputes` | `AttendanceDispute` | 4 | N/A directly on this page — owned by Resolution Center |
+| `app_adjustment` | `AppAdjustment` | 182 — heavily used, real | Source of truth for the "Adjusted" auto-detect indicator (via `HandleAttendanceAdjustmentQuery`) |
+| `vw_accounts_details` | `AccountDetailVW` | — | Employee directory (name, unit, position) — already the standard join used across the portal |
 
 ---
 
@@ -110,11 +111,11 @@ No new tables/columns. Existing tables this feature will eventually read from (G
 
 **None in this pass** (see Decision 1 — Option A). `daily_monitoring.api.ts` stays mocked, but its mock field names are reshaped to match the tables above:
 
-- Attendance Board rows: `empid`, `fullname`, `unit`, `position`, `shift`, `clock_in`, `clock_out`, `status`, `time_type`/`device`, `ip_address`.
+- Attendance Board rows: `empid`, `fullname`, `unit`, `position`, `shift`, `timein`/`timeout` (mirroring `Timesheet`'s real columns — keep the display labels "Clock-In"/"Clock-Out" in the UI, but the underlying field names should match what Gate 2 will actually return), `status`. Drop `device`/`ip` from the mock's pretense of being real — either omit the column for now, or keep it visually but label it clearly as unavailable until `timelogs` is populated (Timekeeper's call; default to omitting rather than showing fabricated device/IP values).
 - Exceptions feed rows: `id` (`EXC-{id}` format, matching `GetExceptionsQuery`), `empid`, `fullname`, `unit`, `issue_type`, `date`, `description`, `severity`, `status`.
 - DTR day rows: add a `has_adjustment: boolean` mock field (stubbed `false`/`true` per row) so the frontend indicator has something to bind to now, and a one-line wiring note for Gate 2: populate it from `HandleAttendanceAdjustmentQuery::checkApproved($date, $idacct)` — do not write a new detection method.
 
-When a follow-up backend spec is written, it should reuse `GetExceptionsQuery` (or a thin sibling in the same `App\Queries\Timesheet` namespace) rather than introducing a parallel exceptions query — per [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+When a follow-up backend spec is written, it should reuse `HandleTimesheetQuery`/`Timesheet` for attendance data and `GetExceptionsQuery` (or a thin sibling in the same `App\Queries\Timesheet` namespace) for exceptions — rather than introducing parallel queries or pointing at the still-empty `timelogs` table — per [duplicate-prevention.md](../../rules/duplicate-prevention.md). Building a *real* auto-audit detection engine (scanning `timesheet` for missing punches/schedule deviations to replace `RunAutoAuditScanHandler`'s random simulator) is a separate, standalone piece of work — it belongs to Resolution Center's own backlog, not this module's spec.
 
 ---
 
@@ -183,6 +184,7 @@ DailyMonitoring.vue
 
 ## 8. Out of Scope (Future Specs)
 
-- Gate 2 backend wiring for this module (`GetDailyAttendanceBoardQuery`, `GetDailyMonitoringDashboardQuery`, `GetEmployeeDtrQuery`, reusing `Timelog`/`AttendanceException`/`HandleAttendanceAdjustmentQuery` as scanned in Section 3–4).
+- Gate 2 backend wiring for this module (`GetDailyAttendanceBoardQuery`, `GetDailyMonitoringDashboardQuery`, `GetEmployeeDtrQuery`, reusing `Timesheet`/`AttendanceException`/`HandleAttendanceAdjustmentQuery` as scanned in Section 3–4 — **not** `Timelog`, which is unpopulated).
 - Adding `route.query` initial-filter support to `useResolutionCenter.ts` for per-row deep-linking from the Exceptions preview (only needed if Decision 3's per-row deep link is confirmed wanted).
-- Any change to the Resolution Center or employee-portal Attendance Adjustment filing flow themselves — both are treated as stable, already-correct dependencies here.
+- Building a real auto-audit detection engine to replace `RunAutoAuditScanHandler`'s random simulator — this is Resolution Center's own gap, not something Daily Monitoring should attempt to solve or fake a second version of.
+- Any change to the Resolution Center or employee-portal Attendance Adjustment filing flow themselves — both are treated as stable, already-correct dependencies here (their plumbing is real; only Resolution Center's detection *input* is currently a stub, which is a backend-internal concern, not a UI concern).
