@@ -19,7 +19,7 @@ Applicable to all frontend files, components, templates, stylesheet directories,
 3. **Responsive Grid Alignment**: Build responsive templates using columns grids (e.g., `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`).
 4. **Dark Mode Integration**: Ensure all classes have active dark mode properties (e.g. `dark:...`) matching the project's styling system.
 5. **Portal Accent Color Standards**:
-   - **Employee**: Amber (`amber-600`)
+   - **Employee**: **Golden Chestnut (`#CB793A` light accent / `#E2A35A` dark-mode accent / `#9C5A22` strong)** — CSS vars `--color-module-employee*` in `resources/css/theme.css`; use arbitrary values (`bg-[#CB793A]`, `text-[#CB793A]`, etc.) or the `.badge-employee` / `.text-module-employee` / `.nav-link-active-employee` utility classes rather than any Tailwind named color. `#CB793A` alone is under 4.5:1 against white text and against its own light badge tint — use the **strong** `#9C5A22` shade (already wired into the utility classes above) anywhere text/icons sit directly on the light accent or its tint; reserve plain `#CB793A` for borders, decorative fills, and icons on plain white/slate cards.
    - **Manager**: Red (`red-600`)
    - **HR**: Emerald (`emerald-600`)
    - **Timekeeping**: Blue (`blue-600`)
