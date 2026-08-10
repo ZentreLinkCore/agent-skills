@@ -26,7 +26,7 @@ The agent MUST read, load, and follow these rules files:
 
 ## Specs
 
-Feature designs live in [.agents/specs/](./specs/) (e.g. [.agents/specs/subhrms/](./specs/subhrms/)). **When a spec exists for the feature you're building, it is the primary source of truth** — the implement skills read it and build to it (tables, queries, handlers, routes, API contract on the backend; layout, components, filters, pagination, types on the frontend). The spec supersedes ad-hoc design decisions; only a rule in [.agents/rules/](./rules/) overrides it, and any genuine conflict should be flagged.
+Feature designs live in [.agents/specs/](./specs/) (under project/repo-specific folders e.g. [.agents/specs/scaleup/](./specs/scaleup/) or [.agents/specs/subhrms/](./specs/subhrms/)). **When a spec exists for the feature you're building, it is the primary source of truth** — the implement skills read it and build to it (tables, queries, handlers, routes, API contract on the backend; layout, components, filters, pagination, types on the frontend). The spec supersedes ad-hoc design decisions; only a rule in [.agents/rules/](./rules/) overrides it, and any genuine conflict should be flagged.
 
 ## Workflow Skills
 

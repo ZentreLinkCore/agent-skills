@@ -29,7 +29,7 @@ This skill is the **Specification Phase** of the AI development workflow. It tur
                │
                ▼
    Spec Document (saved to
-   .agents/specs/subhrms/<portal>/<feature>.md
+   .agents/specs/<repo_name>/<portal>/<feature>.md
     — see Phase 6)
                │
                ▼
@@ -141,7 +141,7 @@ Always mark the recommended option and give a short rationale. When a decision i
 
 ## Phase 6 — Spec Document Structure
 
-Compile everything into a single markdown file using this standard format (modeled on the existing specs in `.agents/specs/subhrms/`):
+Compile everything into a single markdown file using this standard format (modeled on existing specs under `.agents/specs/<repo_name>/`):
 
 ```markdown
 # Spec — <Feature Name>
@@ -184,7 +184,8 @@ Compile everything into a single markdown file using this standard format (model
 
 Displaying the spec in chat is not enough — the implement skills run in separate sessions.
 
-- Write the full spec to `.agents/specs/subhrms/<portal>/<feature_snake_case>.md` (e.g. `.agents/specs/subhrms/payroll/retro_active.md`). Create the directory if it doesn't exist.
+- **Determine the repo name / project name**: Detect the repository or project folder name (in lower-case, e.g. `ScaleUP` -> `scaleup`, `SubHRMS` -> `subhrms`).
+- Write the full spec to `.agents/specs/<repo_name>/<portal>/<feature_snake_case>.md` (e.g. `.agents/specs/scaleup/payroll/retro_active.md`). Create the directory if it doesn't exist.
 - Use the portal folder matching the target portal and a `snake_case` filename derived from the feature name, to sit alongside the existing specs.
 - If a spec for the same feature already exists, **update it in place** rather than creating a near-duplicate ([duplicate-prevention.md](../../rules/duplicate-prevention.md), [incremental-generation.md](../../rules/incremental-generation.md)).
 
@@ -194,5 +195,5 @@ Displaying the spec in chat is not enough — the implement skills run in separa
 
 At the end, suggest next steps, **always including the saved spec path** so the next skill loads it directly instead of relying on chat memory:
 
-- "To build the frontend from this spec (design-first, hard-coded data): `/webkit.frontend-implement <target_path> using .agents/specs/subhrms/<portal>/<feature>.md`"
-- "To build the backend and wire the live data: `/webkit.backend-implement <target_path> using .agents/specs/subhrms/<portal>/<feature>.md`"
+- "To build the frontend from this spec (design-first, hard-coded data): `/webkit.frontend-implement <target_path> using .agents/specs/<repo_name>/<portal>/<feature>.md`"
+- "To build the backend and wire the live data: `/webkit.backend-implement <target_path> using .agents/specs/<repo_name>/<portal>/<feature>.md`"
