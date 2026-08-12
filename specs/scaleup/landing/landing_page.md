@@ -104,6 +104,8 @@ This is therefore a clean **Greenfield** build: a new `landing` frontend module,
 
 **Recommendation:** Option A. The branding doc is the explicit source of truth for this exercise and its Color Palette section defines a light theme with specific hex values — use it as documented, not the previous (now superseded) dark direction.
 
+> **2026-08-11 update — direction changed to Option B-style dark hero.** A stakeholder-provided Figma prototype (`test-ui/Design SaaS Authentication Experience`) was adopted verbatim for the Landing Page: dark (`slate-950`) Hero, Analytics Showcase, and CTA sections alternating with light (`white`/`slate-50`) Features, Growth Journey, Community, Business Planning, Testimonials, Pricing, and FAQ sections. All hex values used (`#2563EB`, `#10B981`, `#8B5CF6`, `#F59E0B`, `#06B6D4`, and the full slate scale) are 1:1 matches for Tailwind's default `blue/emerald/violet/amber/cyan/slate` tokens, so the implementation uses plain Tailwind utilities rather than arbitrary hex. The Auth/Onboarding/Dashboard/Global Layout specs' light-theme decisions are **not** affected by this — this update is scoped to the public Landing Page only. Section 5.3 below has been extended with the new sections the Figma design introduced (Analytics Showcase, Community, Business Planning, Testimonials, Pricing, FAQ).
+
 > **Typeface note:** the branding doc specifies **Inter**. The repo's current `vite.config.js`/`app.css` has `laravel-vite-plugin/fonts` wired to **"Instrument Sans"** (a leftover from the prior implementation), not Inter. Reconciling the two is a Design System spec concern (font tokens); this spec assumes Inter per the branding doc and flags the mismatch rather than silently picking one.
 
 ---

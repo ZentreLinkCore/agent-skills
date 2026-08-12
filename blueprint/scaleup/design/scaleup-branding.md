@@ -4,11 +4,19 @@ Your task is to design the complete product foundation for a modern SaaS platfor
 
 # Project Overview
 
-ScaleUP is a Business Operating System (Business OS) that helps entrepreneurs, startups, small businesses, and organizations manage their operations, understand their performance, plan strategically, and scale sustainably.
+ScaleUP is a Business Operating System (Business OS) and Business Community Platform, developed by ZentreLink, that helps entrepreneurs, startups, small businesses, and organizations manage their operations, understand their performance, plan strategically, and scale sustainably.
 
 ScaleUP is NOT an accounting software.
 
 Accounting and financial tracking are only part of the platform.
+
+The product is built on two connected experiences (see `docs/PLATFORM_ARCHITECTURE.md`):
+
+• **Community Platform (Free)** — every registered user's default home: profile, network, feed, connections, messaging, and opportunity discovery. No Organization required.
+
+• **Organization Workspace (Subscription)** — an optional, subscription-based layer unlocked when a user creates an Organization: dashboard, business management, planning, reports, analytics, and team collaboration.
+
+Every design decision must keep this split legible: what is free and open, versus what requires an active Organization subscription.
 
 The platform's mission is to help businesses:
 
@@ -320,9 +328,7 @@ Do not use photos.
 
 ## 5. Onboarding
 
-After registration.
-
-Create onboarding flow.
+After registration, every user completes the **Individual onboarding** — this is the only onboarding required to use ScaleUP.
 
 Step 1
 
@@ -330,23 +336,41 @@ Welcome
 
 Step 2
 
-Create Business
-
-or
-
-Join Existing Business
+Build Your Profile (identity, experience, interests)
 
 Step 3
 
-Business Information
+Follow Organizations & Find Connections
 
 Step 4
 
+Finish Setup → Land in the Community Feed
+
+Creating an Organization is a separate, optional flow triggered later from within the product — never a forced step in registration.
+
+### Organization Setup (Optional, Subscription Flow)
+
+Triggered when an Individual chooses to create an Organization.
+
+Step 1
+
+Create Organization or Join Existing Organization
+
+Step 2
+
+Business Information
+
+Step 3
+
 Choose Industry
+
+Step 4
+
+Business Size
 
 Step 5
 
-Business Size
+Choose Subscription Plan
 
 Step 6
 
@@ -354,13 +378,35 @@ Invite Team
 
 Step 7
 
-Finish Setup
+Finish Setup → Land in the Business Dashboard
 
 --------------------------------------------------
 
 ## 6. Dashboard Concept
 
-Do NOT design a bookkeeping dashboard.
+Two distinct home views, matching the two experiences. Do not blend them into one screen.
+
+### Community Home (Individual — Free)
+
+The default landing view for every user, with or without an Organization.
+
+Sections:
+
+Community Feed
+
+Profile Summary & Network Growth
+
+Suggested Connections
+
+Followed Organizations
+
+Opportunities
+
+Notifications
+
+### Business Dashboard (Organization Workspace — Subscription)
+
+Only reachable after creating and subscribing an Organization. Do NOT design a bookkeeping dashboard.
 
 Design a Business Operating System dashboard.
 
@@ -402,15 +448,15 @@ Design a reusable application layout.
 
 Top Navigation
 
-Left Sidebar
+Left Sidebar (context-aware: Community items for every user, Workspace items only when an Organization is active)
 
-Workspace
+Community / Workspace Switch (only shown once the user has at least one Organization)
 
 Notification Center
 
 User Profile
 
-Organization Switcher
+Organization Switcher (hidden for users with no Organization)
 
 Theme Switch
 

@@ -1,110 +1,95 @@
 # ScaleUP Product Roadmap
 
-## 🌱 Phase 1 — Foundation (MVP)
-**Goal:** Build the foundation for business management.
+> Aligned with [`docs/PRODUCT_ROADMAP.md`](../docs/PRODUCT_ROADMAP.md). ScaleUP is a Business Operating System built on two connected experiences: a free **Community Platform** every registered user gets by default, and a subscription-based **Organization Workspace** unlocked when a user creates an Organization. See [`docs/PLATFORM_ARCHITECTURE.md`](../docs/PLATFORM_ARCHITECTURE.md) for how they fit together.
+
+## 🌱 Phase 1 — Foundation: Community & Identity
+**Goal:** Establish the Community Platform as a standalone, valuable product for every registered user. No Organization or subscription required.
 
 **Core Features**
 - User Registration & Authentication
-- Organization / Business Setup
-- User Roles & Permissions
-- Dashboard
+- Individual Accounts (default identity for every user)
+- Professional Profiles
+- Community Feed
+- Business Connections & Networking
+- Messaging
+- Notifications
+- Opportunity Discovery
+- Following Organizations
+
+**Outcome**
+Every user gets real value from ScaleUP — networking, content, and opportunity — without ever creating an Organization.
+
+---
+
+## 📈 Phase 2 — Activation: Organizations & Workspace
+**Goal:** Give businesses a reason to formalize on ScaleUP by unlocking a subscription-based Organization Workspace with real operational value.
+
+**Features**
+- Organization Creation
+- Subscription Management
+- Business Dashboard
+- Core Business Management
 - Sales Tracking
 - Expense Tracking
 - Transaction Management
-- Financial Overview
 - Basic Reports
-- Profile & Settings
+- Team Management
+- Organization Settings
 
 **Outcome**
-Businesses can manage their daily financial activities and understand their current business performance.
+Businesses can create an Organization, subscribe, and manage their daily operations inside a dedicated workspace — while keeping full access to their individual community presence.
 
 ---
 
-## 📈 Phase 2 — Business Planning
-**Goal:** Help businesses plan for sustainable growth.
+## 📊 Phase 3 — Depth: Planning, Reporting & Analytics
+**Goal:** Deepen the Organization Workspace with the tools businesses need to plan and measure growth deliberately.
 
 **Features**
-- Business Goals
-- Objectives & KPIs
-- Budget Planning
-- Strategic Planning
+- Business Goals & KPIs
+- Budget & Strategic Planning
 - Growth Tracking
-- Business Calendar
-- Business Notes
-- Milestone Tracking
-
-**Outcome**
-Businesses can plan, monitor, and measure long-term growth.
-
----
-
-## 📊 Phase 3 — Business Intelligence
-**Goal:** Turn business data into valuable insights.
-
-**Features**
 - Advanced Analytics
-- Financial Insights
-- Performance Trends
+- Financial Insights & Performance Trends
 - Business Health Score
 - Forecasting
-- AI-powered Recommendations
-- Custom Reports
-- Executive Dashboard
+- Custom & Executive Reports
 
 **Outcome**
-Business owners gain deeper insights to support better decision-making.
+Organizations move from simply operating on ScaleUP to actively planning and measuring growth through it.
 
 ---
 
-## 🤝 Phase 4 — Business Community
-**Goal:** Build a collaborative business ecosystem.
+## 🤝 Phase 4 — Expansion: Ecosystem & Future Modules
+**Goal:** Strengthen the connective tissue between the Community Platform and the Organization Workspace, and extend the workspace with new business modules. See [`docs/specifications/future`](../docs/specifications/future/).
 
 **Features**
-- Business Profiles
-- Organization Directory
-- Business Connections
-- Community Discussions
-- Knowledge Sharing
-- Events
-- Business Groups
-- Collaboration Opportunities
-
-**Outcome**
-Businesses can connect, collaborate, and grow together.
-
----
-
-## 💼 Phase 5 — Business Opportunities
-**Goal:** Create opportunities beyond business management.
-
-**Features**
-- Business Proposal Publishing
-- Partnership Opportunities
-- Investor Connections
-- Mentorship Programs
+- Deeper integration between community activity and Organization presence
+- Community Discussions & Knowledge Sharing
+- Business Groups & Events
+- Expanded Opportunity Types (partnerships, investment, hiring)
+- Business Proposal Publishing & Startup Showcase
+- Investor & Mentor Connections
 - Business Matching
-- Startup Showcase
 
 **Outcome**
-Businesses gain access to funding, partnerships, and growth opportunities.
+More organizations, more opportunities, more reasons for individuals and businesses to stay engaged — compounding the value of the ecosystem.
 
 ---
 
-## 🌍 Phase 6 — Business Ecosystem
-**Goal:** Become a complete Business Operating System.
+## 🌍 Phase 5 — Ecosystem Maturity
+**Goal:** Become a comprehensive Business Operating System supporting businesses from startup to enterprise.
 
 **Features**
 - Multi-Business Management
 - Marketplace Integrations
-- API Platform
-- Third-Party Integrations
+- API Platform & Third-Party Integrations
 - Automation
 - AI Business Assistant
 - Enterprise Solutions
 - Global Business Network
 
 **Outcome**
-ScaleUP evolves into a comprehensive ecosystem supporting businesses from startup to enterprise.
+ScaleUP operates as the connective infrastructure between the people, businesses, and opportunities that drive sustainable growth.
 
 ---
 
@@ -113,24 +98,25 @@ ScaleUP evolves into a comprehensive ecosystem supporting businesses from startu
 ```
 ScaleUP
 
-Foundation
-    ↓
-Business Management
-    ↓
-Business Planning
-    ↓
-Business Intelligence
-    ↓
-Business Community
-    ↓
-Business Opportunities
-    ↓
-Business Operating System
+Community & Identity   (free, foundation)
+        ↓
+Organizations & Workspace   (subscription, activation)
+        ↓
+Planning & Intelligence   (depth)
+        ↓
+Ecosystem & Future Modules   (expansion)
+        ↓
+Complete Business Operating System
 ```
 
 ---
 
+## Guiding Constraint
+
+At every phase, the Community Platform remains free and the Organization Workspace remains subscription-based. New capability is added by deepening each experience, not by shifting the line between them — see [ADR-002](../docs/decisions/ADR-002-subscription-model.md).
+
 ## Guiding Principles
+
 Every new feature added to ScaleUP should support at least one of these goals:
 
 - **Manage** — Simplify daily business operations.
