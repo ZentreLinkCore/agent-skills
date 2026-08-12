@@ -40,7 +40,7 @@ Before writing any code:
 2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
 3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
 4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
-5. **Branch Discipline**: Confirm work is happening on a `bugfix/` or `hotfix/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this issue, continue there — don't create a new one unnecessarily.
+5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. If on `main`/`master`, **create and switch to a `bugfix/` (or `hotfix/`) branch now** — do not merely confirm one is needed and proceed. Already on a correctly-named branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
 
 ---
 

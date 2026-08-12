@@ -39,7 +39,7 @@ Before restructuring anything:
 1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it — its scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
 2. **Locate Target Files**: Parse the command argument path, or the report's "Affected Files" section if one was loaded, or search the workspace for the described duplication/drift.
 3. **Verify Constraints**: Review relevant project rules in `.agents/rules/`, particularly [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), and [Duplicate Prevention](../../rules/duplicate-prevention.md).
-4. **Branch Discipline**: Confirm work is happening on a `refactor/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this cleanup, continue there.
+4. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. If on `main`/`master`, **create and switch to a `refactor/` branch now** — do not merely confirm one is needed and proceed. Already on a correctly-named branch for this cleanup? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
 
 ---
 

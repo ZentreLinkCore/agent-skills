@@ -86,9 +86,22 @@ After the hard-coded build renders cleanly, explicitly ask the user to review th
 
 ---
 
-## Branch Discipline
+## Phase 0 — Branch Gate (BLOCKING)
 
-Before scaffolding anything, confirm work is happening on a `feature/` branch per [Git Workflow Standards](../../rules/git-workflow.md), not directly on `main`/`master`. If already on a correctly-named branch for this module, continue there instead of creating a new one.
+> [!CAUTION]
+> **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to a `feature/` branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
+>
+> This is not "confirm a branch exists". Confirming has repeatedly failed: the agent checks, sees `main`, notes it, and implements anyway. **Create the branch.**
+
+```bash
+git rev-parse --abbrev-ref HEAD          # where am I?
+git status --short                       # what am I carrying over?
+git checkout -b feature/<domain>-<feature-kebab>
+```
+
+Already on a correctly-named branch for this work? Continue there — do not open a second one. On a branch for *different* work, or detached HEAD? **Stop and ask.** Then state the branch you are on before writing anything.
+
+Committing remains the user's call. This gate only guarantees the work is isolated and revertible.
 
 ---
 
