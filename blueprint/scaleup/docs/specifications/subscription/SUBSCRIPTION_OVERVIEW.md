@@ -1,4 +1,4 @@
-# Subscription Overview Specification
+# Subscription Specification
 
 ## Purpose
 

@@ -2,13 +2,23 @@
 
 Community specifications cover the free, always-available experience every registered Individual receives. No Organization or subscription is required for anything in this scope.
 
-## Scope
+---
 
-- **Community Feed** — the shared stream of business updates, insights, and discussions.
-- **Business Connections** — professional relationships between individuals and organizations.
-- **Opportunities** — discovery of partnerships, collaborations, hiring, and other business openings.
-- **Discussions** — community conversation around business topics.
-- **Following Organizations** — how individuals track organizations of interest.
+## Specifications
+
+| Document | Purpose |
+| :--- | :--- |
+| [COMMUNITY_FEED.md](./COMMUNITY_FEED.md) | The primary discovery and engagement space of the platform |
+| [POSTS.md](./POSTS.md) | Business-focused content published by individuals and organizations |
+| [COMMENTS.md](./COMMENTS.md) | Discussion around community posts |
+| [REACTIONS.md](./REACTIONS.md) | Lightweight feedback on community content |
+| [CONNECTIONS.md](./CONNECTIONS.md) | Mutual professional relationships between individuals |
+| [FOLLOWING.md](./FOLLOWING.md) | One-way subscription to public updates from users and organizations |
+| [MESSAGING.md](./MESSAGING.md) | Private communication between members of the ecosystem |
+| [OPPORTUNITIES.md](./OPPORTUNITIES.md) | Discovery of partnerships, collaborations, hiring, and other business openings |
+| [ORGANIZATION_DISCOVERY.md](./ORGANIZATION_DISCOVERY.md) | How users discover organizations participating in ScaleUP |
+
+---
 
 ## Design Constraint
 

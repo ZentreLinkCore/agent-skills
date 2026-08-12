@@ -4,11 +4,15 @@
 
 The Audit Logging module records important system and security actions to provide accountability, traceability, and operational visibility.
 
+---
+
 ## Overview
 
 Audit logs are intended for security-sensitive, administrative, and business-critical actions.
 
 Audit logging is separate from normal application activity history.
+
+---
 
 ## Potential Audited Actions
 
@@ -53,6 +57,8 @@ Audit logging is separate from normal application activity history.
 - Security setting changed
 - Administrative access
 
+---
+
 ## Audit Record
 
 An audit event may contain:
@@ -69,6 +75,8 @@ An audit event may contain:
 - Source
 - Additional Context
 
+---
+
 ## Rules
 
 - Audit records should be append-oriented.
@@ -78,6 +86,8 @@ An audit event may contain:
 - Audit records should identify the organization context where applicable.
 - Critical audit events should be retained according to defined retention policies.
 
+---
+
 ## Audit Results
 
 Possible results:
@@ -85,6 +95,8 @@ Possible results:
 - Success
 - Failure
 - Denied
+
+---
 
 ## Access
 
@@ -96,9 +108,13 @@ Audit logs may be accessible to:
 
 Access must itself be auditable.
 
+---
+
 ## Privacy
 
 Audit logs may contain personal or organizational information and must be protected accordingly.
+
+---
 
 ## Edge Cases
 
@@ -108,6 +124,8 @@ Audit logs may contain personal or organizational information and must be protec
 - Resource is deleted after an audit event exists.
 - Audit log storage becomes temporarily unavailable.
 
+---
+
 ## Future Enhancements
 
 - Security event dashboard
@@ -115,6 +133,8 @@ Audit logs may contain personal or organizational information and must be protec
 - Exportable audit reports
 - Compliance reporting
 - Automated security alerts
+
+---
 
 ## Success Criteria
 

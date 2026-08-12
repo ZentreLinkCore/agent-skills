@@ -2,14 +2,20 @@
 
 Core specifications cover the shared foundation used by both the Community Platform and the Organization Workspace. Every capability documented here applies regardless of whether a user has created an Organization.
 
-## Scope
+---
 
-- **Identity & Accounts** — the Individual Account as the default identity for every registered user, and how it relates to Organization membership.
-- **User Profiles** — the professional profile every user builds, independent of any Organization.
-- **Messaging** — direct communication between members of the ecosystem.
-- **Notifications** — how users stay informed of relevant activity across both experiences.
+## Specifications
 
-## Relationship to Other Specifications
+| Document | Purpose |
+| :--- | :--- |
+| [AUTHENTICATION.md](./AUTHENTICATION.md) | Secure identity and account access — registration, login, verification, and password management |
+| [USER_PROFILE.md](./USER_PROFILE.md) | The professional identity every user builds, independent of any Organization |
+| [NOTIFICATION.md](./NOTIFICATION.md) | How users stay informed of relevant activity across both experiences |
+| [SEARCH.md](./SEARCH.md) | Unified discovery of people, organizations, posts, and opportunities |
+
+---
+
+## Design Constraint
 
 Core specifications are the dependency layer for [specifications/community](../community/) and [specifications/organization](../organization/). A capability belongs here if it is used by both experiences rather than belonging exclusively to one.
 

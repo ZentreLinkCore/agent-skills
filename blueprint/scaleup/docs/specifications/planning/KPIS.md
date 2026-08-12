@@ -1,8 +1,8 @@
-# KPI Specification
+# KPIs Specification
 
 ## Purpose
 
-The KPI module allows organizations to define and monitor Key Performance Indicators that measure important aspects of business performance.
+The KPIs module allows organizations to define and monitor Key Performance Indicators that measure important aspects of business performance.
 
 Its purpose is to provide measurable indicators that connect business activity with organizational goals and objectives.
 

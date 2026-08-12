@@ -1,8 +1,16 @@
 # Search Specification
 
-## Overview
+## Purpose
 
 The Search module provides a unified way for users to discover people, organizations, posts, and opportunities across the ScaleUP platform.
+
+Its purpose is to make the ScaleUP ecosystem discoverable while respecting privacy, visibility, and authorization rules.
+
+---
+
+## Overview
+
+Search operates across the Community Platform and returns only the results a user is permitted to see.
 
 Search results must respect user privacy, organization visibility, permissions, and content access rules.
 
@@ -17,7 +25,7 @@ Search results must respect user privacy, organization visibility, permissions, 
 
 ---
 
-# 1. Search Scope
+## 1. Search Scope
 
 Search may cover:
 
@@ -30,7 +38,7 @@ Search may cover:
 
 ---
 
-# 2. Global Search
+## 2. Global Search
 
 The global search experience may provide:
 
@@ -47,7 +55,7 @@ Results should be grouped by entity type.
 
 ---
 
-# 3. User Search
+## 3. User Search
 
 Users may search for people using:
 
@@ -62,7 +70,7 @@ Only discoverable profiles should appear.
 
 ---
 
-# 4. Organization Search
+## 4. Organization Search
 
 Users may search organizations using:
 
@@ -76,7 +84,7 @@ Private organizations or restricted information must not be exposed.
 
 ---
 
-# 5. Post Search
+## 5. Post Search
 
 Users may discover publicly accessible posts using:
 
@@ -90,7 +98,7 @@ Search results must respect post visibility and access restrictions.
 
 ---
 
-# 6. Opportunity Search
+## 6. Opportunity Search
 
 Users may search for opportunities using:
 
@@ -114,28 +122,28 @@ Possible opportunity types:
 
 ---
 
-# 7. Search Filters
+## 7. Search Filters
 
-## People
+### People
 
 - Industry
 - Location
 - Skills
 
-## Organizations
+### Organizations
 
 - Industry
 - Location
 - Organization Type
 
-## Posts
+### Posts
 
 - Topic
 - Author
 - Organization
 - Date
 
-## Opportunities
+### Opportunities
 
 - Type
 - Industry
@@ -144,7 +152,7 @@ Possible opportunity types:
 
 ---
 
-# 8. Search Suggestions
+## 8. Search Suggestions
 
 The search interface may provide suggestions while the user types.
 
@@ -157,23 +165,23 @@ Search:
 Suggestions:
 
 Organizations
-• ABC Coffee
+- ABC Coffee
 
 People
-• John Coffee
+- John Coffee
 
 Posts
-• Coffee Business Growth
+- Coffee Business Growth
 
 Opportunities
-• Coffee Shop Partnership
+- Coffee Shop Partnership
 ```
 
 ---
 
-# 9. Search History
+## 9. Search History
 
-## Status
+### Status
 
 Future capability.
 
@@ -185,7 +193,7 @@ Users may be able to:
 
 ---
 
-# 10. Search Permissions
+## 10. Search Permissions
 
 Search must respect:
 
@@ -199,20 +207,20 @@ Search must respect:
 
 ---
 
-# 11. Search Principles
+## 11. Search Principles
 
-### Relevant
+#### Relevant
 
 Prioritize useful and meaningful results.
 
-### Discoverable
+#### Discoverable
 
 Help users discover people, organizations, and opportunities.
 
-### Private
+#### Private
 
 Never expose information the user is not authorized to access.
 
-### Consistent
+#### Consistent
 
 Search behavior and filtering should remain consistent across ScaleUP.

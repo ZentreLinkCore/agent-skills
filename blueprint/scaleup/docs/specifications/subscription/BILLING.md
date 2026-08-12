@@ -6,11 +6,15 @@ The Billing module manages billing information and financial records associated 
 
 Its purpose is to provide organizations with a clear and reliable view of subscription charges, billing cycles, invoices, and billing status.
 
+---
+
 ## Overview
 
 Billing belongs to the organization subscription.
 
 It is separate from the organization's internal business and financial records.
+
+---
 
 ## Actors
 
@@ -18,6 +22,8 @@ It is separate from the organization's internal business and financial records.
 - Authorized Administrator
 - Billing System
 - Payment Provider
+
+---
 
 ## Scope
 
@@ -39,6 +45,8 @@ It is separate from the organization's internal business and financial records.
 - Regional invoicing
 - Custom enterprise invoices
 
+---
+
 ## Billing Information
 
 May include:
@@ -48,6 +56,8 @@ May include:
 - Billing Address
 - Country
 - Tax Information where applicable
+
+---
 
 ## Invoice Information
 
@@ -68,6 +78,8 @@ An invoice may contain:
 - Due Date
 - Payment Date
 
+---
+
 ## Billing Status
 
 Possible states:
@@ -79,6 +91,8 @@ Possible states:
 - Refunded
 - Void
 
+---
+
 ## Billing Cycle
 
 Billing may operate on:
@@ -88,6 +102,8 @@ Billing may operate on:
 
 The next renewal date must be visible to authorized billing users.
 
+---
+
 ## Rules
 
 - Billing information is private organization data.
@@ -96,14 +112,18 @@ The next renewal date must be visible to authorized billing users.
 - Billing history should remain accessible according to retention policy.
 - Currency and tax rules must be determined based on applicable billing configuration.
 
+---
+
 ## Permissions
 
 | Action | Owner | Admin | Manager | Member | Viewer |
-|---|---:|---:|---:|---:|---:|
+| :--- | :---: | :---: | :---: | :---: | :---: |
 | View Billing | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 | Edit Billing Information | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 | View Invoices | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 | Download Invoice | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+
+---
 
 ## Notifications
 
@@ -116,6 +136,8 @@ Billing events may generate:
 - Renewal reminder
 - Billing information updated
 
+---
+
 ## Edge Cases
 
 - Billing information is incomplete.
@@ -124,6 +146,8 @@ Billing events may generate:
 - Subscription is cancelled before renewal.
 - Billing provider is temporarily unavailable.
 - Invoice requires correction or refund.
+
+---
 
 ## Success Criteria
 

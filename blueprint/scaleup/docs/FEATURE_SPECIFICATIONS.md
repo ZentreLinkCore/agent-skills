@@ -8,193 +8,193 @@ Each feature should be further expanded into its own detailed specification as t
 
 ScaleUP features are grouped into:
 
-* Platform Core
-* Community
-* Organizations
-* Organization Workspace
-* Business Management
-* Business Planning
-* Analytics & Reporting
-* Opportunities
-* Subscription & Billing
+- Platform Core
+- Community
+- Organizations
+- Organization Workspace
+- Business Management
+- Business Planning
+- Analytics & Reporting
+- Opportunities
+- Subscription & Billing
 
 ---
 
-# 1. Platform Core
+## 1. Platform Core
 
-## 1.1 User Registration & Authentication
+### 1.1 User Registration & Authentication
 
-### Purpose
+#### Purpose
 
 Allow users to securely create and access their ScaleUP accounts.
 
-### Core Capabilities
+#### Core Capabilities
 
-* User registration
-* Login
-* Logout
-* Email verification
-* Password reset
-* Password change
-* Session management
-* Account security
+- User registration
+- Login
+- Logout
+- Email verification
+- Password reset
+- Password change
+- Session management
+- Account security
 
-### Actor
+#### Actor
 
 Individual User
 
 ---
 
-## 1.2 User Profile
+### 1.2 User Profile
 
-### Purpose
+#### Purpose
 
 Allow users to establish and manage their professional identity.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Profile information
-* Profile photo
-* Biography
-* Professional information
-* Skills and interests
-* Profile visibility
-* Public profile
+- Profile information
+- Profile photo
+- Biography
+- Professional information
+- Skills and interests
+- Profile visibility
+- Public profile
 
-### Actor
+#### Actor
 
 Individual User
 
 ---
 
-## 1.3 Notifications
+### 1.3 Notifications
 
-### Purpose
+#### Purpose
 
 Provide users with timely information about platform activity.
 
-### Examples
+#### Examples
 
-* Connection requests
-* New messages
-* Post activity
-* Organization invitations
-* Opportunity updates
-* Business alerts
+- Connection requests
+- New messages
+- Post activity
+- Organization invitations
+- Opportunity updates
+- Business alerts
 
 ---
 
-# 2. Community
+## 2. Community
 
-## 2.1 Community Feed
+### 2.1 Community Feed
 
-### Purpose
+#### Purpose
 
 Provide a central stream for business-related content and updates.
 
-### Core Capabilities
+#### Core Capabilities
 
-* View feed
-* Create posts
-* React to posts
-* Comment
-* Share
-* Discover content
-* Filter content
+- View feed
+- Create posts
+- React to posts
+- Comment
+- Share
+- Discover content
+- Filter content
 
-### Content Sources
+#### Content Sources
 
-* Individuals
-* Organizations
-* Platform announcements
+- Individuals
+- Organizations
+- Platform announcements
 
 ---
 
-## 2.2 Posts
+### 2.2 Posts
 
-### Purpose
+#### Purpose
 
 Allow individuals and organizations to publish business-related content.
 
-### Post Types
+#### Post Types
 
-* Business Update
-* Discussion
-* Question
-* Achievement
-* Announcement
-* Opportunity
-* Industry Insight
+- Business Update
+- Discussion
+- Question
+- Achievement
+- Announcement
+- Opportunity
+- Industry Insight
 
 ---
 
-## 2.3 Connections
+### 2.3 Connections
 
-### Purpose
+#### Purpose
 
 Allow individuals to build professional relationships.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Send connection request
-* Accept connection
-* Reject connection
-* Remove connection
-* View connections
+- Send connection request
+- Accept connection
+- Reject connection
+- Remove connection
+- View connections
 
 ---
 
-## 2.4 Messaging
+### 2.4 Messaging
 
-### Purpose
+#### Purpose
 
 Allow users and permitted participants to communicate privately.
 
-### Core Capabilities
+#### Core Capabilities
 
-* One-to-one messaging
-* Message history
-* Message notifications
-* Conversation management
+- One-to-one messaging
+- Message history
+- Message notifications
+- Conversation management
 
 Future capabilities may include group and business opportunity conversations.
 
 ---
 
-## 2.5 Organizations Directory
+### 2.5 Organizations Directory
 
-### Purpose
+#### Purpose
 
 Allow users to discover organizations participating in ScaleUP.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Search organizations
-* Filter organizations
-* View public organization profiles
-* Follow organizations
-* Discover organization posts
+- Search organizations
+- Filter organizations
+- View public organization profiles
+- Follow organizations
+- Discover organization posts
 
 ---
 
-# 3. Organizations
+## 3. Organizations
 
-## 3.1 Create Organization
+### 3.1 Create Organization
 
-### Purpose
+#### Purpose
 
 Allow an individual user to establish an organization and access the subscription-based organization workspace.
 
-### Actor
+#### Actor
 
 Individual User
 
-### Preconditions
+#### Preconditions
 
-* User has a valid ScaleUP account.
-* User has completed required account verification.
+- User has a valid ScaleUP account.
+- User has completed required account verification.
 
-### Main Flow
+#### Main Flow
 
 ```text
 Create Organization
@@ -212,321 +212,321 @@ Organization Workspace Available
 
 ---
 
-## 3.2 Organization Membership
+### 3.2 Organization Membership
 
-### Purpose
+#### Purpose
 
 Allow multiple users to collaborate inside an organization.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Invite members
-* Accept invitations
-* Remove members
-* Assign roles
-* Manage membership status
+- Invite members
+- Accept invitations
+- Remove members
+- Assign roles
+- Manage membership status
 
 ---
 
-## 3.3 Organization Roles & Permissions
+### 3.3 Organization Roles & Permissions
 
-### Purpose
+#### Purpose
 
 Control access to organization capabilities.
 
-### Initial Roles
+#### Initial Roles
 
-* Owner
-* Administrator
-* Manager
-* Member
-* Viewer
+- Owner
+- Administrator
+- Manager
+- Member
+- Viewer
 
 The permission model should remain extensible for future custom roles.
 
 ---
 
-# 4. Organization Workspace
+## 4. Organization Workspace
 
-## 4.1 Organization Dashboard
+### 4.1 Organization Dashboard
 
-### Purpose
+#### Purpose
 
 Provide an overview of the organization's current business condition.
 
-### Information May Include
+#### Information May Include
 
-* Business health
-* Revenue
-* Expenses
-* Goals
-* KPIs
-* Recent activities
-* Performance insights
-* Upcoming tasks
+- Business health
+- Revenue
+- Expenses
+- Goals
+- KPIs
+- Recent activities
+- Performance insights
+- Upcoming tasks
 
 ---
 
-## 4.2 Team Management
+### 4.2 Team Management
 
-### Purpose
+#### Purpose
 
 Allow authorized users to manage organization members and collaboration.
 
-### Core Capabilities
+#### Core Capabilities
 
-* View members
-* Invite members
-* Assign roles
-* Manage permissions
-* Remove members
+- View members
+- Invite members
+- Assign roles
+- Manage permissions
+- Remove members
 
 ---
 
-# 5. Business Management
+## 5. Business Management
 
-## 5.1 Sales
+### 5.1 Sales
 
-### Purpose
+#### Purpose
 
 Allow organizations to record and monitor sales activity.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Record sales
-* View transactions
-* Track sales performance
-* Filter and search records
-* View sales summaries
+- Record sales
+- View transactions
+- Track sales performance
+- Filter and search records
+- View sales summaries
 
 ---
 
-## 5.2 Expenses
+### 5.2 Expenses
 
-### Purpose
+#### Purpose
 
 Allow organizations to record and monitor business expenses.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Record expenses
-* Categorize expenses
-* Track expense trends
-* Search and filter records
-* View summaries
+- Record expenses
+- Categorize expenses
+- Track expense trends
+- Search and filter records
+- View summaries
 
 ---
 
-## 5.3 Transactions
+### 5.3 Transactions
 
-### Purpose
+#### Purpose
 
 Provide a centralized record of business financial activities.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Record transactions
-* View transaction history
-* Categorize transactions
-* Search and filter
-* View transaction details
+- Record transactions
+- View transaction history
+- Categorize transactions
+- Search and filter
+- View transaction details
 
 ---
 
-## 5.4 Business Records
+### 5.4 Business Records
 
-### Purpose
+#### Purpose
 
 Provide structured storage for business-related operational information.
 
 Future areas may include:
 
-* Customers
-* Products
-* Services
-* Vendors
-* Business documents
+- Customers
+- Products
+- Services
+- Vendors
+- Business documents
 
 ---
 
-# 6. Business Planning
+## 6. Business Planning
 
-## 6.1 Goals
+### 6.1 Goals
 
-### Purpose
+#### Purpose
 
 Allow organizations to define measurable business objectives.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Create goal
-* Define target
-* Set deadline
-* Assign owner
-* Track progress
-* Update status
+- Create goal
+- Define target
+- Set deadline
+- Assign owner
+- Track progress
+- Update status
 
 ---
 
-## 6.2 KPIs
+### 6.2 KPIs
 
-### Purpose
+#### Purpose
 
 Allow organizations to define and monitor key business performance indicators.
 
-### Examples
+#### Examples
 
-* Revenue Growth
-* Profit Margin
-* Customer Growth
-* Sales Conversion
-* Expense Ratio
+- Revenue Growth
+- Profit Margin
+- Customer Growth
+- Sales Conversion
+- Expense Ratio
 
 ---
 
-## 6.3 Strategic Planning
+### 6.3 Strategic Planning
 
-### Purpose
+#### Purpose
 
 Allow organizations to create structured plans for long-term business growth.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Define objectives
-* Create action plans
-* Set milestones
-* Assign responsibilities
-* Monitor progress
+- Define objectives
+- Create action plans
+- Set milestones
+- Assign responsibilities
+- Monitor progress
 
 ---
 
-# 7. Analytics & Reporting
+## 7. Analytics & Reporting
 
-## 7.1 Business Analytics
+### 7.1 Business Analytics
 
-### Purpose
+#### Purpose
 
 Help organizations understand business performance through data.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Performance trends
-* Revenue analysis
-* Expense analysis
-* Goal performance
-* KPI monitoring
-* Comparative analysis
+- Performance trends
+- Revenue analysis
+- Expense analysis
+- Goal performance
+- KPI monitoring
+- Comparative analysis
 
 ---
 
-## 7.2 Reports
+### 7.2 Reports
 
-### Purpose
+#### Purpose
 
 Provide structured reports for business monitoring and decision-making.
 
-### Report Types
+#### Report Types
 
-* Sales Reports
-* Expense Reports
-* Financial Reports
-* Performance Reports
-* Goal Reports
-* Executive Reports
+- Sales Reports
+- Expense Reports
+- Financial Reports
+- Performance Reports
+- Goal Reports
+- Executive Reports
 
 ---
 
-## 7.3 Business Insights
+### 7.3 Business Insights
 
-### Purpose
+#### Purpose
 
 Present useful observations based on organization data.
 
 Future capabilities may include:
 
-* Automated insights
-* Trend detection
-* Risk indicators
-* Forecasting
-* AI recommendations
+- Automated insights
+- Trend detection
+- Risk indicators
+- Forecasting
+- AI recommendations
 
 ---
 
-# 8. Opportunities
+## 8. Opportunities
 
-## 8.1 Opportunity Publishing
+### 8.1 Opportunity Publishing
 
-### Purpose
+#### Purpose
 
 Allow users and organizations to publish business-related opportunities.
 
-### Types
+#### Types
 
-* Partnership
-* Investment
-* Collaboration
-* Mentorship
-* Hiring
-* Project
-* Business Service
-* Event
+- Partnership
+- Investment
+- Collaboration
+- Mentorship
+- Hiring
+- Project
+- Business Service
+- Event
 
 ---
 
-## 8.2 Opportunity Discovery
+### 8.2 Opportunity Discovery
 
-### Purpose
+#### Purpose
 
 Allow users and organizations to discover opportunities relevant to their interests or business needs.
 
-### Core Capabilities
+#### Core Capabilities
 
-* Browse opportunities
-* Search
-* Filter
-* View details
-* Express interest
-* Contact opportunity owner
+- Browse opportunities
+- Search
+- Filter
+- View details
+- Express interest
+- Contact opportunity owner
 
 ---
 
-# 9. Subscription & Billing
+## 9. Subscription & Billing
 
-## 9.1 Subscription Plans
+### 9.1 Subscription Plans
 
-### Purpose
+#### Purpose
 
 Define the plans available to organizations.
 
 Each plan may control:
 
-* Features
-* Member limits
-* Storage
-* Analytics capabilities
-* Usage limits
-* Support level
+- Features
+- Member limits
+- Storage
+- Analytics capabilities
+- Usage limits
+- Support level
 
 ---
 
-## 9.2 Organization Subscription
+### 9.2 Organization Subscription
 
-### Purpose
+#### Purpose
 
 Manage an organization's active subscription.
 
-### Core Capabilities
+#### Core Capabilities
 
-* View current plan
-* Upgrade
-* Downgrade
-* Renew
-* Cancel
-* View subscription status
+- View current plan
+- Upgrade
+- Downgrade
+- Renew
+- Cancel
+- View subscription status
 
 ---
 
-# 10. Feature Lifecycle
+## 10. Feature Lifecycle
 
 Features should generally follow this lifecycle:
 
@@ -552,28 +552,28 @@ Improvement
 
 ---
 
-# 11. Feature Principles
+## 11. Feature Principles
 
-### User Value
+#### User Value
 
 Every feature must solve a meaningful user problem.
 
-### Clear Ownership
+#### Clear Ownership
 
 Every business feature must have a clear owner and organization context.
 
-### Permission Awareness
+#### Permission Awareness
 
 Private organization features must respect organizational roles and permissions.
 
-### Privacy
+#### Privacy
 
 Community visibility must never expose private organization information unintentionally.
 
-### Extensibility
+#### Extensibility
 
 Features should be designed so future capabilities can be added without restructuring the entire platform.
 
-### Consistency
+#### Consistency
 
 Features should follow ScaleUP's common navigation, design, terminology, and interaction patterns.

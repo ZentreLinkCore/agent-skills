@@ -1,12 +1,18 @@
 # Authentication Specification
 
-## Overview
+## Purpose
 
 The Authentication module provides secure identity and account access for the ScaleUP platform.
 
+Its purpose is to verify user identity, protect account access, and manage authentication-related processes across both the Community Platform and the Organization Workspace.
+
+---
+
+## Overview
+
 Every person using ScaleUP must have an individual account. An organization is optional and is created separately from the user account.
 
-Authentication is responsible for verifying user identity, protecting account access, and managing authentication-related processes.
+Authentication applies to every ScaleUP client, including the web application and the mobile application.
 
 ---
 
@@ -21,13 +27,13 @@ Authentication is responsible for verifying user identity, protecting account ac
 
 ---
 
-# 1. User Registration
+## 1. User Registration
 
-## Purpose
+### Purpose
 
 Allow a new user to create an individual ScaleUP account.
 
-## Required Information
+### Required Information
 
 - First Name
 - Last Name
@@ -36,7 +42,7 @@ Allow a new user to create an individual ScaleUP account.
 - Password Confirmation
 - Terms and Conditions acceptance
 
-## Flow
+### Flow
 
 ```text
 Registration
@@ -52,7 +58,7 @@ Verify Email
 Account Activated
 ```
 
-## Rules
+### Rules
 
 - Email address must be unique.
 - Password must meet the platform's security requirements.
@@ -62,18 +68,18 @@ Account Activated
 
 ---
 
-# 2. Login
+## 2. Login
 
-## Purpose
+### Purpose
 
 Allow registered users to securely access ScaleUP.
 
-## Required Information
+### Required Information
 
 - Email Address
 - Password
 
-## Flow
+### Flow
 
 ```text
 Enter Credentials
@@ -87,7 +93,7 @@ Create Session
 Access ScaleUP
 ```
 
-## Rules
+### Rules
 
 - Invalid credentials must not reveal whether an email exists.
 - Repeated failed login attempts may trigger rate limiting or temporary restrictions.
@@ -95,13 +101,13 @@ Access ScaleUP
 
 ---
 
-# 3. Logout
+## 3. Logout
 
-## Purpose
+### Purpose
 
 Terminate the user's active authenticated session.
 
-## Actions
+### Actions
 
 - Logout current session.
 - Invalidate authentication state.
@@ -109,13 +115,13 @@ Terminate the user's active authenticated session.
 
 ---
 
-# 4. Email Verification
+## 4. Email Verification
 
-## Purpose
+### Purpose
 
 Confirm that the registered email address belongs to the user.
 
-## Flow
+### Flow
 
 ```text
 Registration
@@ -129,7 +135,7 @@ Validate Verification Token
 Email Verified
 ```
 
-## Rules
+### Rules
 
 - Verification links must expire.
 - Verification links must be single-use.
@@ -138,13 +144,13 @@ Email Verified
 
 ---
 
-# 5. Forgot Password
+## 5. Forgot Password
 
-## Purpose
+### Purpose
 
 Allow users who cannot remember their password to request a secure password reset.
 
-## Flow
+### Flow
 
 ```text
 Forgot Password
@@ -158,7 +164,7 @@ Open Reset Link
 Create New Password
 ```
 
-## Security Rules
+### Security Rules
 
 - The system must not reveal whether the email exists.
 - Reset tokens must expire.
@@ -167,18 +173,18 @@ Create New Password
 
 ---
 
-# 6. Reset Password
+## 6. Reset Password
 
-## Purpose
+### Purpose
 
 Allow a user to create a new password using a valid password-reset token.
 
-## Required Information
+### Required Information
 
 - New Password
 - Password Confirmation
 
-## Rules
+### Rules
 
 - Token must be valid and unexpired.
 - Password must meet security requirements.
@@ -187,19 +193,19 @@ Allow a user to create a new password using a valid password-reset token.
 
 ---
 
-# 7. Change Password
+## 7. Change Password
 
-## Purpose
+### Purpose
 
 Allow authenticated users to change their password from account settings.
 
-## Required Information
+### Required Information
 
 - Current Password
 - New Password
 - Password Confirmation
 
-## Rules
+### Rules
 
 - Current password must be verified.
 - New password must meet security requirements.
@@ -207,13 +213,13 @@ Allow authenticated users to change their password from account settings.
 
 ---
 
-# 8. Session Management
+## 8. Session Management
 
-## Purpose
+### Purpose
 
 Allow ScaleUP to securely manage authenticated sessions.
 
-## Capabilities
+### Capabilities
 
 - Maintain current session.
 - View active sessions.
@@ -221,7 +227,7 @@ Allow ScaleUP to securely manage authenticated sessions.
 - Logout current session.
 - Logout other sessions.
 
-## Future Capabilities
+### Future Capabilities
 
 - Trusted devices
 - Session expiration controls
@@ -229,13 +235,13 @@ Allow ScaleUP to securely manage authenticated sessions.
 
 ---
 
-# 9. Account Security
+## 9. Account Security
 
-## Purpose
+### Purpose
 
 Provide additional protection for ScaleUP accounts.
 
-## Security Controls
+### Security Controls
 
 - Login attempt protection
 - Rate limiting
@@ -247,13 +253,13 @@ Provide additional protection for ScaleUP accounts.
 
 ---
 
-# 10. Multi-Factor Authentication
+## 10. Multi-Factor Authentication
 
-## Status
+### Status
 
 Future capability.
 
-## Potential Methods
+### Potential Methods
 
 - Authenticator application
 - Email verification code
@@ -263,13 +269,13 @@ Future capability.
 
 ---
 
-# 11. Social Authentication
+## 11. Social Authentication
 
-## Status
+### Status
 
 Future capability.
 
-## Potential Providers
+### Potential Providers
 
 - Google
 - Microsoft
@@ -279,7 +285,7 @@ Social authentication must still create or link to a ScaleUP Individual Account.
 
 ---
 
-# 12. Authentication States
+## 12. Authentication States
 
 A user account may have states such as:
 
@@ -302,24 +308,24 @@ Additional states may include:
 
 ---
 
-# 13. Authentication Principles
+## 13. Authentication Principles
 
-### Individual Identity
+#### Individual Identity
 
 Authentication belongs to the individual user, not to an organization.
 
-### Organization Independence
+#### Organization Independence
 
 A user must be able to access ScaleUP without owning or joining an organization.
 
-### Security First
+#### Security First
 
 Authentication must protect user identity and prevent unauthorized access.
 
-### Extensibility
+#### Extensibility
 
 The authentication system must support additional authentication methods in the future.
 
-### Privacy
+#### Privacy
 
 Authentication and security information must never be exposed publicly through community or organization profiles.

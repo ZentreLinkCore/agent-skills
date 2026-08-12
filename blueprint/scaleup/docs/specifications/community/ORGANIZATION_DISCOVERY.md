@@ -6,6 +6,8 @@ The Organization Discovery module allows users to discover businesses and organi
 
 Its purpose is to make organizations visible within the business ecosystem while separating public organization information from private organization workspace data.
 
+---
+
 ## Overview
 
 Organizations can maintain a public-facing profile that can be discovered by users.
@@ -20,36 +22,42 @@ Community Discovery
 Private Organization Workspace
         ↓
 Authorized Organization Members
-````
+```
+
+---
 
 ## Actors
 
-* Visitor
-* Individual User
-* Organization Member
-* Organization
-* System
+- Visitor
+- Individual User
+- Organization Member
+- Organization
+- System
+
+---
 
 ## Scope
 
 ### In Scope
 
-* Organization directory
-* Organization search
-* Organization profile
-* Organization categories
-* Organization discovery
-* Follow organization
-* View public organization activity
+- Organization directory
+- Organization search
+- Organization profile
+- Organization categories
+- Organization discovery
+- Follow organization
+- View public organization activity
 
 ### Future Scope
 
-* Organization verification
-* Ratings
-* Reviews
-* Business recommendations
-* Organization comparisons
-* Industry rankings
+- Organization verification
+- Ratings
+- Reviews
+- Business recommendations
+- Organization comparisons
+- Industry rankings
+
+---
 
 ## Main Flow
 
@@ -65,77 +73,89 @@ View Public Information
 Follow Organization / Explore Content
 ```
 
+---
+
 ## Public Organization Profile
 
 The public profile may include:
 
-* Organization Name
-* Logo
-* Cover Image
-* Industry
-* Organization Type
-* Description
-* Location
-* Website
-* Public Contact Information
-* Followers
-* Public Posts
-* Public Opportunities
-* Public Achievements
+- Organization Name
+- Logo
+- Cover Image
+- Industry
+- Organization Type
+- Description
+- Location
+- Website
+- Public Contact Information
+- Followers
+- Public Posts
+- Public Opportunities
+- Public Achievements
 
 Only intentionally public information may be displayed.
+
+---
 
 ## Discovery Filters
 
 Potential filters:
 
-* Industry
-* Location
-* Organization Type
-* Business Size
-* Keywords
-* Opportunities
+- Industry
+- Location
+- Organization Type
+- Business Size
+- Keywords
+- Opportunities
+
+---
 
 ## Rules
 
 ### Visibility Rules
 
-* Only discoverable organizations should appear in public discovery.
-* Private organization data must never be exposed.
-* Organization workspace data must never appear in public search without explicit authorization.
-* Organizations may control what public information is displayed.
+- Only discoverable organizations should appear in public discovery.
+- Private organization data must never be exposed.
+- Organization workspace data must never appear in public search without explicit authorization.
+- Organizations may control what public information is displayed.
 
 ### Following Rules
 
-* Users may follow public organizations.
-* Following an organization does not make the user a member.
-* Following does not grant access to private organization information.
+- Users may follow public organizations.
+- Following an organization does not make the user a member.
+- Following does not grant access to private organization information.
 
 ### Membership Rules
 
-* Organization membership is separate from public discovery.
-* A user must use the organization membership process to access private workspace features.
+- Organization membership is separate from public discovery.
+- A user must use the organization membership process to access private workspace features.
+
+---
 
 ## Permissions
 
-| Action                         | Visitor | Individual User |          Org Member |
-| ------------------------------ | ------: | --------------: | ------------------: |
-| View Public Organization       |       ✅ |               ✅ |                   ✅ |
-| Search Organizations           |       ✅ |               ✅ |                   ✅ |
-| Follow Organization            |       ❌ |               ✅ |                   ✅ |
-| View Public Organization Posts |       ✅ |               ✅ |                   ✅ |
-| View Private Workspace         |       ❌ |               ❌ | Based on Membership |
+| Action | Visitor | Individual User | Org Member |
+| :--- | :---: | :---: | :---: |
+| View Public Organization | ✅ | ✅ | ✅ |
+| Search Organizations | ✅ | ✅ | ✅ |
+| Follow Organization | ❌ | ✅ | ✅ |
+| View Public Organization Posts | ✅ | ✅ | ✅ |
+| View Private Workspace | ❌ | ❌ | Based on Membership |
+
+---
 
 ## Organization States
 
 Potential public organization states:
 
-* Active
-* Inactive
-* Suspended
-* Archived
+- Active
+- Inactive
+- Suspended
+- Archived
 
 The platform may restrict discovery for organizations that are no longer eligible for public visibility.
+
+---
 
 ## Organization Verification
 
@@ -145,20 +165,24 @@ Future capability.
 
 Potential verification levels:
 
-* Unverified
-* Verified
-* Official / Trusted
+- Unverified
+- Verified
+- Official / Trusted
 
 Verification must be governed by a separate verification policy.
+
+---
 
 ## Notifications
 
 Users may receive notifications for:
 
-* New posts from followed organizations
-* Organization announcements
-* New public opportunities
-* Major organization updates
+- New posts from followed organizations
+- Organization announcements
+- New public opportunities
+- Major organization updates
+
+---
 
 ## Privacy
 
@@ -166,28 +190,32 @@ The discovery layer must clearly separate:
 
 ### Public
 
-* Organization Profile
-* Public Posts
-* Public Opportunities
-* Public Information
+- Organization Profile
+- Public Posts
+- Public Opportunities
+- Public Information
 
 ### Private
 
-* Financial Data
-* Internal Reports
-* Team Information
-* Internal Planning
-* Operational Data
-* Private Organization Settings
+- Financial Data
+- Internal Reports
+- Team Information
+- Internal Planning
+- Operational Data
+- Private Organization Settings
+
+---
 
 ## Edge Cases
 
-* Organization becomes inactive.
-* Organization subscription expires.
-* Organization changes its visibility.
-* User follows an organization that becomes private.
-* Public organization profile is removed.
-* Organization is suspended for policy violations.
+- Organization becomes inactive.
+- Organization subscription expires.
+- Organization changes its visibility.
+- User follows an organization that becomes private.
+- Public organization profile is removed.
+- Organization is suspended for policy violations.
+
+---
 
 ## Success Criteria
 

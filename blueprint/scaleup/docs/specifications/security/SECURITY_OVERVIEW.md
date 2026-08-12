@@ -1,4 +1,4 @@
-# Security Overview Specification
+# Security Specification
 
 ## Purpose
 

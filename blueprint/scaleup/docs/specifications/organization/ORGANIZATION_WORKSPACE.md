@@ -126,7 +126,7 @@ The detailed dashboard is defined under the Business domain.
 Workspace access is role and permission based.
 
 | Role | Workspace Access |
-| :--- | :--- |
+| :--- | :---: |
 | Owner | ✅ |
 | Administrator | ✅ |
 | Manager | ✅ |

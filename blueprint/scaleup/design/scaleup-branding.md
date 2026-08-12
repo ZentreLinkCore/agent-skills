@@ -1,8 +1,18 @@
+# ScaleUP Design Brief
+
+> Design brief for the ScaleUP product foundation. Aligned with [`docs/PRODUCT_VISION.md`](../docs/PRODUCT_VISION.md) and [`docs/PLATFORM_ARCHITECTURE.md`](../docs/PLATFORM_ARCHITECTURE.md).
+
+---
+
+## Brief
+
 You are a Senior Product Designer and UX/UI Designer.
 
 Your task is to design the complete product foundation for a modern SaaS platform called **ScaleUP**.
 
-# Project Overview
+---
+
+## Project Overview
 
 ScaleUP is a Business Operating System (Business OS) and Business Community Platform, developed by ZentreLink, that helps entrepreneurs, startups, small businesses, and organizations manage their operations, understand their performance, plan strategically, and scale sustainably.
 
@@ -12,19 +22,19 @@ Accounting and financial tracking are only part of the platform.
 
 The product is built on two connected experiences (see `docs/PLATFORM_ARCHITECTURE.md`):
 
-• **Community Platform (Free)** — every registered user's default home: profile, network, feed, connections, messaging, and opportunity discovery. No Organization required.
+- **Community Platform (Free)** — every registered user's default home: profile, network, feed, connections, messaging, and opportunity discovery. No Organization required.
 
-• **Organization Workspace (Subscription)** — an optional, subscription-based layer unlocked when a user creates an Organization: dashboard, business management, planning, reports, analytics, and team collaboration.
+- **Organization Workspace (Subscription)** — an optional, subscription-based layer unlocked when a user creates an Organization: dashboard, business management, planning, reports, analytics, and team collaboration.
 
 Every design decision must keep this split legible: what is free and open, versus what requires an active Organization subscription.
 
 The platform's mission is to help businesses:
 
-• Manage
-• Measure
-• Plan
-• Connect
-• Scale
+- Manage
+- Measure
+- Plan
+- Connect
+- Scale
 
 Every design decision should reinforce these five pillars.
 
@@ -36,19 +46,18 @@ Never make it look like a traditional ERP, bookkeeping software, or admin dashbo
 
 Instead, create a premium Business Operating System.
 
---------------------------------------------------
-
+---
 ## Design Inspiration
 
 Use the design language inspired by:
 
-• Stripe
-• Linear
-• Notion
-• Vercel
-• Arc Browser
-• Apple
-• Slack
+- Stripe
+- Linear
+- Notion
+- Vercel
+- Arc Browser
+- Apple
+- Slack
 
 Avoid Bootstrap-looking interfaces.
 
@@ -66,8 +75,7 @@ Minimal gradients.
 
 Elegant micro-interactions.
 
---------------------------------------------------
-
+---
 ## Brand Identity
 
 Brand Name
@@ -96,8 +104,7 @@ Enterprise
 
 Growth-focused
 
---------------------------------------------------
-
+---
 ## Color Palette
 
 Primary
@@ -128,8 +135,7 @@ Border
 
 #E2E8F0
 
---------------------------------------------------
-
+---
 ## Typography
 
 Use
@@ -142,14 +148,12 @@ Large headlines
 
 Minimal text
 
---------------------------------------------------
-
+---
 ## Icons
 
 Lucide Icons
 
---------------------------------------------------
-
+---
 ## 1. Landing Page
 
 Design a premium marketing website.
@@ -214,8 +218,7 @@ Do not use people.
 
 Do not use stock photos.
 
---------------------------------------------------
-
+---
 ## 2. Logo Concepts
 
 Create multiple modern logo concepts.
@@ -250,8 +253,7 @@ Abstract "S"
 
 Modern geometric mark
 
---------------------------------------------------
-
+---
 ## 3. Design System
 
 Create a complete design system.
@@ -292,8 +294,7 @@ Dark Mode Ready
 
 Responsive
 
---------------------------------------------------
-
+---
 ## 4. Authentication
 
 Design
@@ -324,8 +325,7 @@ Show floating business KPI cards.
 
 Do not use photos.
 
---------------------------------------------------
-
+---
 ## 5. Onboarding
 
 After registration, every user completes the **Individual onboarding** — this is the only onboarding required to use ScaleUP.
@@ -380,8 +380,7 @@ Step 7
 
 Finish Setup → Land in the Business Dashboard
 
---------------------------------------------------
-
+---
 ## 6. Dashboard Concept
 
 Two distinct home views, matching the two experiences. Do not blend them into one screen.
@@ -440,8 +439,7 @@ Professional charts.
 
 Clean spacing.
 
---------------------------------------------------
-
+---
 ## 7. Global Layout
 
 Design a reusable application layout.
@@ -472,8 +470,7 @@ Tablet
 
 Mobile
 
---------------------------------------------------
-
+---
 ## General Rules
 
 Everything should feel like:

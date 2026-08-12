@@ -1,8 +1,14 @@
 # User Profile Specification
 
-## Overview
+## Purpose
 
 The User Profile represents the professional identity of an individual within ScaleUP.
+
+Its purpose is to give every user a professional presence that supports networking, community participation, discovery, and collaboration — independent of any organization.
+
+---
+
+## Overview
 
 Every registered user has a personal profile regardless of whether they create or join an organization.
 
@@ -19,14 +25,14 @@ The profile is primarily used for professional networking, community participati
 
 ---
 
-# 1. Profile Information
+## 1. Profile Information
 
-## Required Information
+### Required Information
 
 - First Name
 - Last Name
 
-## Optional Information
+### Optional Information
 
 - Profile Photo
 - Headline
@@ -41,7 +47,7 @@ The profile is primarily used for professional networking, community participati
 
 ---
 
-# 2. Profile Visibility
+## 2. Profile Visibility
 
 Users may have configurable profile visibility.
 
@@ -56,7 +62,7 @@ The final visibility rules should be defined by the platform privacy policy.
 
 ---
 
-# 3. Public Profile
+## 3. Public Profile
 
 A public profile may display:
 
@@ -75,11 +81,11 @@ Sensitive account information must never be exposed publicly.
 
 ---
 
-# 4. Profile Editing
+## 4. Profile Editing
 
 Users may update their own profile information.
 
-## Editable Information
+### Editable Information
 
 - Name
 - Profile Photo
@@ -95,7 +101,7 @@ Users may update their own profile information.
 
 ---
 
-# 5. Professional Identity
+## 5. Professional Identity
 
 The profile should support a user's professional presence within ScaleUP.
 
@@ -110,7 +116,7 @@ Technology • SaaS • Business Strategy
 
 ---
 
-# 6. Personal vs Organization Identity
+## 6. Personal vs Organization Identity
 
 A User Profile represents a person.
 
@@ -130,7 +136,7 @@ A user may be associated with an organization through membership, but the organi
 
 ---
 
-# 7. Profile Relationships
+## 7. Profile Relationships
 
 A profile may be connected to:
 
@@ -146,7 +152,7 @@ A profile may be connected to:
 
 ---
 
-# 8. Profile Discovery
+## 8. Profile Discovery
 
 Users may be discovered through:
 
@@ -160,7 +166,7 @@ Discovery must respect profile visibility and privacy settings.
 
 ---
 
-# 9. Profile Activity
+## 9. Profile Activity
 
 Users may have a public activity history such as:
 
@@ -174,7 +180,7 @@ Private account activity must not be exposed.
 
 ---
 
-# 10. Profile Privacy
+## 10. Profile Privacy
 
 Users should have control over what information is visible to others.
 
@@ -188,20 +194,20 @@ Privacy controls may eventually include:
 
 ---
 
-# 11. Profile Principles
+## 11. Profile Principles
 
-### Individual First
+#### Individual First
 
 Every ScaleUP user has a personal identity independent of an organization.
 
-### Professional
+#### Professional
 
 Profile information should support professional and business-oriented interactions.
 
-### Privacy
+#### Privacy
 
 Users control how much personal information is exposed.
 
-### Extensible
+#### Extensible
 
 The profile model should support future professional features without requiring a structural redesign.

@@ -6,6 +6,8 @@ The Account Security module provides additional protections for individual Scale
 
 Its purpose is to reduce the risk of account compromise and help users understand and control the security of their accounts.
 
+---
+
 ## Security Controls
 
 Potential controls include:
@@ -19,6 +21,8 @@ Potential controls include:
 - Trusted devices
 - Suspicious activity detection
 
+---
+
 ## Password Security
 
 - Passwords must be securely hashed.
@@ -26,6 +30,8 @@ Potential controls include:
 - Password changes must require appropriate authentication.
 - Password reset must use secure, expiring tokens.
 - Compromised credentials should trigger additional security measures.
+
+---
 
 ## Login Protection
 
@@ -43,6 +49,8 @@ Controls may include:
 - CAPTCHA where appropriate
 - Additional verification
 
+---
+
 ## Session Security
 
 Users should be able to:
@@ -54,6 +62,8 @@ Users should be able to:
 
 Sensitive account changes may require re-authentication.
 
+---
+
 ## Multi-Factor Authentication
 
 Future support may include:
@@ -62,6 +72,8 @@ Future support may include:
 - Passkeys
 - Email verification codes
 - Biometrics on supported devices
+
+---
 
 ## Security Notifications
 
@@ -74,6 +86,8 @@ Users may receive notifications for:
 - Authentication method change
 - Suspicious activity
 
+---
+
 ## Rules
 
 - Security notifications must not expose sensitive credentials.
@@ -81,6 +95,8 @@ Users may receive notifications for:
 - Security-critical protections must not be disabled through insecure mechanisms.
 - Account recovery must require sufficient identity verification.
 - Security actions should be auditable.
+
+---
 
 ## Account Recovery
 
@@ -92,6 +108,8 @@ Potential recovery methods:
 - Multi-factor authentication
 - Recovery codes
 - Additional identity verification for high-risk scenarios
+
+---
 
 ## Suspicious Activity
 
@@ -105,6 +123,8 @@ The platform may identify:
 
 Detection should not automatically assume malicious behavior without sufficient evidence.
 
+---
+
 ## Edge Cases
 
 - User loses access to primary email.
@@ -113,6 +133,8 @@ Detection should not automatically assume malicious behavior without sufficient 
 - Suspicious session is detected.
 - Multiple authentication methods conflict.
 - User requests account recovery from an untrusted device.
+
+---
 
 ## Success Criteria
 

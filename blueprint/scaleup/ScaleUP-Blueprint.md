@@ -1,4 +1,4 @@
-# 🏗️ ScaleUP Blueprint
+# ScaleUP Blueprint
 
 > Aligned with [`docs/`](./docs/README.md) — ScaleUP is a Business Operating System and Business Community Platform developed by ZentreLink, built on two connected experiences: the free **Community Platform** and the subscription-based **Organization Workspace**. See [`docs/PRODUCT_VISION.md`](./docs/PRODUCT_VISION.md) and [`docs/PLATFORM_ARCHITECTURE.md`](./docs/PLATFORM_ARCHITECTURE.md).
 

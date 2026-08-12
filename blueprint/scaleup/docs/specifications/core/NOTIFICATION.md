@@ -1,10 +1,18 @@
 # Notifications Specification
 
-## Overview
+## Purpose
 
 The Notifications module provides users with timely information about relevant activity within ScaleUP.
 
+Its purpose is to keep users informed about activity that matters to them without creating unnecessary noise.
+
+---
+
+## Overview
+
 Notifications may originate from the Community Platform, Organization Workspace, subscription activities, or other platform services.
+
+Notifications are delivered through multiple channels and remain under the user's control through notification preferences.
 
 ---
 
@@ -17,9 +25,9 @@ Notifications may originate from the Community Platform, Organization Workspace,
 
 ---
 
-# 1. Notification Types
+## 1. Notification Types
 
-## Community
+### Community
 
 - Connection request
 - Connection accepted
@@ -29,7 +37,7 @@ Notifications may originate from the Community Platform, Organization Workspace,
 - New follower
 - New message
 
-## Organization
+### Organization
 
 - Organization invitation
 - Member activity
@@ -39,7 +47,7 @@ Notifications may originate from the Community Platform, Organization Workspace,
 - Goal updates
 - Team activity
 
-## Subscription
+### Subscription
 
 - Subscription activated
 - Payment successful
@@ -49,14 +57,14 @@ Notifications may originate from the Community Platform, Organization Workspace,
 - Subscription cancelled
 - Subscription expired
 
-## Opportunities
+### Opportunities
 
 - New opportunity
 - Opportunity interest received
 - Opportunity status changed
 - Opportunity discussion
 
-## Security
+### Security
 
 - New login
 - Password changed
@@ -66,7 +74,7 @@ Notifications may originate from the Community Platform, Organization Workspace,
 
 ---
 
-# 2. Notification Channels
+## 2. Notification Channels
 
 Supported or planned channels:
 
@@ -77,7 +85,7 @@ Supported or planned channels:
 
 ---
 
-# 3. In-App Notifications
+## 3. In-App Notifications
 
 The in-app notification center should allow users to:
 
@@ -90,7 +98,7 @@ The in-app notification center should allow users to:
 
 ---
 
-# 4. Notification States
+## 4. Notification States
 
 A notification may have states such as:
 
@@ -106,7 +114,7 @@ Notifications may also support expiration or dismissal.
 
 ---
 
-# 5. Notification Preferences
+## 5. Notification Preferences
 
 Users should be able to configure how they receive notifications.
 
@@ -131,7 +139,7 @@ Security-critical notifications may not be fully disableable.
 
 ---
 
-# 6. Notification Priority
+## 6. Notification Priority
 
 Notifications may have priority levels:
 
@@ -149,7 +157,7 @@ Critical notifications may include:
 
 ---
 
-# 7. Notification Relationships
+## 7. Notification Relationships
 
 Notifications may reference:
 
@@ -165,7 +173,7 @@ Notifications may reference:
 
 ---
 
-# 8. Notification Rules
+## 8. Notification Rules
 
 - Notifications must only be delivered to authorized recipients.
 - Organization notifications must respect organization membership.
@@ -175,20 +183,20 @@ Notifications may reference:
 
 ---
 
-# 9. Notification Principles
+## 9. Notification Principles
 
-### Relevant
+#### Relevant
 
 Notifications should provide useful information.
 
-### Timely
+#### Timely
 
 Important notifications should be delivered promptly.
 
-### Non-Intrusive
+#### Non-Intrusive
 
 Users should not be overwhelmed by unnecessary notifications.
 
-### Secure
+#### Secure
 
 Notifications must respect privacy and authorization boundaries.

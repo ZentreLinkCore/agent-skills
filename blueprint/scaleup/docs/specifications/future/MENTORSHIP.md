@@ -4,9 +4,13 @@
 
 The Mentorship module is a future ScaleUP capability designed to connect entrepreneurs and business professionals with experienced mentors who can provide guidance, knowledge, and strategic support.
 
+---
+
 ## Overview
 
 Mentorship extends the ScaleUP Community by creating structured relationships between users seeking guidance and individuals or organizations willing to provide expertise.
+
+---
 
 ## Actors
 
@@ -14,6 +18,8 @@ Mentorship extends the ScaleUP Community by creating structured relationships be
 - Mentor
 - Organization
 - Platform Administrator
+
+---
 
 ## Potential Capabilities
 
@@ -26,6 +32,8 @@ Mentorship extends the ScaleUP Community by creating structured relationships be
 - Scheduling
 - Reviews
 - Mentorship Programs
+
+---
 
 ## Potential Flow
 

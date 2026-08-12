@@ -2,7 +2,7 @@
 
 > Aligned with [`docs/PRODUCT_ROADMAP.md`](../docs/PRODUCT_ROADMAP.md). ScaleUP is a Business Operating System built on two connected experiences: a free **Community Platform** every registered user gets by default, and a subscription-based **Organization Workspace** unlocked when a user creates an Organization. See [`docs/PLATFORM_ARCHITECTURE.md`](../docs/PLATFORM_ARCHITECTURE.md) for how they fit together.
 
-## 🌱 Phase 1 — Foundation: Community & Identity
+## Phase 1 — Foundation: Community & Identity
 **Goal:** Establish the Community Platform as a standalone, valuable product for every registered user. No Organization or subscription required.
 
 **Core Features**
@@ -21,7 +21,7 @@ Every user gets real value from ScaleUP — networking, content, and opportunity
 
 ---
 
-## 📈 Phase 2 — Activation: Organizations & Workspace
+## Phase 2 — Activation: Organizations & Workspace
 **Goal:** Give businesses a reason to formalize on ScaleUP by unlocking a subscription-based Organization Workspace with real operational value.
 
 **Features**
@@ -41,7 +41,7 @@ Businesses can create an Organization, subscribe, and manage their daily operati
 
 ---
 
-## 📊 Phase 3 — Depth: Planning, Reporting & Analytics
+## Phase 3 — Depth: Planning, Reporting & Analytics
 **Goal:** Deepen the Organization Workspace with the tools businesses need to plan and measure growth deliberately.
 
 **Features**
@@ -59,7 +59,7 @@ Organizations move from simply operating on ScaleUP to actively planning and mea
 
 ---
 
-## 🤝 Phase 4 — Expansion: Ecosystem & Future Modules
+## Phase 4 — Expansion: Ecosystem & Future Modules
 **Goal:** Strengthen the connective tissue between the Community Platform and the Organization Workspace, and extend the workspace with new business modules. See [`docs/specifications/future`](../docs/specifications/future/).
 
 **Features**
@@ -76,7 +76,7 @@ More organizations, more opportunities, more reasons for individuals and busines
 
 ---
 
-## 🌍 Phase 5 — Ecosystem Maturity
+## Phase 5 — Ecosystem Maturity
 **Goal:** Become a comprehensive Business Operating System supporting businesses from startup to enterprise.
 
 **Features**
@@ -114,6 +114,8 @@ Complete Business Operating System
 ## Guiding Constraint
 
 At every phase, the Community Platform remains free and the Organization Workspace remains subscription-based. New capability is added by deepening each experience, not by shifting the line between them — see [ADR-002](../docs/decisions/ADR-002-subscription-model.md).
+
+---
 
 ## Guiding Principles
 
