@@ -140,13 +140,13 @@ Possible statuses:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Expenses | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Expense | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Expense | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Delete / Void Expense | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Export Expenses | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Expenses | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Expense | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Edit Expense | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Delete / Void Expense | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Export Expenses | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

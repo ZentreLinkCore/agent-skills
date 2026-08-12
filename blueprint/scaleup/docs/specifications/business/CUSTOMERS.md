@@ -125,13 +125,13 @@ Possible statuses:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Customers | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Customer | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Customer | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive Customer | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Export Customers | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Customers | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Customer | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Edit Customer | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Archive Customer | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Export Customers | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

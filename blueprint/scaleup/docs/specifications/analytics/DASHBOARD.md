@@ -150,12 +150,12 @@ Provide a high-level business condition indicator.
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Dashboard | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
-| Change Period | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
-| View Financial Analytics | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
-| Export Analytics | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Dashboard | ✅ | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
+| Change Period | ✅ | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
+| View Financial Analytics | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
+| Export Analytics | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

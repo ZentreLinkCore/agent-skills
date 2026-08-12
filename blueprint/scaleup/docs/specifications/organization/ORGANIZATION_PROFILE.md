@@ -131,13 +131,13 @@ The following must not automatically appear on the public profile:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Public Profile | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Edit Organization Profile | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Change Profile Visibility | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Upload Logo | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Publish Public Information | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Public Profile | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Edit Organization Profile | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Change Profile Visibility | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Upload Logo | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Publish Public Information | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

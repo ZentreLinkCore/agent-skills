@@ -137,12 +137,12 @@ Action Plans
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Plan | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Plan | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Plan | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive Plan | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Plan | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Plan | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Plan | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Archive Plan | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

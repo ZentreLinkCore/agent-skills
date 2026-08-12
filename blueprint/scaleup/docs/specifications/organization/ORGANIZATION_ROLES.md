@@ -13,8 +13,11 @@ Its purpose is to ensure that organization members only have access to the infor
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
+
+Listed in descending order of authority.
 
 ---
 
@@ -58,6 +61,27 @@ Capabilities may include:
 - Manage goals
 - View reports
 - Coordinate team activities
+
+### Accountant
+
+Records and reports on the organization's financial activity.
+
+Capabilities include:
+
+- View dashboard
+- Record and edit sales, expenses, and transactions
+- Maintain customers and products
+- View analytics
+- View and export reports
+- View goals and KPIs
+- View subscription billing details, invoices, and billing history
+
+Deliberately excluded:
+
+- Deleting or voiding financial records — history is corrected by entry, not erased
+- Member management and organization settings
+- Changing, paying for, or cancelling the subscription — billing is readable, not manageable
+- Managing goals and KPIs
 
 ### Member
 

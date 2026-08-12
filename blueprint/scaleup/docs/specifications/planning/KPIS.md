@@ -146,12 +146,12 @@ Business Data
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View KPIs | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create KPI | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit KPI | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive KPI | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View KPIs | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create KPI | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit KPI | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Archive KPI | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

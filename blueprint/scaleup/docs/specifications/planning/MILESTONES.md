@@ -114,12 +114,12 @@ Potential fields:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Milestones | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Milestone | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Milestone | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Complete Milestone | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Milestones | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Milestone | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Milestone | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Complete Milestone | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
 
 ---
 

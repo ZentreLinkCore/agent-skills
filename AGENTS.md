@@ -22,7 +22,7 @@ The agent MUST read, load, and follow these rules files:
 16. [Incremental Generation](./rules/incremental-generation.md) - Guidelines for minimal diffs and safe file modification.
 17. [Anti-Hallucination](./rules/anti-hallucination.md) - Constraints to reduce fabricated routes, databases, or variables.
 18. [System Awareness](./rules/system-awareness.md) - The canonical models/migrations/routes discovery scan referenced by the rules and skills above; update scan steps here only.
-19. [Project Profile](./rules/project-profile.md) - **Read this first for any implementation.** Verified ground-truth architecture of THIS codebase: top-level Query/Handler/Action pattern (`App\Queries`, `App\Handlers`, `App\Actions` — `app/Domain/` is retired), no API Resources, portal route prefixes (`tk` namespace vs `timekeeping` URL), frontend module layout, HTTP client import, globally-registered components. Follow it instead of re-detecting.
+19. [Project Profile](./rules/project-profile.md) - **Read this first for any implementation.** Verified ground-truth architecture. Covers **two codebases** — start at its "Which Project Am I In?" section, which detects SubHRMS (Vue 3) vs ScaleUP (React 19) from `package.json` and tells you which sections apply. Shared: top-level Query/Handler/Action pattern (`App\Queries`, `App\Handlers`, `App\Actions` — `app/Domain/` is retired), no API Resources. Project-specific: database conventions (**opposite** in each), route organization, frontend layout, HTTP client import. Follow it instead of re-detecting.
 
 ## Specs
 

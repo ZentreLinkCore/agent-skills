@@ -116,12 +116,12 @@ The next renewal date must be visible to authorized billing users.
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Billing | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Edit Billing Information | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| View Invoices | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Download Invoice | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Billing | ✅ | Based on Permission | ❌ | ✅ | ❌ | ❌ |
+| Edit Billing Information | ✅ | Based on Permission | ❌ | ❌ | ❌ | ❌ |
+| View Invoices | ✅ | Based on Permission | ❌ | ✅ | ❌ | ❌ |
+| Download Invoice | ✅ | Based on Permission | ❌ | ✅ | ❌ | ❌ |
 
 ---
 

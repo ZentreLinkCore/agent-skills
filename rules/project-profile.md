@@ -1,14 +1,45 @@
 # Project Profile (Verified Facts)
 
 ## Purpose
-This is the **ground-truth architecture reference** for this specific HRMS codebase. Other rule and skill files tell the agent to "detect the architecture" — this file records what that detection actually resolves to, so the agent follows known facts instead of re-deriving (and re-guessing) them every run.
+This is the **ground-truth architecture reference** for the codebases this `.agents/` folder ships with. Other rule and skill files tell the agent to "detect the architecture" — this file records what that detection actually resolves to, so the agent follows known facts instead of re-deriving (and re-guessing) them every run.
 
 > [!IMPORTANT]
-> These are observed facts, not aspirations. Still run the [System Awareness](./system-awareness.md) scan for the specific models/columns/routes you touch — but do NOT contradict the patterns below (e.g. don't introduce API Resources; this project doesn't use them). If reality has drifted from this file, update this file.
+> These are observed facts, not aspirations. Still run the [System Awareness](./system-awareness.md) scan for the specific models/columns/routes you touch — but do NOT contradict the patterns below (e.g. don't introduce API Resources; neither project uses them). If reality has drifted from this file, update this file.
 
 ---
 
-## Stack
+## Which Project Am I In? (READ FIRST)
+
+This `.agents/` folder is shared by **two different codebases**. They share a backend pattern but their frontends, database conventions, and domain vocabulary are **incompatible**. Applying the wrong half produces code that looks plausible and is wrong.
+
+**Detect it in one step — check `package.json` dependencies:**
+
+| If you see | Project | Frontend |
+| :--- | :--- | :--- |
+| `vue`, `pinia`, `vue-router` | **SubHRMS** | Vue 3 |
+| `react`, `react-dom`, `react-router-dom` | **ScaleUP** | React 19 |
+
+Secondary tells: ScaleUP has `.agents/blueprint/scaleup/` and `app/Models/Organization.php`; SubHRMS has `.agents/rules/hrms-rules.md` domain content (payroll, timekeeping) and `app/Models/Employee.php`.
+
+**What each section below applies to:**
+
+| Section | SubHRMS | ScaleUP |
+| :--- | :---: | :---: |
+| Backend: Query/Handler/Action | ✅ | ✅ |
+| Database Schema Conventions (SubHRMS) | ✅ | ❌ |
+| Portals & Route Prefixes (SubHRMS) | ✅ | ❌ |
+| Frontend Architecture (SubHRMS / Vue) | ✅ | ❌ |
+| ScaleUP Profile | ❌ | ✅ |
+
+> [!CAUTION]
+> The database conventions are **direct opposites** and are the easiest thing to get wrong. SubHRMS: no FK constraints, `id`-prefixed relationship columns (`idacct`), `status` column instead of soft deletes. ScaleUP: real foreign keys, `<parent>_id` columns (`organization_id`), `deleted_at` soft deletes. Never carry one project's rule into the other.
+
+---
+
+## SubHRMS — Stack
+
+> **Applies to: SubHRMS only.** For ScaleUP see the ScaleUP Profile at the end of this file.
+
 - **Backend**: Laravel (PHP), Sanctum auth. Entry: `app/`, routes in `routes/api.php` (orchestrator) + per-portal files under `routes/api/`.
 - **Frontend**: Vue 3 `<script setup>` + Composition API, Vue Router, Tailwind CSS, Vite. Root: `resources/views/web/src/`.
 - **Testing**: PHPUnit (`vendor/bin/phpunit`), Vitest (`npm run test`). `tests/` at project root.
@@ -16,6 +47,8 @@ This is the **ground-truth architecture reference** for this specific HRMS codeb
 ---
 
 ## Backend Architecture: Query/Handler/Action Pattern
+
+**Applies to: both projects.** ScaleUP uses the identical pattern — `app/Queries/`, `app/Handlers/`, `app/Actions/` with the same empty base classes and static `execute()` convention. Its PascalCase domain folders are `Auth`, `Onboarding`, `Organization`, `Dashboard`, `Inquiry`.
 
 > [!IMPORTANT]
 > **The `app/Domain/` folder is retired.** These classes now live at the **top level of `app/`** — `app/Queries/`, `app/Handlers/`, `app/Services/`, `app/Actions/` — with matching top-level namespaces (`App\Queries`, `App\Handlers`, `App\Services`, `App\Actions`). Do NOT reference `App\Domain\...` or write anything under `app/Domain/` for new work. (A few base/legacy files may still carry a stale `namespace App\Domain\Handlers;` mid-migration — the target is `App\Handlers`; don't copy the stale form.)
@@ -109,7 +142,9 @@ public function getRequests(Request $request)
 
 ---
 
-## Database Schema Conventions
+## SubHRMS — Database Schema Conventions
+
+**Applies to: SubHRMS only.** ScaleUP's conventions are the opposite — see the ScaleUP Profile.
 
 > [!IMPORTANT]
 > **No DB-level foreign keys — index the relationship column instead.** This codebase has **zero** `->foreign()->references()` constraints. Referential integrity is enforced in the **Query/Handler layer**, not the database.
@@ -121,7 +156,9 @@ public function getRequests(Request $request)
 
 ---
 
-## Portals & Route Prefixes
+## SubHRMS — Portals & Route Prefixes
+
+> **Applies to: SubHRMS only.** ScaleUP has no portals; it groups routes by domain — see the ScaleUP Profile.
 
 `routes/api.php` is a thin **orchestrator**: public routes (login, biometric) + one `Route::middleware(['auth:sanctum'])->group(...)`. Inside that group, each portal's routes live in **its own file** under `routes/api/`, loaded with `Route::prefix('<portal>')->group(base_path('routes/api/<portal>.php'))`. Each portal file holds just its route bodies + its own controller `use` imports and inherits the prefix + `auth:sanctum` from the orchestrator — so URLs are identical to a single flat file.
 
@@ -154,7 +191,9 @@ routes/api/admin.php         # /api/admin/...        (contains the `database` su
 
 ---
 
-## Frontend Architecture
+## SubHRMS — Frontend Architecture (Vue 3)
+
+> **Applies to: SubHRMS only.** ScaleUP is React — see the ScaleUP Profile.
 
 **Module structure (current standard — TypeScript)** — `resources/views/web/src/module/<portal>/<feature>/`:
 ```
@@ -221,3 +260,110 @@ export { default as <feature>Routes } from './route/<feature>.routes';
 **Shared utils** (`@/src/utils/`): `debounce`, `throttle`, `dateFormatter` (date helpers), `currency` (`formatCurrency`/`parseCurrency`), `constants`, `theme`, `useFileUpload`, `formatNumberInput`.
 
 **Shared composables** (`@/src/composables/`): `useLocalStorage`, `useResponsive`, `useCalendar`, `useSidebarLinks`, `useInitialProfile`.
+
+---
+
+## ScaleUP Profile
+
+> **Applies to: ScaleUP only.** Everything in the `SubHRMS —` sections above is wrong for this project.
+
+ScaleUP is a Business Operating System + Business Community Platform (ZentreLink). Unlike SubHRMS, it has a **written product blueprint that is the source of truth**: [`.agents/blueprint/scaleup/docs/`](../blueprint/scaleup/). Read the relevant specification there before speccing or building — it governs behavior, and this file governs only *how* to express it in code. Start at [`docs/README.md`](../blueprint/scaleup/docs/README.md); the condensed version is [`SUMMARY.md`](../blueprint/scaleup/SUMMARY.md).
+
+### Stack
+
+- **Backend**: Laravel (PHP), **Sanctum stateful SPA session** (cookie-based, not bearer tokens). Same Query/Handler/Action pattern as SubHRMS.
+- **Frontend**: **React 19** + `react-router-dom` v7, Tailwind CSS 4, Radix UI primitives, `lucide-react` icons, Vite 8.
+- **TypeScript**: configured and enforced — `tsconfig.json` at project root, `npm run typecheck` (`tsc --noEmit`), and `npm run build` runs typecheck first. `allowJs: true` + `checkJs: false` during migration: `.jsx`/`.js` still run but are unchecked; every `.ts`/`.tsx` file gets `strict: true`.
+- **Testing**: PHPUnit (`vendor/bin/phpunit`). **No Vitest is configured** — do not reference `npm run test`.
+
+### Frontend layout
+
+The web root is `resources/views/web/` — **not** `.../web/src/`. The `@` alias points at that root, so `@/app/...` and `@/src/...` are both valid:
+
+```text
+resources/views/web/
+├── main.jsx                     # entry (registered in vite.config.js input)
+├── app/
+│   ├── routes.jsx               # THE router — all routes registered here, manually
+│   └── axios/                   # http.ts, axiosInstance.ts, axiosInterceptors.ts, axiosApiErrors.ts
+└── src/
+    ├── types/                   # shared domain types barrel (@/src/types)
+    ├── theme/                   # ThemeProvider + useTheme
+    ├── components/ui/           # design system (Button, Card, Input, Table, Chart, …)
+    └── module/<domain>/         # feature modules
+        ├── api/<domain>.api.ts  # use<Domain>Api() service hook
+        ├── pages/               # route-level components
+        ├── components/          # sub-components
+        ├── hooks/ context/ guards/
+        └── index.jsx            # barrel
+```
+
+- **File extensions**: `.tsx` for anything containing JSX, `.ts` for everything else. New work is TypeScript — do not add new `.jsx`/`.js` files.
+- **Routing is MANUAL and central.** There is no glob-based auto-aggregation (that is a SubHRMS mechanism). To add a route, import the page in `app/routes.jsx` and add it to the `createBrowserRouter` tree, inside `<AuthGuard>` or `<GuestGuard>` as appropriate.
+- **State**: React Context + hooks. There is no Pinia, Redux, or Zustand — do not introduce one without asking.
+
+### HTTP client
+
+Import the **`http` wrapper**, not the raw axios instance — this differs from SubHRMS:
+
+```ts
+import http from '@/app/axios/http';
+
+import type { ApiResponse } from '@/src/types';
+
+export function use<Domain>Api() {
+    return {
+        getThing: () => http.get<ApiResponse<Thing>>('/api/<domain>/thing'),
+    };
+}
+```
+
+- `http.get/post/put/patch/delete` are generic and return the **already-unwrapped response body** (`response.data`), so `T` is the body — usually the `{ data: ... }` envelope, hence `ApiResponse<Thing>`.
+- Rejections are always a normalized `ApiError` (`{ status, message, fields, original }`), never a raw `AxiosError`. Use `isApiError()` from `@/src/types` to narrow in `catch`.
+- 401/419 handling is already wired: `axiosApiErrors` dispatches `auth:unauthorized` once, and `AuthContext` clears the session. **Never** add per-module logout handling.
+- Endpoint strings are absolute and start with `/api/`.
+- Shared domain types live in `@/src/types` — import from the barrel, and keep them matching the shaping Query on the backend.
+
+### Database conventions
+
+> [!CAUTION]
+> These are the **opposite** of the SubHRMS conventions above. Follow [`DATABASE_SCHEMA.md`](../blueprint/scaleup/docs/DATABASE_SCHEMA.md) and [naming-convention.md](./naming-convention.md).
+
+- **Foreign keys are real.** Use `->foreign()->references()` where appropriate — ScaleUP is not the no-FK codebase.
+- **Relationship columns are `<singular_parent>_id`** — `organization_id`, `user_id`, `role_id`. **Never** the `id_`-prefixed form.
+- **Soft deletes use `deleted_at`** (the `SoftDeletes` trait), not a `status` disable column. `status` still exists for lifecycle state where the schema defines it.
+- **Multi-tenancy**: single database, shared tables, **organization scoping**. Every organization-owned table carries `organization_id`, and every query for organization-owned data MUST filter by the active organization. Cross-organization leakage is the one non-negotiable defect class.
+
+### Route organization (domains, not portals)
+
+ScaleUP has **no portals**. `routes/api.php` is a thin orchestrator that groups by **domain**:
+
+```text
+routes/api.php                 # orchestrator
+routes/api/auth.php            # /api/auth/...            PUBLIC (+ an auth:sanctum sub-group)
+routes/api/dashboard.php       # /api/dashboard/...       auth:sanctum
+routes/api/onboarding.php      # /api/onboarding/...      auth:sanctum
+routes/api/organizations.php   # /api/organizations/...   auth:sanctum
+```
+
+- Controllers live in `app/Http/Controllers/<Domain>/` with a **PascalCase** namespace (`App\Http\Controllers\Organization\...`) — unlike SubHRMS's lowercase portal folders.
+- New domains get their own `routes/api/<domain>.php` plus a `Route::prefix(...)->group(...)` line in the orchestrator, placed inside the `auth:sanctum` group unless the blueprint says the capability is public/free.
+- **FormRequests are the norm here**, not the exception — `app/Http/Requests/` already holds `LoginRequest`, `RegisterRequest`, `ResetPasswordRequest`, `StoreInquiryRequest`. Add one for any endpoint taking user input.
+- Rate-limit auth-adjacent routes (`->middleware('throttle:6,1')`), matching `routes/api/auth.php`.
+
+### Known drift — do NOT copy these patterns
+
+The existing implementation predates the blueprint being followed. These are **defects awaiting rework**, not conventions:
+
+| Drift | What exists | What the docs require |
+| :--- | :--- | :--- |
+| FK column naming | `id_organization`, `id_user`, `id_created_by` | `organization_id`, `user_id`, `created_by_id` |
+| Membership table | `organization_users` | `organization_members` |
+| Roles | plain `role` string (`'owner'`/`'employee'`) | `organization_roles` + `permissions` + `role_permissions`; 5 roles per [PERMISSION_MATRIX.md](../blueprint/scaleup/docs/PERMISSION_MATRIX.md) |
+| Onboarding | forces every user through Create/Join Business | Organizations are **opt-in** — [Design Principle 2](../blueprint/scaleup/docs/DESIGN_PRINCIPLES.md) |
+| Default landing | `/dashboard` and `/app` both = Organization Workspace | Community Platform is the default; the workspace is a subscription-gated branch |
+| Subscription | absent entirely | The workspace is unlocked by an Organization subscription — [ADR-002](../blueprint/scaleup/docs/decisions/ADR-002-subscription-model.md) |
+| Community layer | absent entirely | Roadmap **Phase 1** — profiles, feed, posts, connections, messaging, notifications |
+| Dashboard data | static seed values in `GetDashboardSummaryQuery` | Derived from real business/planning tables |
+
+When touching a file that carries one of these, follow the **right-hand column** and flag the mismatch rather than matching the surrounding (wrong) code. This is the one place where "match the sibling files" does not apply.

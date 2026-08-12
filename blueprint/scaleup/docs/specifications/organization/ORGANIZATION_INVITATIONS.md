@@ -71,12 +71,12 @@ Alternative states:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| Send Invitation | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Revoke Invitation | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Accept Invitation | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Decline Invitation | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Send Invitation | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Revoke Invitation | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Accept Invitation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Decline Invitation | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 

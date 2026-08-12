@@ -257,8 +257,11 @@ System roles may include:
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
+
+System roles carry a null `organization_id` and `is_system_role = true`, so a single set is shared by every organization rather than copied into each one. A non-null `organization_id` marks a custom role belonging to that one organization.
 
 Future custom roles may be organization-specific.
 

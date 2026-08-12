@@ -121,13 +121,13 @@ Potential fields:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Actions | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Action | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Action | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Complete Action | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Assign Action | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Actions | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Action | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Action | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Complete Action | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Assign Action | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
 
 ---
 

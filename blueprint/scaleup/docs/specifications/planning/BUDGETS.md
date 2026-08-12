@@ -128,12 +128,12 @@ Variance: ₱18,000
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Budgets | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Budget | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Budget | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Close Budget | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Budgets | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Budget | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Budget | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Close Budget | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

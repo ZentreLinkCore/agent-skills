@@ -117,16 +117,16 @@ May include:
 
 ## Permissions
 
-| Setting Area | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| General | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Profile | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Members | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Roles | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Privacy | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Notifications | ✅ | ✅ | ✅ | Personal Only | Personal Only |
-| Subscription | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Security | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Setting Area | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| General | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Profile | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Members | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Roles | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Privacy | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Notifications | ✅ | ✅ | ✅ | Personal Only | Personal Only | Personal Only |
+| Subscription | ✅ | Based on Permission | ❌ | ❌ | ❌ | ❌ |
+| Security | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

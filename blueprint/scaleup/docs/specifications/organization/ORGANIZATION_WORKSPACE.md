@@ -130,6 +130,7 @@ Workspace access is role and permission based.
 | Owner | ✅ |
 | Administrator | ✅ |
 | Manager | ✅ |
+| Accountant | ✅ Financial Areas |
 | Member | ✅ Based on Permission |
 | Viewer | ✅ Read Only |
 

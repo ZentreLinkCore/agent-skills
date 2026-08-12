@@ -239,6 +239,7 @@ Control access to organization capabilities.
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
 

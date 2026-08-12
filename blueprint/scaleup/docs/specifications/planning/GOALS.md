@@ -166,13 +166,13 @@ Progress: 70%
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Goals | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Goal | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Goal | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Complete Goal | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive Goal | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Goals | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Goal | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Goal | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Complete Goal | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Archive Goal | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

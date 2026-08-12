@@ -195,12 +195,12 @@ Possible additional states:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Reports | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
-| Generate Reports | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
-| Export Reports | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
-| Manage Report Templates | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Reports | ✅ | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
+| Generate Reports | ✅ | ✅ | ✅ | ✅ | Based on Permission | Based on Permission |
+| Export Reports | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
+| Manage Report Templates | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

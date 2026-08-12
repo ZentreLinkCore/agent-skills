@@ -47,32 +47,52 @@ Initial organization roles:
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
+
+Roles are listed in descending order of authority. Accountant sits between Manager
+and Member: broader than a Member on financial records, narrower than a Manager in
+that it never touches members, settings, or the subscription.
 
 ---
 
 ## 3. Organization Access Matrix
 
-| Capability | Owner | Administrator | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View organization workspace | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View business data | ✅ | ✅ | ✅ | Based on permission | ✅/❌ |
-| Create business records | ✅ | ✅ | ✅ | ✅/❌ | ❌ |
-| Edit business records | ✅ | ✅ | ✅ | ✅/❌ | ❌ |
-| Delete business records | ✅ | ✅ | Limited | ❌ | ❌ |
-| View reports | ✅ | ✅ | ✅ | ✅/❌ | ✅/❌ |
-| Manage goals | ✅ | ✅ | ✅ | ✅/❌ | ❌ |
-| Manage KPIs | ✅ | ✅ | ✅ | ✅/❌ | ❌ |
-| Invite members | ✅ | ✅ | ✅/❌ | ❌ | ❌ |
-| Manage member roles | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Remove members | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Manage organization settings | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Manage subscription | ✅ | ✅/❌ | ❌ | ❌ | ❌ |
-| Cancel organization | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Capability | Owner | Administrator | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View organization workspace | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| View dashboard | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| View business data | ✅ | ✅ | ✅ | ✅ | ✅ | ✅/❌ |
+| Create business records | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Edit business records | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| Delete business records | ✅ | ✅ | Limited | ❌ | ❌ | ❌ |
+| View reports | ✅ | ✅ | ✅ | ✅ | ✅/❌ | ✅/❌ |
+| Export reports | ✅ | ✅ | ✅ | ✅ | ✅/❌ | ✅/❌ |
+| View analytics | ✅ | ✅ | ✅ | ✅ | ✅/❌ | ✅/❌ |
+| Manage goals | ✅ | ✅ | ✅ | ❌ | ✅/❌ | ❌ |
+| Manage KPIs | ✅ | ✅ | ✅ | ❌ | ✅/❌ | ❌ |
+| Invite members | ✅ | ✅ | ✅/❌ | ❌ | ❌ | ❌ |
+| Manage member roles | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Remove members | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Manage organization settings | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| View billing and invoices | ✅ | ✅/❌ | ❌ | ✅ | ❌ | ❌ |
+| Manage subscription | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Cancel organization | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 `✅/❌` indicates a capability that should eventually be configurable through granular permissions.
+
+`Limited` indicates a capability restricted in scope rather than granted outright.
+
+### Seeded Defaults
+
+Until the granular permission system exists, every `✅/❌` cell is seeded as **denied**, with two deliberate exceptions recorded in [`schema_correction.md`](../../../specs/scaleup/organization/schema_correction.md):
+
+- **Member** receives `Create` and `Edit business records`. A Member "performs assigned organization activities" — a read-only Member is a Viewer.
+- **Manage subscription** is Owner-only. Spending money is not delegable by default, so it is withheld from Administrator.
+- **Accountant** receives `View billing and invoices`. Recording the ScaleUP subscription as a business expense — and substantiating it for tax — requires the invoice, so withholding it would block the role's core responsibility. Read-only: changing, paying for, or cancelling the plan stays Owner-only. Note this is deliberately *not* hierarchical — an Administrator's authority is over people and settings, not the books.
+
+Seeded permission counts: Owner 21, Administrator 18, Manager 14, Accountant 12, Member 8, Viewer 6.
 
 ---
 
@@ -133,7 +153,31 @@ Manager access should become configurable per organization.
 
 ---
 
-## 7. Member
+## 7. Accountant
+
+Accountants record and report on the organization's financial activity.
+
+#### Typical Access
+
+- Dashboard
+- Sales, expenses, and transactions — view, create, and edit
+- Customers and products
+- Analytics
+- Reports, including export
+- View goals and KPIs
+- View subscription billing, invoices, and billing history
+
+#### Restrictions
+
+- No deleting or voiding financial records — history is corrected by entry, not erased
+- No member management
+- No organization settings
+- No changing, paying for, or cancelling the subscription — billing is **readable**, not manageable
+- No managing goals or KPIs
+
+---
+
+## 8. Member
 
 Members perform assigned operational activities.
 
@@ -148,7 +192,7 @@ Members should not automatically receive access to sensitive financial or admini
 
 ---
 
-## 8. Viewer
+## 9. Viewer
 
 Viewers have read-only access.
 
@@ -168,7 +212,7 @@ Viewers have read-only access.
 
 ---
 
-## 9. Community Permissions
+## 10. Community Permissions
 
 Organization roles do not automatically control community permissions.
 
@@ -189,21 +233,21 @@ Community actions remain tied to the user's personal identity.
 
 ---
 
-## 10. Organization Content Permissions
+## 11. Organization Content Permissions
 
 Organizations may publish public-facing content while keeping internal data private.
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| Create organization post | ✅ | ✅ | ✅ | Based on permission | ❌ |
-| Edit own organization post | ✅ | ✅ | ✅ | ✅/❌ | ❌ |
-| Delete organization post | ✅ | ✅ | ✅/❌ | ❌ | ❌ |
-| Publish announcement | ✅ | ✅ | ✅/❌ | ❌ | ❌ |
-| Publish opportunity | ✅ | ✅ | ✅/❌ | ✅/❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Create organization post | ✅ | ✅ | ✅ | ❌ | Based on permission | ❌ |
+| Edit own organization post | ✅ | ✅ | ✅ | ❌ | ✅/❌ | ❌ |
+| Delete organization post | ✅ | ✅ | ✅/❌ | ❌ | ❌ | ❌ |
+| Publish announcement | ✅ | ✅ | ✅/❌ | ❌ | ❌ | ❌ |
+| Publish opportunity | ✅ | ✅ | ✅/❌ | ❌ | ✅/❌ | ❌ |
 
 ---
 
-## 11. Subscription Permissions
+## 12. Subscription Permissions
 
 Subscription status controls whether an organization can access paid workspace capabilities.
 
@@ -229,7 +273,7 @@ Access to paid features is removed or restricted according to the retention poli
 
 ---
 
-## 12. Permission Principles
+## 13. Permission Principles
 
 #### Least Privilege
 
@@ -253,7 +297,7 @@ The initial roles are defaults. The permission model should support more granula
 
 ---
 
-## 13. Multi-Organization Example
+## 14. Multi-Organization Example
 
 A user may have different permissions in different organizations.
 
@@ -287,7 +331,7 @@ Startup Group
 
 ---
 
-## 14. Permission Evaluation Principle
+## 15. Permission Evaluation Principle
 
 Every organization request should conceptually follow:
 
@@ -311,7 +355,7 @@ This ensures that users can only access resources allowed by both their organiza
 
 ---
 
-## 15. Future Permission Extensions
+## 16. Future Permission Extensions
 
 The permission system may later support:
 

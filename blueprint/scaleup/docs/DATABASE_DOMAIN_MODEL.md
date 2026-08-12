@@ -149,6 +149,7 @@ Examples:
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
 

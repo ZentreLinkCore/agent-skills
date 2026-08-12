@@ -137,13 +137,13 @@ Possible statuses:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Products | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Product | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Product | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive Product | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Export Products | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Products | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Product | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Edit Product | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Archive Product | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Export Products | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

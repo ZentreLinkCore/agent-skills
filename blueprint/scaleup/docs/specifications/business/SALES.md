@@ -124,13 +124,13 @@ The final statuses may depend on future accounting requirements.
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Sales | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Sale | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Sale | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Delete / Void Sale | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Export Sales | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Sales | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Sale | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Edit Sale | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Delete / Void Sale | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Export Sales | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

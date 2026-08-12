@@ -129,6 +129,7 @@ Possible initial roles:
 - Owner
 - Administrator
 - Manager
+- Accountant
 - Member
 - Viewer
 

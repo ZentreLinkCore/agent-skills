@@ -160,14 +160,14 @@ The domain should support future business modules without restructuring its core
 
 ## Permissions
 
-| Capability | Owner | Administrator | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ |
-| View Business Data | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Records | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Records | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Delete Records | ✅ | ✅ | Based on Permission | ❌ | ❌ |
-| Export Data | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
+| Capability | Owner | Administrator | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Dashboard | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| View Business Data | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Records | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Edit Records | ✅ | ✅ | ✅ | ✅ | Based on Permission | ❌ |
+| Delete Records | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Export Data | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
 
 ---
 

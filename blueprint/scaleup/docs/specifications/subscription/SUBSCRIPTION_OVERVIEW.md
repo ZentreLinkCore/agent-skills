@@ -139,13 +139,13 @@ Cancelled / Expired
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Subscription | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Change Plan | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Update Billing Information | ✅ | Based on Permission | ❌ | ❌ | ❌ |
-| Cancel Subscription | ✅ | ❌ | ❌ | ❌ | ❌ |
-| View Billing History | ✅ | Based on Permission | ❌ | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Subscription | ✅ | Based on Permission | ❌ | ✅ | ❌ | ❌ |
+| Change Plan | ✅ | Based on Permission | ❌ | ❌ | ❌ | ❌ |
+| Update Billing Information | ✅ | Based on Permission | ❌ | ❌ | ❌ | ❌ |
+| Cancel Subscription | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| View Billing History | ✅ | Based on Permission | ❌ | ✅ | ❌ | ❌ |
 
 ---
 

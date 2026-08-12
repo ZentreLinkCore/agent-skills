@@ -130,12 +130,12 @@ KPIs
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Objectives | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Create Objective | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Edit Objective | ✅ | ✅ | ✅ | Based on Permission | ❌ |
-| Archive Objective | ✅ | ✅ | Based on Permission | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Objectives | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Create Objective | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Edit Objective | ✅ | ✅ | ✅ | ❌ | Based on Permission | ❌ |
+| Archive Objective | ✅ | ✅ | Based on Permission | ❌ | ❌ | ❌ |
 
 ---
 

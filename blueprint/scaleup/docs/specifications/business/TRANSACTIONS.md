@@ -133,11 +133,11 @@ Possible states:
 
 ## Permissions
 
-| Action | Owner | Admin | Manager | Member | Viewer |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| View Transactions | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
-| Export Transactions | ✅ | ✅ | Based on Permission | Based on Permission | Based on Permission |
-| Modify Transaction | ❌/Based on Source | ❌/Based on Source | ❌/Based on Source | ❌ | ❌ |
+| Action | Owner | Admin | Manager | Accountant | Member | Viewer |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| View Transactions | ✅ | ✅ | ✅ | ✅ | Based on Permission | ✅/❌ |
+| Export Transactions | ✅ | ✅ | Based on Permission | ✅ | Based on Permission | Based on Permission |
+| Modify Transaction | ❌/Based on Source | ❌/Based on Source | ❌/Based on Source | ❌ | ❌ | ❌ |
 
 Transactions should generally be modified through their source business records rather than directly.
 
