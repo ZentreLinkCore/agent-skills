@@ -1,28 +1,31 @@
-# HRMS Agent Rules & Customizations
+# Agent Rules — Rule Library Index
 
-This workspace contains specialized coding, design, and business rules located in the [.agents/rules/](./rules/) directory, plus a set of end-to-end workflow skills in [.agents/skills/](./skills/).
+> [!IMPORTANT]
+> **Start at the repo-root [`AGENTS.md`](../AGENTS.md), not here.** That file is the portable entry point every agent should load: the project gate, the conventions that are always true, and a table telling you which rule to open for which task. This file is just the index of what lives in [`.agents/rules/`](./rules/).
 
-The agent MUST read, load, and follow these rules files:
+**Do NOT preload all of these.** The library is ~1,000 lines, and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals. Loading it all on every turn is the single largest avoidable context cost here, and wrong-project content in context is what causes agents to build to the wrong stack.
+
+**Read a rule when the task touches it** (the root `AGENTS.md` table maps task → rule):
 
 1. [Coding Standards](./rules/coding-standards.md) - Clean code, formatting, and DRY guidelines.
-2. [Vue.js Standards](./rules/vue-standards.md) - Rules for Composition API, state, and components.
-3. [Laravel Standards](./rules/laravel-standards.md) - Rules for controllers, models, FormRequests, and API resources.
-4. [UI & Design Standards](./rules/ui-design.md) - Theme guidelines, colors, grids, dark mode, card styling, and animations.
-5. [Performance Standards](./rules/performance.md) - Lazy loading, lazy routes, memory cleanup, and DB query scaling.
-6. [Security Standards](./rules/security.md) - CSRF, input validation, DB policies, rate-limiting, and encryption.
+2. [Vue.js Standards](./rules/vue-standards.md) - Composition API, state, components. **SubHRMS only** — ScaleUP is React.
+3. [Laravel Standards](./rules/laravel-standards.md) - Controllers, models, FormRequests, migrations, routes.
+4. [UI & Design Standards](./rules/ui-design.md) - Theme, colors, grids, dark mode, cards. **Portal-specific parts are SubHRMS only.**
+5. [Performance Standards](./rules/performance.md) - Lazy loading, memory cleanup, DB query scaling.
+6. [Security Standards](./rules/security.md) - CSRF, input validation, policies, rate-limiting, encryption.
 7. [Project Structure Standards](./rules/project-structure.md) - File and folder layouts across backend and frontend.
-8. [Naming Convention Standards](./rules/naming-convention.md) - Casing standards for components, variables, tables, models, and classes.
-9. [Git Workflow Standards](./rules/git-workflow.md) - Branch names, Conventional Commits, and PR merging guidelines.
-10. [Testing Standards](./rules/testing.md) - PHPUnit and Vitest targets, mocking guidelines, and critical calculations coverage.
+8. [Naming Convention Standards](./rules/naming-convention.md) - Casing for components, variables, tables, models, classes.
+9. [Git Workflow Standards](./rules/git-workflow.md) - Branch names, Conventional Commits, the mandatory branch gate.
+10. [Testing Standards](./rules/testing.md) - PHPUnit targets, mocking, critical-calculation coverage. **ScaleUP configures no JS test runner** — use `npm run typecheck` / `npm run build`.
 11. [Documentation Standards](./rules/documentation.md) - Inline JSDoc/PHPDoc comments and API schemas.
-12. [HRMS Domain Rules](./rules/hrms-rules.md) - Overtime, late logs, SSS/PhilHealth/Pag-IBIG compliance, salary rate factors, and portal separations.
-13. [Execution Strategy](./rules/execution-strategy.md) - Workspace search order and scan optimization guidelines.
-14. [Context Loading](./rules/context-loading.md) - Focus scoping and token safety limitations.
+12. [HRMS Domain Rules](./rules/hrms-rules.md) - Overtime, late logs, SSS/PhilHealth/Pag-IBIG, rate factors, portal separation. **SubHRMS only.**
+13. [Execution Strategy](./rules/execution-strategy.md) - Workspace search order and scan optimization.
+14. [Context Loading](./rules/context-loading.md) - Focus scoping and token safety limits.
 15. [Duplicate Prevention](./rules/duplicate-prevention.md) - Logic and file reuse rules.
-16. [Incremental Generation](./rules/incremental-generation.md) - Guidelines for minimal diffs and safe file modification.
-17. [Anti-Hallucination](./rules/anti-hallucination.md) - Constraints to reduce fabricated routes, databases, or variables.
-18. [System Awareness](./rules/system-awareness.md) - The canonical models/migrations/routes discovery scan referenced by the rules and skills above; update scan steps here only.
-19. [Project Profile](./rules/project-profile.md) - **Read this first for any implementation.** Verified ground-truth architecture. Covers **two codebases** — start at its "Which Project Am I In?" section, which detects SubHRMS (Vue 3) vs ScaleUP (React 19) from `package.json` and tells you which sections apply. Shared: top-level Query/Handler/Action pattern (`App\Queries`, `App\Handlers`, `App\Actions` — `app/Domain/` is retired), no API Resources. Project-specific: database conventions (**opposite** in each), route organization, frontend layout, HTTP client import. Follow it instead of re-detecting.
+16. [Incremental Generation](./rules/incremental-generation.md) - Minimal diffs and safe file modification.
+17. [Anti-Hallucination](./rules/anti-hallucination.md) - Constraints against fabricated routes, tables, or variables.
+18. [System Awareness](./rules/system-awareness.md) - The canonical models/migrations/routes discovery scan. Update scan steps here only.
+19. [Project Profile](./rules/project-profile.md) - Verified ground-truth architecture for **both** codebases. Open it when you need detail beyond the root `AGENTS.md` summary — then read **only** your project's sections. Shared: top-level Query/Handler/Action (`App\Queries`, `App\Handlers`, `App\Actions` — `app/Domain/` is retired), no API Resources. Project-specific: database conventions (**opposite** in each), route organization, frontend layout, HTTP client.
 
 ## Specs
 
