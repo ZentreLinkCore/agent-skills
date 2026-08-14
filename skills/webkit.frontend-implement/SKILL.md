@@ -1,15 +1,12 @@
 ---
 name: webkit-frontend-implement
 description: >
-  Generates and implements modular base structure folder and files for frontend modules.
-  SPEC-DRIVEN: when a spec exists under `.agents/specs/`, that spec is the primary source of truth for the layout, components, filters, pagination, types, and API contract.
-  DESIGN-FIRST: builds the UI with HARD-CODED / static placeholder data first (no live API calls) so the design can be validated against the spec BEFORE any backend wiring — dynamic data is added later by `/webkit.backend-implement`.
-  Detects the target framework (Vue, React, etc.) based on package.json, file extensions, or config files, and scaffolds appropriately.
-  Focuses primarily on the frontend UI, setting up pages, components, hooks/composables, and routes.
-  ALWAYS aligns to existing backend models, tables, and API routes — never creates new database tables or endpoints
-  unless explicitly instructed and confirmed that no existing implementation covers the need.
-  Supports dragging folder or file paths into the command to specify the target module.
-  Triggered when the user runs the command `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
+  Scaffolds and implements a frontend module — pages, components, hooks/composables, routes, api layer.
+  DESIGN-FIRST: builds the UI with HARD-CODED data so the design can be validated against the spec BEFORE
+  any backend wiring (Gate 1; `/webkit.backend-implement` adds the live data). SPEC-DRIVEN when a spec
+  exists under `.agents/specs/`. Detects the project and framework, reuses the existing design system
+  instead of duplicating it, and never invents backend fields, tables, or endpoints.
+  Triggered by `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
 ---
 
 # Webkit Frontend Implement
@@ -58,25 +55,7 @@ Spec (.agents/specs/…)  ──►  GATE 1: /webkit.frontend-implement   ──
 
 This is the **default** behavior of this skill. Even when the backend route already exists, build the design against hard-coded data first unless the user explicitly says "wire it live now."
 
-**Where the hard-coded data lives:** put it in the `api/<feature>.api.ts` hook so the swap to live calls later is a one-file change. Each method returns static data synchronously (wrapped in a resolved promise) instead of calling `http`.
-
-```typescript
-// api/<feature>.api.ts — DESIGN-FIRST: hard-coded data, no live calls yet.
-// Field names MUST match the spec's data contract / model $fillable — never invented.
-// TODO(backend): /webkit.backend-implement replaces these with http.get/post("api/<url-prefix>/...").
-export function use<Feature>Api() {
-  return {
-    getRoster: async (_params: Record<string, any> = {}): Promise<any> => ({
-      period: { period_start: '2026-07-01', period_end: '2026-07-15', tk_process_status: 1 },
-      employees: [
-        { empid: 'EMP001', fullname: 'Juan Dela Cruz', unit: 'Finance', reg_hrs: 88, ot_hrs: 4, gross_pay: 15000, payroll_status: 'Pending' },
-        // …enough rows to exercise pagination + every status the spec defines
-      ],
-      count: 1,
-    }),
-  };
-}
-```
+**Where the hard-coded data lives:** in the feature's **api layer**, so swapping to live calls later is a one-file change. Each method returns static data wrapped in a resolved promise instead of calling the HTTP client, and carries a `TODO(backend)` comment naming the endpoint it will become.
 
 **Rules for the hard-coded build:**
 - **Real field names only.** Shape every placeholder object after the spec's data contract (or the model `$fillable` from the System Awareness scan). Invented fields are a critical error even in mock data.
@@ -232,52 +211,19 @@ Before generating, detect the existing styles and code shapes for:
 
 ---
 
-## Execution Strategy (Performance Optimized)
+## Search Discipline & Inspection Budget
 
-The agent MUST minimize workspace scanning and token consumption.
+Search in this order and **stop at the first acceptable match** — never keep hunting for a "better" one:
 
-### Search Order
-1. Current module directory.
-2. Shared global components (`resources/views/web/src/components/` or React components folder).
-3. Sibling feature modules.
-4. Current portal modules.
-5. Entire frontend project (ONLY if explicitly requested).
+1. Current module directory
+2. **The design system / shared components** — never skipped for budget; it is one cheap read and prevents this skill's most expensive mistake
+3. Sibling feature modules
+4. Other modules in the same area
+5. Entire frontend — only if explicitly requested
 
-- **Early Exit**: If a reusable component clearly covers the core requirement, reuse it immediately unless the user explicitly requests a new/separate implementation. Never keep searching for a "better" match once one is found.
-- Never scan the entire frontend unless explicitly requested.
+**Per-turn budget:** ~5 files for framework/route/api checks, ~20 for component discovery, ~10 for utilities. Load at most 2 full files at once; prefer targeted line ranges. Never inspect backend files beyond the read-only System Awareness scan, unrelated modules, or mobile code during web work.
 
----
-
-## Workspace Inspection Budget
-
-To reduce unnecessary token usage, limit the number of files scanned in a single turn.
-
-### Maximum Files to Inspect:
-- **Framework Detection**: 5 files
-- **Component Discovery**: 20 files
-- **Route Discovery**: 5 files
-- **API Layer**: 5 files
-- **Utility Discovery**: 10 files
-
-If the budget is exceeded:
-1. Stop scanning.
-2. Use the best matching implementation already discovered.
-3. **If nothing was discovered, say so — do not quietly create.** Budget exhaustion means *unknown*, not *nothing exists*. Name what you searched for, record `CREATE — search incomplete` in the Reuse Ledger, and flag it at hand-off so the user can point you at the right file. A truncated search that silently becomes a new component is the exact path this budget must not create.
-
-> The design system is **never** the thing you skip for budget. Reading one components directory and its barrel is a single cheap call, and it prevents the most expensive mistake in this skill.
-
----
-
-## Context Loading Strategy
-
-Only load context that is required.
-
-### Context Priority
-Current file → Current folder → Shared components → Related module → Portal → Entire workspace (explicit request only)
-
-- **Token Protection**: Never load more than 2 full files simultaneously unless performing a merge or refactor operation. Prefer targeted snippets over full-file context whenever possible.
-- Never load unrelated modules or inspect backend files when implementing frontend code.
-- Never inspect mobile code when implementing web, and vice-versa.
+**When the budget runs out:** stop and use the best match found. **If nothing was found, say so — do not quietly create.** Exhaustion means *unknown*, not *nothing exists*: name what you searched, record `CREATE — search incomplete` in the Reuse Ledger, and flag it at hand-off. A truncated search that silently becomes a new component is exactly what this budget must prevent.
 
 ---
 
@@ -348,221 +294,39 @@ If a path parameter is passed in the command (e.g. `/webkit.frontend-implement @
 
 ---
 
-## Framework-Agnostic Setup Examples
+## Module Layout
 
-Adapt the structure, file naming, and coding syntax to the detected project framework:
+**The exact folder layout is project-specific — read it from [Project Profile](../../rules/project-profile.md)**, not from memory. SubHRMS nests modules under a *portal*; ScaleUP nests them under a *domain* and has no portals, with the web root at `resources/views/web/` (not `.../web/src/`).
 
-### 1. SubHRMS — Vue.js Pattern (Composition API + `<script setup>` + TypeScript)
+Rules that hold in both:
 
-> **Applies to SubHRMS only.** If Phase 0 resolved ScaleUP, skip to §2 — none of the paths below exist there.
-
-```
-<feature>/
-├── index.ts                        # Public API barrel — re-exports composables, api hook, routes
-├── route/<feature>.routes.ts       # RouteRecordRaw[] (default export); auto-registered by the portal glob
-├── api/<feature>.api.ts            # use<Feature>Api() — API service layer
-├── composables/use<Feature>.ts     # reactive state machine (filters, lists, actions)
-├── pages/<Feature>.vue             # main view(s), PascalCase
-├── components/                     # Vue sub-components (.vue)
-├── types/types.<feature>.ts        # TS interfaces / DTOs / enums (add when the feature has real shapes)
-├── utils/<feature>.utils.ts        # feature-specific helpers (add when needed)
-└── store/<feature>.store.ts        # Pinia store (add ONLY when state is shared across pages/components)
-```
-
-> `types/`, `utils/`, and `store/` are **on-demand** — create them only when the feature needs them (see Folder Generation Rules). Every new feature needs `route/`, `api/`, `composables/`, `pages/`, and `index.ts`.
-
-**Legacy layout** (older modules, plain JS — match it only when extending such a module):
-```
-<module_name>/
-├── components/           # Vue sub-components (.vue)
-├── pages/                # Main views (e.g., <ModuleName>.vue)
-├── script/               # useApiRequest.js + use<ModuleName>.js
-└── webRoute.js           # default-exported route array
-```
-
-### 2. ScaleUP — React Pattern (Functional Hooks + TypeScript)
-
-> **Applies to ScaleUP only.** Confirm the exact layout against the **ScaleUP Profile** in [project-profile.md](../../rules/project-profile.md) — it is the source of truth; the sketch below only shows the shape. Note the web root is `resources/views/web/` (**not** `.../web/src/`), and modules are grouped by **domain** — there are no portals.
-
-```text
-module/<domain>/
-├── index.jsx                     # barrel — exports routes, components, hooks
-├── route/<domain>.routes.tsx     # AppRouteObject[]; loaded by the master router
-├── useApiWebRoute.ts             # module route aggregator (where the module has one)
-├── api/<domain>.api.ts           # use<Domain>Api() service hook
-├── pages/                        # route-level components
-├── components/                   # sub-components
-└── hooks/ context/ guards/       # state, providers, and route guards as needed
-```
-
-- **File extensions**: `.tsx` for anything containing JSX, `.ts` otherwise. **New work is TypeScript — do not add new `.jsx`/`.js` files**, even when the sibling files in the module are still `.jsx`.
-- **State** is React Context + hooks. There is no Pinia, Redux, or Zustand — do not introduce one.
-- **Design system** lives at `src/components/ui/` with a barrel export. Read it before writing any component (see §5).
-- **HTTP client** is the `http` wrapper (`@/app/axios/http`), which returns the **already-unwrapped** body — do not add another `.data`. Rejections normalize to `ApiError`; narrow with `isApiError()`.
+- Every feature needs routes, an api layer, state, pages, and a barrel. `types/`, `utils/`, and `store/` are **on demand** — create them only when the feature needs them.
+- **Match the closest sibling module exactly.** If it uses an older convention than the profile documents, follow the folder, not the profile — never mix conventions inside one module.
+- **New work is TypeScript** where the project has adopted it — `.tsx` for anything containing JSX, `.ts` otherwise. Do not add new `.jsx`/`.js` files even when the sibling files are still `.jsx`.
 
 ---
 
 ## Frontend Implementation Guidelines
 
-### 1. Routes Definition (`route/<feature>.routes.ts`)
-Default-export a typed `RouteRecordRaw[]`. **Do NOT touch the portal aggregator** — `<portal>/useApiWebRoute.ts` globs `./*/route/*.routes.ts` eagerly, so a new route file is auto-registered.
-- **For Vue** (TS, current standard):
-```typescript
-import type { RouteRecordRaw } from 'vue-router';
+### 1–3. Routes, API Layer, State, Barrel
 
-const routes: RouteRecordRaw[] = [
-  {
-    path: '<portal_name>/<feature-kebab>',
-    name: '<portal_name>_<feature>',
-    component: () => import('../pages/<Feature>.vue'), // relative to the feature root
-    meta: { title: '<Feature Title>' },
-  },
-];
+**The concrete shape of these four files is project-specific and lives in [Project Profile](../../rules/project-profile.md)** — route file name and export type, the HTTP client to import and whether it unwraps `response.data`, hooks vs composables, barrel contents. Read your project's section rather than a template here; a template in this file is a copy that goes stale, which is how the wrong client and the wrong folder shape get used.
 
-export default routes;
-```
-- **Legacy modules**: keep using `webRoute.js` (default-exported array) if that's what the module already has.
-- **For React**: Export standard React routes matching the project's routing system (e.g. React Router config).
+What holds regardless of project:
 
-### 2. API Service Layer (`api/<feature>.api.ts`)
-Create a `use<Feature>Api()` factory returning async methods. This project's verified conventions ([Project Profile](../../rules/project-profile.md)):
-- **Import the HTTP client** — it is NOT globally bound: `import http from '@/app/axios/axiosInstance';`. Interceptors, auth-token attach, HTML guard, and 401/419 handling are already wired inside that instance. Methods get the full `AxiosResponse`, so `return response.data`.
-- **Composables call the api hook**, never `http` directly.
-- **Endpoint strings** are lowercase `api/<url-prefix>/<...>` using the **URL prefix** from the profile's portal table. Timekeeping is **`api/timekeeping/...`**, never `api/tk/...`.
-- **System Awareness First**: Before writing API functions, run the [System Awareness](../../rules/system-awareness.md) scan. If a matching route already exists in the portal's route file (`routes/api/<portal>.php`), wire the real endpoint directly — no mock.
-- **Mock Setup (fallback only)**: Use mock data ONLY when no backend route exists yet. Mock field names MUST match the actual model `$fillable` / migration columns — never invent field names. Add a comment noting the intended endpoint.
-
-Real endpoint (route exists):
-```typescript
-import http from '@/app/axios/axiosInstance';
-
-export function use<Feature>Api() {
-  return {
-    getData: async (params: Record<string, any> = {}): Promise<any> => {
-      const response = await http.get('api/<url-prefix>/<endpoint>', { params });
-      return response.data;
-    },
-    saveData: async (payload: Record<string, any> = {}): Promise<any> => {
-      const response = await http.post('api/<url-prefix>/<endpoint>/save', payload);
-      return response.data;
-    },
-  };
-}
-```
-
-Mock fallback (backend route pending — field names mirror `<ModelName>` `$fillable`):
-```typescript
-export function use<Feature>Api() {
-  return {
-    // TODO: replace with http.get("api/<url-prefix>/<endpoint>") once the route is registered
-    getData: async (_params: Record<string, any> = {}): Promise<any> => ({
-      data: [{ id: 1, /* real model columns here */ created_at: '2026-06-19' }],
-      total: 1,
-    }),
-  };
-}
-```
-
-### 3. State Management (`composables/use<Feature>.ts`)
-Manage reactive states, active filters, loading indicators, and actions. Import the api hook from `../api/<feature>.api`. Use a Pinia `store/<feature>.store.ts` only when the state must be shared across multiple pages/components; otherwise keep it in the composable.
-- **For Vue**: typed reactive refs and watchers in `composables/use<Feature>.ts`.
-- **For React**: Use custom hook state (`useState`, `useEffect`, `useMemo`) in `hooks/use<Feature>.ts`.
-
-```typescript
-import { ref, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { use<Feature>Api } from '../api/<feature>.api';
-import { debounce } from '@/src/utils/debounce';
-
-export function use<Feature>() {
-  const route = useRoute();
-  const api = use<Feature>Api();
-
-  const isLoading = ref(false);
-  const dataList = ref<{ data: any[] }>({ data: [] });
-  const totalItems = ref(0);
-  const isModalOpen = ref(false);
-
-  // Filter states
-  const searchQuery = ref('');
-  const selectedStatus = ref('');
-
-  const debouncedFetch = debounce((params: Record<string, any>) => {
-    fetchData(params);
-  }, 300);
-
-  // Debounce text search to avoid excessive API calls
-  watch(searchQuery, (newVal) => {
-    debouncedFetch({ search: newVal, status: selectedStatus.value, page: 1 });
-  });
-
-  // Non-text filters update immediately
-  watch(selectedStatus, (newVal) => {
-    fetchData({ search: searchQuery.value, status: newVal, page: 1 });
-  });
-
-  async function fetchData(params: Record<string, any> = {}) {
-    isLoading.value = true;
-    try {
-      const res = await api.getData(params);
-      dataList.value = res.data || { data: [] };
-      totalItems.value = res.total || 0;
-    } catch (err) {
-      console.error(err);
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  onMounted(() => {
-    fetchData({ page: route.query.page || 1 });
-  });
-
-  onUnmounted(() => {
-    debouncedFetch.cancel();
-  });
-
-  return {
-    fetchData,
-    isLoading,
-    dataList,
-    totalItems,
-    isModalOpen,
-    searchQuery,
-    selectedStatus,
-  };
-}
-```
-
-### 3b. Public API Barrel (`index.ts`)
-Re-export the feature's public surface so other modules import from the feature root, not deep paths:
-```typescript
-export { use<Feature> } from './composables/use<Feature>';
-export { use<Feature>Api } from './api/<feature>.api';
-export { default as <feature>Routes } from './route/<feature>.routes';
-// export type { ... } from './types/types.<feature>';  // when a types/ file exists
-```
+- **Routes** — lazily import the page (`() => import(...)`). If an aggregator auto-registers module route files, **do not edit the aggregator**.
+- **API layer** — one `use<Feature>Api()` factory of async methods. **Import the client the profile names**; do not construct a new axios instance, and do not add a second `.data` to a client that already unwraps. Endpoint strings come from the real registered route (verify it), never from a guess.
+- **State** — pages and components call the state hook/composable; **the state layer calls the api hook; nothing calls the HTTP client directly.** Debounce text-search inputs at 300ms using the shared helper, and clean up timers/listeners/subscriptions on unmount. Add a shared store only if the project already has one and the state truly spans pages.
+- **Barrel** — re-export the feature's public surface (state hook, api hook, routes) so consumers import from the module root, not deep paths.
+- **Types** — mirror real backend field names from the System Awareness scan. Never invent a field, even in placeholder data.
 
 ### 4. UI Components & Layouts
-- **View/Page Files**: Main page files should go in the `pages/` directory (e.g., `pages/<ModuleName>.vue` for Vue, or `pages/<ModuleName>.jsx` / `pages/<ModuleName>.tsx` for React).
-- **Framework Standards**: Always use `<script setup>` and composition hooks for Vue. For React, use modern functional components, hooks, and proper type definitions if TypeScript is used.
-- **Breadcrumbs**: Include a styled breadcrumb navigation mapping the module path (e.g., `<PORTAL_NAME> / <ModuleName>`).
-- **Premium Aesthetics**:
-  - Grid & list view toggling with state persistence via `localStorage`.
-  - Search inputs with modern icons (like `mdi-magnify`).
-  - Loading states using a shared `<LoadingState>` component.
-  - Floating action buttons for mobile layouts (`lg:hidden`).
-  - **Premium Tailwind gradients, subtle shadows, and borders**: Use premium aesthetics.
-  - **Card Background & Border Standard (Dark Mode Pop)**: All layout cards, panel blocks, and table containers must use `bg-white dark:bg-slate-800` backgrounds (rather than `dark:bg-slate-900` which blends flatly into the body background in dark mode), paired with borders using `border-slate-200/60 dark:border-slate-700` and soft shadow styling (e.g., `shadow-sm` or `shadow-md`).
-  - **Portal-Specific Accent Colors** *(SubHRMS only — ScaleUP has no portals; use its theme tokens and skip this table)*: All layout accent classes, welcome banner gradients, button styles (hovers/active borders), and active sidebar link classes MUST be synchronized based on the target portal theme:
-    - **Employee**: Amber/Orange (e.g. `bg-amber-600`, `from-amber-700 via-amber-600 to-orange-600`, `active-class="nav-link-active-employee"`)
-    - **Manager**: Red (e.g. `bg-red-600`, `from-red-700 via-red-650 to-rose-600`, `active-class="nav-link-active-manager"`)
-    - **HR**: Emerald (e.g. `bg-emerald-600`, `from-emerald-700 via-emerald-600 to-teal-600`, `active-class="nav-link-active-hr"`)
-    - **Timekeeping**: Blue (e.g. `bg-blue-600`, `from-blue-700 via-blue-600 to-indigo-600`, `active-class="nav-link-active-timekeeping"`)
-    - **Payroll**: Cyan (e.g. `bg-cyan-600`, `from-cyan-700 via-cyan-600 to-sky-600`, `active-class="nav-link-active-payroll"`)
-    - **Admin**: Slate (e.g. `bg-slate-700`, `from-slate-700 via-slate-600 to-zinc-700`, `active-class="nav-link-active-admin"`)
-    Avoid using hardcoded values of other portals unless they represent standard semantic states (e.g., Red for errors/alerts, Emerald for active check-ins, Amber for warnings).
-  - Responsive alignment (flex layouts, responsive grids).
+
+- **Pages** go in `pages/`, sub-components in `components/`, using the project's component style (`<script setup>` for Vue; functional components + hooks for React).
+- **Cards, panels, and table containers**: `bg-white dark:bg-slate-800` with `border-slate-200/60 dark:border-slate-700` and a soft shadow. Avoid `dark:bg-slate-900` — it flattens into the body background in dark mode.
+- **Dark mode on everything.** Every color class needs its `dark:` counterpart.
+- **Accent colors are project-specific.** SubHRMS uses per-portal accents (the full table is in [ui-design.md](../../rules/ui-design.md)); ScaleUP has no portals — use its theme tokens. Do not hardcode another portal's color except for semantic states (red = error, amber = warning).
+- **Expected polish**: breadcrumbs, responsive grids, `localStorage`-persisted view toggles, shared loading/empty states (from the design system — not hand-rolled), and mobile floating actions.
 
 ### 5. Reusable & Global Components Guideline
 
@@ -582,21 +346,14 @@ export { default as <feature>Routes } from './route/<feature>.routes';
 
 - **Creating a new shared component**: if a component is general-purpose enough to be useful elsewhere (date-range picker, profile card, file uploader), create it in the shared components directory your profile documents rather than locally. Follow the styling patterns of the components already in that folder, and document its props so others can consume it.
 
-### 6. System Design & Performance Optimization Guidelines
-- **Lazy Loading**:
-  - **Dynamic Route Importing**: Always dynamic-import page components in route files (`route/<feature>.routes.ts`; legacy `webRoute.js` / `routes.js`) using `() => import(...)`.
-  - **Async/Lazy Components**: For large, heavy, or secondary components (e.g., Modals, Charts, rich editors, document viewers), load them asynchronously (Vue: `defineAsyncComponent()`, React: `React.lazy()`) to reduce initial package size.
-  - **Images & Media**: Use native `loading="lazy"` on all off-screen images to save network bandwidth and speed up page rendering.
-- **Search & Input Optimization (Debouncing/Throttling)**:
-  - **Debounced Inputs**: When text input triggers dynamic searches, lists, or suggestions, always apply a debounce (usually 300ms) to wait until the user stops typing before making API calls.
-  - **Throttling UI Listeners**: Limit execution frequency of scroll, resize, or drag events using throttling to keep frame rates steady.
-- **Resource Management & Memory Leak Prevention**:
-  - **Lifecycle Cleanup**: Always clean up timeouts, intervals, resize observers, custom event listeners, and subscriptions inside `onUnmounted` (Vue) or the cleanup function of `useEffect` (React) to avoid memory leaks.
-  - **API Request Cancellation**: Cancel pending requests when filters change or when the component unmounts using `AbortController` to avoid race conditions and save network bandwidth.
-- **Data Rendering & Computations**:
-  - **Pagination**: Implement pagination for lists and grids to avoid high-volume payload rendering issues.
-  - **Virtual Scrolling**: Use virtual list rendering for non-paginated lists with hundreds of elements to keep the DOM clean.
-  - **Memoization**: Cache heavy values using computed properties (`computed` in Vue) or memoization hooks (`useMemo`, `useCallback` in React) to prevent recalculating on every redraw.
+### 6. Performance
+
+Full detail in [performance.md](../../rules/performance.md). Non-negotiable here:
+
+- **Lazy-load** route pages (`() => import(...)`) and heavy secondary components (modals, charts, editors). `loading="lazy"` on off-screen images.
+- **Debounce** text inputs that trigger requests (300ms) using the shared helper; throttle scroll/resize.
+- **Clean up** timers, intervals, observers, listeners, and subscriptions on unmount. Cancel in-flight requests when filters change.
+- **Paginate** lists; memoize derived values rather than recomputing per render.
 
 ---
 

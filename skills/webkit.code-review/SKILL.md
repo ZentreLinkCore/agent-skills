@@ -1,14 +1,12 @@
 ---
 name: webkit-code-review
 description: >
-  Reviews changed code for CORRECTNESS and RULE COMPLIANCE — bugs that will bite, security holes,
-  duplication, performance traps, and violations of the project's own rules in `.agents/rules/`.
-  Scoped to the DIFF by default (uncommitted changes, or a branch against its base), not the whole repo.
-  Complements `/webkit.verify`: verify asks "does this match the spec?", this asks "is this code any good?" —
-  a change can conform perfectly to its spec and still leak tenants, N+1 a dashboard, or duplicate an existing helper.
-  Grades every finding CRITICAL / HIGH / MEDIUM / LOW with a concrete suggested fix and a dependency-first Fix Plan.
-  Never modifies application code — its only file output is a review report under `.agents/reports/`.
-  Triggered when the user runs the command `/webkit.code-review`, `/webkit.code-review <target_path>`, or `/webkit.code-review <branch>`.
+  Reviews the DIFF (uncommitted changes, or a branch against its base) for correctness bugs, security holes,
+  N+1s, duplication, and violations of the project's own rules in `.agents/rules/`. Complements `/webkit.verify`:
+  verify asks "does this match the spec", this asks "is this code any good". Grades every finding
+  CRITICAL/HIGH/MEDIUM/LOW with a suggested fix and a dependency-first Fix Plan. Never edits code;
+  writes a review report to `.agents/reports/`.
+  Triggered by `/webkit.code-review`, `/webkit.code-review <target_path>`, or `/webkit.code-review <branch>`.
 ---
 
 # Webkit Code Review

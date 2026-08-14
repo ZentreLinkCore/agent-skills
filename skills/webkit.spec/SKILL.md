@@ -1,13 +1,12 @@
 ---
 name: webkit-spec
 description: >
-  Produces a complete, implementation-ready specification document before any code is written.
-  Its sole job is to DEFINE what a feature/module needs — purpose, data, backend, frontend, edge cases, build order —
-  and to lay out the key design decisions as options WITH PROS AND CONS so the user can choose before implementation.
-  Never modifies application code, migrations, or routes — it only writes a spec file under `.agents/specs/`.
-  SPEC-DRIVEN handoff: the spec it writes is the primary source of truth later consumed by
-  `/webkit.frontend-implement` and `/webkit.backend-implement`.
-  Triggered when the user runs the command `/webkit.spec <target_path> <prompt>` or `/webkit.spec <prompt>`.
+  Produces an implementation-ready specification document BEFORE any code is written — purpose, data,
+  backend, frontend, acceptance criteria, non-functional/failure modes, edge cases, and build order —
+  with the load-bearing design decisions laid out as options WITH PROS AND CONS so the user chooses first.
+  Writes only to `.agents/specs/`; never touches application code. The spec it writes is the source of
+  truth later consumed by `/webkit.frontend-implement` and `/webkit.backend-implement`.
+  Triggered by `/webkit.spec <target_path> <prompt>` or `/webkit.spec <prompt>`.
 ---
 
 # Webkit Spec

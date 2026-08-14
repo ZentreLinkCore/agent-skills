@@ -1,14 +1,11 @@
 ---
 name: webkit-backend-implement
 description: >
-  Generates and implements modular backend setup for Vue.js modules using Laravel, creating controllers,
-  domain query/handler classes, registering routes in the matching per-portal file under routes/api/, and integrating the backend endpoints with the frontend components.
-  SPEC-DRIVEN: when a spec exists under `.agents/specs/`, that spec is the primary source of truth for the tables, queries, handlers, routes, and API contract to build.
-  GATE 2 of the design-first flow: runs AFTER `/webkit.frontend-implement` has built the hard-coded design and the user has validated it — its job is to ADD THE DYNAMIC DATA, replacing the frontend's hard-coded `api/<feature>.api.ts` methods with live HTTP calls.
-  ALWAYS scans existing Eloquent models, database migrations, and registered routes before generating anything.
-  Never creates a new migration or model when an existing one already covers the feature's data needs.
-  Supports dragging folder or file paths into the command to specify the target module.
-  Triggered when the user runs the command `/webkit.backend-implement <target_path> <prompt>` or `/webkit.backend-implement <prompt>`.
+  Builds the Laravel backend — migrations, models, Query/Handler/Action classes, controllers, routes —
+  then swaps the frontend's hard-coded api methods for live calls (Gate 2 of the design-first flow,
+  after the user validates the Gate 1 design). SPEC-DRIVEN. Scans existing models, migrations, and routes
+  first and never creates a duplicate table, model, or endpoint.
+  Triggered by `/webkit.backend-implement <target_path> <prompt>` or `/webkit.backend-implement <prompt>`.
 ---
 
 # Webkit Backend Implement
@@ -312,102 +309,21 @@ routes/
 
 ---
 
-## Code Templates (This Project's Actual Pattern)
+## Code Shapes
 
-*These mirror the verified conventions in [Project Profile](../../rules/project-profile.md). Before writing, open the closest sibling Query/Handler/Controller for your portal and match it exactly — arg shapes and response wrappers vary slightly per module.*
+**The full worked examples live in [Project Profile](../../rules/project-profile.md)** — Query, Handler, Action, controller, and route, in this codebase's exact style. Read them there and **open the closest sibling class for your feature before writing**, since arg shapes and response wrappers vary per module. Templates copied into this file drift; the profile is maintained.
 
-#### 1. Domain Query (reads) — `app/Queries/<Domain>/Get<X>Query.php`
-```php
-<?php
+The shape in one line each:
 
-namespace App\Queries\<Domain>;
+| Layer | Location | Shape |
+| :--- | :--- | :--- |
+| **Query** (reads) | `app/Queries/<Domain>/Get<X>Query.php` | `extends Query`, `public static function execute($params = [])`, eager-load relations, paginate |
+| **Handler** (writes) | `app/Handlers/<Domain>/Save<X>Handler.php` | `extends Handler`, static `execute()`, wrapped in `DB::transaction` |
+| **Action** (optional) | `app/Actions/<Domain>/` | Static `execute()`. Only when a Handler's logic grows large or a step is reused — do not pre-split small handlers |
+| **Controller** | `app/Http/Controllers/<namespace>/` | Thin: call the Query/Handler, `try/catch (Exception $e)`, `response()->json(...)`. **Never** a `JsonResource` |
+| **Route** | `routes/api/<group>.php` | Add inside the existing group + its `use` import in that same file. `apiResource` for standard CRUD, explicit routes for domain actions |
 
-use App\Queries\Query;
-use App\Models\<ModelName>;
-
-class Get<ModuleName>Query extends Query
-{
-    public static function execute($params = [])
-    {
-        return <ModelName>::query()
-            ->with(['relations'])            // eager-load to avoid N+1
-            ->paginate($params['entries'] ?? 10);
-    }
-}
-```
-
-#### 2. Domain Handler (writes) — `app/Handlers/<Domain>/Save<X>Handler.php`
-```php
-<?php
-
-namespace App\Handlers\<Domain>;
-
-use App\Handlers\Handler;
-use App\Models\<ModelName>;
-use Illuminate\Support\Facades\DB;
-
-class Save<ModuleName>Handler extends Handler
-{
-    public static function execute($params = [])
-    {
-        return DB::transaction(function () use ($params) {
-            return <ModelName>::updateOrCreate(
-                ['id' => $params['id'] ?? null],
-                $params
-            );
-        });
-    }
-}
-```
-
-#### 3. Controller (thin dispatcher) — `app/Http/Controllers/<namespace>/<ModuleName>Controller.php`
-```php
-<?php
-
-namespace App\Http\Controllers\<namespace>;   // e.g. tk, hr, payroll, employee, manager, admin
-
-use App\Http\Controllers\Controller;
-use App\Queries\<Domain>\Get<ModuleName>Query;
-use App\Handlers\<Domain>\Save<ModuleName>Handler;
-use Illuminate\Http\Request;
-use Exception;
-
-class <ModuleName>Controller extends Controller
-{
-    public function index(Request $request)
-    {
-        try {
-            $data = Get<ModuleName>Query::execute($request->all());
-            return response()->json(['data' => $data]);      // NO API Resource wrapper
-        } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
-
-    public function store(Request $request)                   // inline validation is the norm; add a FormRequest only if the module already uses one
-    {
-        try {
-            $result = Save<ModuleName>Handler::execute($request->all());
-            return response()->json($result);
-        } catch (Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
-}
-```
-
-#### 4. Route — add inside the matching portal file `routes/api/<portal>.php`
-```php
-// in routes/api/timekeeping.php (loaded by api.php under prefix('timekeeping') + auth:sanctum).
-// Add the controller `use` import at the top of THIS file, then the routes:
-Route::get('/<module_endpoint>', [<ModuleName>Controller::class, 'index']);
-Route::post('/<module_endpoint>/save', [<ModuleName>Controller::class, 'store']);
-
-// Standard CRUD → prefer apiResource, with custom domain actions beside it:
-Route::apiResource('<resource>', <ModuleName>Controller::class)->only(['index', 'store', 'update', 'destroy']);
-Route::post('/<resource>/{id}/<action>', [<ModuleName>Controller::class, '<action>']);
-```
-Do NOT add routes to `routes/api.php` for an existing group — it only holds the `group()` loaders. *(SubHRMS gotcha: Timekeeping's file is `routes/api/timekeeping.php` and its URL prefix is **`timekeeping`** even though the controller namespace is `tk`. ScaleUP has no portals — its files are per-domain, e.g. `routes/api/organizations.php`.)*
+`<Domain>` is a **PascalCase domain folder**, never a lowercase portal. `<namespace>` is project-specific (SubHRMS: lowercase portal; ScaleUP: PascalCase domain). Never add routes to `routes/api.php` for an existing group — it only holds the loaders.
 
 ---
 

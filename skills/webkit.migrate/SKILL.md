@@ -1,14 +1,12 @@
 ---
 name: webkit-migrate
 description: >
-  Migrates a feature/module FROM this HRMS (source) INTO a sibling target project (e.g. `hrms_react`) that uses a different stack, and IMPLEMENTS it there — writing real code into the target, matching the TARGET's own conventions.
-  TWO PATHS: `/webkit.migrate <source_path> <target_path>` — `<source_path>` is the feature in THIS repo (asa kuhaon); `<target_path>` is where it lands in the target project (asa e-migrate).
-  THE FLOW IS THE INVARIANT, THE STACK IS THE VARIABLE: business rules, data contract, API contract, and state machine must come out identical; the frontend framework (Vue→React), state layer, HTTP client, UI library, routing, and backend architecture are EXPECTED to differ and must follow the TARGET's patterns, never this repo's.
-  SPEC-DRIVEN: when a spec exists under `.agents/specs/`, it is the primary source of truth for the flow being migrated.
-  ALWAYS runs the System Awareness scan on BOTH sides — the source (real fields/routes/rules to export) and the target (its architecture + whether a model/table/route already covers the feature, to avoid duplicates).
-  Persists a portable migration contract to `.agents/migrations/` as the intermediate blueprint, then implements the feature in the target following the target's conventions.
-  Supports dragging folder or file paths into the command.
-  Triggered when the user runs the command `/webkit.migrate <source_path> <target_path>` or `/webkit.migrate <source_path>`.
+  Migrates a feature FROM the repo you are in INTO a sibling target project on a different stack, and
+  IMPLEMENTS it there following the TARGET's conventions. Flow is the invariant (business rules, data
+  contract, API contract, state machine come out identical); the stack is the variable (framework, state
+  layer, HTTP client, UI library, routing, backend architecture follow the target). Scans BOTH sides to
+  avoid duplicating a model/table/route the target already has. Persists a portable contract to `.agents/migrations/`.
+  Triggered by `/webkit.migrate <source_path> <target_path>` or `/webkit.migrate <source_path>`.
 ---
 
 # Webkit Migrate

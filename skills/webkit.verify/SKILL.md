@@ -1,17 +1,12 @@
 ---
 name: webkit-verify
 description: >
-  ADVERSARIAL spec-conformance verification. Its job is to try to PROVE the implementation does NOT match its spec —
-  not to confirm that it does. Every spec claim starts as UNPROVEN and is only marked conformant once the code
-  provides file:line evidence; the burden of proof is on the implementation, never on the reviewer.
-  Hunts the three failure modes a normal review misses: rules that were silently never coded (absence),
-  rules that were coded backwards (inversion), and code that does things the spec never authorized (unspecced additions).
-  Grades every finding CRITICAL / HIGH / MEDIUM / LOW and pairs it with a concrete suggested fix — which file,
-  which construct, and whether the CODE or the SPEC is the side that is wrong — then orders them into a
-  dependency-first Fix Plan that `/webkit.fix` can work straight down.
-  Never modifies application code — its only file output is a conformance report under `.agents/reports/`.
-  Runs AFTER `/webkit.frontend-implement` and `/webkit.backend-implement`, and hands confirmed findings to `/webkit.fix`.
-  Triggered when the user runs the command `/webkit.verify <spec_path>` or `/webkit.verify <target_path> <spec_path>`.
+  ADVERSARIAL spec-conformance verification — tries to PROVE the implementation does NOT match its spec,
+  rather than confirming that it does. Every spec claim starts UNPROVEN and needs `file:line` evidence to pass.
+  Hunts the three failure modes a normal review misses: rules silently never coded, rules coded backwards,
+  and code the spec never authorized. Grades findings CRITICAL/HIGH/MEDIUM/LOW with concrete fixes and a
+  dependency-first Fix Plan for `/webkit.fix`. Never edits code; writes a report to `.agents/reports/`.
+  Triggered by `/webkit.verify <spec_path>` or `/webkit.verify <target_path> <spec_path>`.
 ---
 
 # Webkit Verify

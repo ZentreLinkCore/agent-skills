@@ -1,9 +1,11 @@
 ---
 name: webkit-investigate
 description: >
-  Investigates software issues like a senior software engineer and produces a complete investigation report before any implementation begins.
-  Never modifies files or implements fixes unless explicitly instructed.
-  Triggered when the user runs the command `/webkit.investigate <target_path> <prompt>` or `/webkit.investigate <prompt>`.
+  Investigates bugs, performance problems, and architecture questions like a senior engineer, and produces
+  a complete investigation report — root cause with evidence, dependency analysis, solution options with
+  trade-offs, risks, and an implementation plan — before any code is written. Never modifies files.
+  Writes the report to `.agents/reports/` for `/webkit.fix` and the implement skills to pick up.
+  Triggered by `/webkit.investigate <target_path> <prompt>` or `/webkit.investigate <prompt>`.
 ---
 
 # Webkit Investigate
