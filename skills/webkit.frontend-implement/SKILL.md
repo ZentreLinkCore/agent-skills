@@ -25,6 +25,11 @@ When the user requests to implement or scaffold the frontend structure of a modu
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
 4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/<repo_name>/` e.g. `.agents/specs/scaleup/` or `.agents/specs/subhrms/`) for a spec matching the target module/feature (by filename, title, portal, or the connection point it documents). If one exists, **read it in full and let it drive the implementation** — folder structure, page layout, components, filters, pagination, sorting, TS types, stats, and the API contract all come from the spec. The spec supersedes ad-hoc design guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+
+   **Three spec sections bind this skill specifically** — read them before building, not at review time:
+   - **Acceptance Criteria** (`AC-n` Given/When/Then rows) — the frontend owns every row describing rendered state: empty, loading, error, validation messages, disabled controls, per-role visibility. Seed the hard-coded data so **each** such row is visibly exercised in the design.
+   - **Non-Functional & Failure-Mode Checklist** — the Authorization row decides what this UI must hide or disable per role; the error-shape row decides what the page renders on failure, not just on success. A design that only draws the happy path fails its own spec.
+   - **Definition of Done** — the completion gate. Do not report the design as finished while a DoD box covering UI behavior is unticked.
 5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
 6. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
 7. **Mandatory System Awareness**: Before designing data shapes, run the scan defined in [System Awareness](../../rules/system-awareness.md) so the hard-coded design uses **real field names** (from the spec's data contract and/or existing models). Never invent field names — even for hard-coded placeholder data. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
@@ -86,7 +91,26 @@ After the hard-coded build renders cleanly, explicitly ask the user to review th
 
 ---
 
-## Phase 0 — Branch Gate (BLOCKING)
+## Phase 0 — Project Gate (BLOCKING)
+
+> [!CAUTION]
+> **Resolve which project you are in before you read anything else in this skill.** This workspace holds two projects with different frameworks, folder layouts, HTTP clients, and design systems. Building React work to Vue conventions — or hunting for a component library that belongs to the *other* repo — is the most common failure of this skill, and it does not surface as an error. It surfaces as *"no reusable component exists"*, followed by a hand-built duplicate of a component that was sitting in the design system the whole time.
+
+Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile (read `package.json` dependencies), then read **only** that project's sections:
+
+| Resolved | Read | Ignore completely |
+| :--- | :--- | :--- |
+| **SubHRMS** — `vue`, `pinia`, `vue-router` | the `SubHRMS —` sections of the profile | the ScaleUP Profile |
+| **ScaleUP** — `react`, `react-dom`, `react-router-dom` | the **ScaleUP Profile** section at the end of the profile | every `SubHRMS —` section |
+
+**State the resolved project in your first message**, before generating anything.
+
+> [!IMPORTANT]
+> **The profile is the source of truth for every project-specific detail** — module layout, the reusable component list, the HTTP client, state solution, routing, file extensions, styling. This skill deliberately does **not** restate them, because a second copy drifts, and a drifted copy is exactly what sends the agent searching for components that do not exist. Any concrete example below that names a framework is an illustration of the *shape* of the work — never a list to go searching for in the other project.
+
+---
+
+## Phase 0.5 — Branch Gate (BLOCKING)
 
 > [!CAUTION]
 > **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to a `feature/` branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
@@ -107,16 +131,16 @@ Committing remains the user's call. This gate only guarantees the work is isolat
 
 ## Decision Playbook
 
-The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (cached in [Project Profile](../../rules/project-profile.md)) — after a quick confirm (see Architecture Discovery Phase), work top-to-bottom. If the project actually uses a different framework, follow that instead; the steps below assume the cached Vue setup:
+Work top-to-bottom, against the project resolved in **Phase 0** — not against a remembered stack.
 
-1. **Does a similar module already exist?** Find the closest `resources/views/web/src/module/<portal>/<feature>/` and mirror its layout exactly. New features use the **TS structure**: `index.ts` barrel + `route/ api/ composables/ pages/ components/` (+ `types/ utils/ store/` when needed). If the closest sibling is still on the **legacy** layout (`script/ webRoute.js`, plain JS), match that folder instead — don't mix conventions within a module.
-2. **Does a global component cover the UI need?** (see the global list in the profile) → use it without importing. Else check other modules for a reusable one → import it. Only then build local.
+1. **Does a similar module already exist?** Find the closest sibling module **at the path your project's profile section documents**, and mirror its layout exactly. Do not guess the path: SubHRMS nests modules under a *portal* (`module/<portal>/<feature>/`), ScaleUP nests them under a *domain* (`module/<domain>/`) and has **no portals at all**. Searching the wrong shape returns nothing and reads as "there is no sibling to mirror," which is how duplicates get built. If the closest sibling uses an older convention (legacy JS layout, Options API, `.jsx` in a TS module), match that folder rather than mixing conventions inside one module.
+2. **Does the design system already cover the UI need?** Open the reusable-component list in **your project's profile section** and check it before writing any component. Do **not** search for component names from memory or from this skill's examples — if the name you are grepping for belongs to the other project, you will find nothing and build a duplicate of a component that already exists. Order: design system → another module's shared component (import it) → only then build local. Record the result in the Reuse Ledger.
 3. **Design-first: hard-code the data source regardless of whether the route exists.** Put static, real-field-name data in `api/<feature>.api.ts` with a `TODO(backend)` comment, so the design can be validated first. Live wiring (`http.get/post("api/<url-prefix>/...")`, minding `timekeeping` ≠ `tk`) is Gate 2's job (`/webkit.backend-implement`) — do it here only if the user explicitly asks to wire live now.
-4. **State** → `composables/use<Feature>.ts` with typed `ref`/`reactive`, debounced search (`@/src/utils/debounce`, 300ms), cleanup in `onUnmounted`. Add a Pinia `store/<feature>.store.ts` only when state is shared across pages/components.
-5. **Route** → add `route/<feature>.routes.ts` (default-export `RouteRecordRaw[]`, lazy `() => import('../pages/...')`). It is auto-registered by the portal's `useApiWebRoute.ts` glob — do NOT edit the aggregator.
-6. **Barrel** → export the feature's surface (composables, api hook, routes) from `index.ts`.
-7. **Styling** → Tailwind only, portal accent color for this portal (see UI section), `bg-white dark:bg-slate-800` cards, dark-mode classes on everything.
-8. **Table Drag-to-Scroll & ID Formatting** → Wide data tables MUST support mouse drag-to-scroll on their `overflow-x-auto cursor-grab active:cursor-grabbing select-none` container (`@mousedown="startDrag"` with window `mousemove`/`mouseup` tracking). Statutory ID columns (SSS, PhilHealth, Pag-IBIG) MUST be formatted as straight, left-aligned, non-wrapping monospace text (`font-mono text-xs font-bold whitespace-nowrap flex items-center gap-1.5`) with an icon (`shrink-0`).
+4. **State** → the state pattern your project's profile documents (composables, or hooks + context), with debounced search (300ms) from the **shared** debounce helper and cleanup on unmount. Reach for a shared store only when state genuinely spans pages, and only if the project already has one — never introduce a state library.
+5. **Route** → add the module route file your project uses, lazily importing the page. Check whether an aggregator picks it up automatically; where it does, **do NOT edit the aggregator**.
+6. **Barrel** → export the feature's public surface (state hook/composable, api hook, routes) from the module barrel.
+7. **Styling** → Tailwind only, using your project's theme tokens and dark-mode conventions from the profile. *(SubHRMS: per-portal accent colors, see the UI section below. ScaleUP has no portals — use its theme provider's tokens instead.)*
+8. **Table Drag-to-Scroll & Statutory ID Formatting** *(SubHRMS/HRMS only — skip entirely in ScaleUP)* → Wide data tables MUST support mouse drag-to-scroll on their `overflow-x-auto cursor-grab active:cursor-grabbing select-none` container (`@mousedown="startDrag"` with window `mousemove`/`mouseup` tracking). Statutory ID columns (SSS, PhilHealth, Pag-IBIG) MUST be formatted as straight, left-aligned, non-wrapping monospace text (`font-mono text-xs font-bold whitespace-nowrap flex items-center gap-1.5`) with an icon (`shrink-0`).
 
 ---
 
@@ -124,28 +148,28 @@ The current setup is **Vue 3 `<script setup>` + Composition API + Tailwind** (ca
 
 **Governing rule: follow whatever framework, state solution, and styling the project actually uses right now — never impose a stack of your own.** This skill is framework-aware (Vue, React, Next, Angular, plain JS); it detects what exists and matches it.
 
-To save re-detecting on every run, [Project Profile](../../rules/project-profile.md) records the *cached result* of that detection. **As of the last profile update, detection resolves to:**
+Phase 0 already resolved **which** project you are in. Now read that project's stack from [Project Profile](../../rules/project-profile.md) and fill in this table from its sections — do not fill it in from memory, and do not carry an answer over from the other project:
 
-| Aspect | Current setup |
+| Aspect | Where the answer lives |
 |---|---|
-| Framework | Vue 3 `<script setup>` + Composition API |
-| Folder org | Module-based, per-feature: `module/<portal>/<feature>/{route,api,composables,pages,components}` + `index.ts` barrel (+ `types,utils,store` on demand) |
-| Routing | Vue Router; `route/<feature>.routes.ts` (`RouteRecordRaw[]`), auto-aggregated by each portal's `useApiWebRoute.ts` via `import.meta.glob('./*/route/*.routes.ts')` |
-| State | Composables (`composables/use<Feature>.ts`); Pinia `store/` only when state is shared across pages |
-| API layer | `api/<feature>.api.ts` → `use<Feature>Api()`, `import http from '@/app/axios/axiosInstance'` (imported, not global; returns `AxiosResponse`, so `return response.data`) |
-| Styling | Tailwind CSS (+ portal accent colors, dark mode) |
-| Files | **TypeScript** (`.ts`) + `.vue` |
+| Framework + file extensions | Your project's `Stack` section |
+| Folder org (module path, subfolder names) | Your project's frontend-architecture / layout section |
+| Routing (route file name, aggregation) | same |
+| State (hooks/context, composables, store) | same — **never introduce a state library the project doesn't already use** |
+| API layer (client import, unwrapping, error type) | your project's HTTP-client section — the two projects import *different* clients with *different* return shapes |
+| Styling + design system location | your project's styling / component sections |
 
-> **Mid-migration:** the project is moving JS → TS. Newer modules (most of `hr/`) use the TS structure above; older ones still have the legacy layout (`script/useApiRequest.js` + `use<Module>.js`, `webRoute.js`, plain JS), and some contain both. **Rule of thumb:** new feature → TS structure; extending a legacy module → match that folder's existing files.
+> [!WARNING]
+> The two projects differ on every row above, and several differences are silent rather than loud — an HTTP client that already unwraps `response.data` versus one that doesn't produces no error, just `undefined` at render time. Copying a row from the other project is not a style slip; it is a bug.
 
-The profile is a shortcut, not a lock. Precedence when they disagree:
-1. **The target folder / closest sibling module wins.** If it uses a different convention (e.g. an older module on the Options API), match that folder.
-2. **If the project genuinely uses a different framework than the profile says** (e.g. you find a React/`.jsx` app, or `package.json` shows `react`/`next`/`@angular`), follow *that* framework's idioms — do not force Vue. Then flag the drift and update the profile so the cache is correct next time.
-3. **Only when there's no signal either way** do you fall back to the profile's cached answer (Vue).
+Precedence when the profile and the code disagree:
+1. **The target folder / closest sibling module wins.** If it uses an older convention than the profile documents, match that folder — don't mix conventions inside a module.
+2. **The code wins over the profile.** If `package.json` or the file extensions contradict the profile section you're reading, you resolved the wrong project — go back to Phase 0. If the profile is genuinely stale, follow the code, then **flag the drift and offer to update the profile** so the next run is correct.
+3. Only when there is no signal either way, ask rather than assume.
 
-The one thing you must NOT do is introduce a framework/state/styling system the project doesn't already use anywhere.
+The one thing you must NOT do is introduce a framework, state solution, or styling system the project doesn't already use anywhere.
 
-**Quick confirm step** (cheap — do it, don't skip): glance at `package.json` and the target/sibling folder's file extensions to confirm the profile still matches before scaffolding. If it does (the normal case), proceed on the cached answer above without a deeper hunt.
+**Quick confirm step** (cheap — do it, don't skip): glance at `package.json` and the target/sibling folder's file extensions to confirm the resolved project before scaffolding.
 
 ---
 
@@ -238,6 +262,9 @@ To reduce unnecessary token usage, limit the number of files scanned in a single
 If the budget is exceeded:
 1. Stop scanning.
 2. Use the best matching implementation already discovered.
+3. **If nothing was discovered, say so — do not quietly create.** Budget exhaustion means *unknown*, not *nothing exists*. Name what you searched for, record `CREATE — search incomplete` in the Reuse Ledger, and flag it at hand-off so the user can point you at the right file. A truncated search that silently becomes a new component is the exact path this budget must not create.
+
+> The design system is **never** the thing you skip for budget. Reading one components directory and its barrel is a single cheap call, and it prevents the most expensive mistake in this skill.
 
 ---
 
@@ -275,6 +302,25 @@ Before generating code, determine the confidence score:
 - **Medium**: Similar implementation found. Adapt.
 - **Low**: No implementation exists. Generate from scratch.
 
+### The Reuse Ledger (MANDATORY)
+
+Everything above has always said "reuse first" — and duplicates still get built. The reason is structural, not a lapse in discipline: **reuse is merely asserted, while creating a file requires no evidence at all.** Nothing records what was searched, so a search that found nothing looks exactly like a search that never ran, and both end the same way — a new file.
+
+Invert the burden, the way `/webkit.verify` does for spec claims: **a new file is a claim that nothing reusable exists, and that claim needs evidence.**
+
+Before creating **any** component, page, hook, composable, util, type, or api file, record one row:
+
+| Artifact | Searched | Found | Decision |
+|---|---|---|---|
+| `<what you are about to create>` | `<the actual command or glob you ran, including the generic-name variants>` | `<path, or NONE>` | `REUSE` / `EXTEND` / `CREATE — <why nothing fit>` |
+
+- **`CREATE` with no recorded search is a violation**, not a shortcut. If there is no row, the file should not exist.
+- **"Found nothing" only counts after searching the generic name.** A row that searched `StatusBadge` but never `Badge`, or `CSelect` but never `Select`, has not established absence — it has established that you searched the other project's vocabulary.
+- **A `CREATE` reason must survive review.** *"No existing component supports multi-select"* is a reason. *"None found"* after one literal grep is not.
+- **Report the ledger at hand-off.** The user sees, in one table, everything built new and why. That is the moment a wrong `CREATE` costs one line to fix instead of surviving as the module's local convention.
+
+A ledger row costs a sentence. A duplicated component is permanent — the next agent reads it as the established pattern and copies it again.
+
 ---
 
 ## Technology Stack & Styling Detection
@@ -306,7 +352,9 @@ If a path parameter is passed in the command (e.g. `/webkit.frontend-implement @
 
 Adapt the structure, file naming, and coding syntax to the detected project framework:
 
-### 1. Vue.js Project Pattern (Composition API + `<script setup>` + TypeScript — current standard)
+### 1. SubHRMS — Vue.js Pattern (Composition API + `<script setup>` + TypeScript)
+
+> **Applies to SubHRMS only.** If Phase 0 resolved ScaleUP, skip to §2 — none of the paths below exist there.
 
 ```
 <feature>/
@@ -332,16 +380,25 @@ Adapt the structure, file naming, and coding syntax to the detected project fram
 └── webRoute.js           # default-exported route array
 ```
 
-### 2. React / Next.js Project Pattern (Functional Hooks + TypeScript/JSX)
+### 2. ScaleUP — React Pattern (Functional Hooks + TypeScript)
 
+> **Applies to ScaleUP only.** Confirm the exact layout against the **ScaleUP Profile** in [project-profile.md](../../rules/project-profile.md) — it is the source of truth; the sketch below only shows the shape. Note the web root is `resources/views/web/` (**not** `.../web/src/`), and modules are grouped by **domain** — there are no portals.
+
+```text
+module/<domain>/
+├── index.jsx                     # barrel — exports routes, components, hooks
+├── route/<domain>.routes.tsx     # AppRouteObject[]; loaded by the master router
+├── useApiWebRoute.ts             # module route aggregator (where the module has one)
+├── api/<domain>.api.ts           # use<Domain>Api() service hook
+├── pages/                        # route-level components
+├── components/                   # sub-components
+└── hooks/ context/ guards/       # state, providers, and route guards as needed
 ```
-<module_name>/
-├── components/           # React sub-components (.jsx or .tsx)
-├── pages/                # Main page components (e.g., <ModuleName>.jsx)
-├── hooks/                # React custom hooks (e.g., use<ModuleName>.js)
-├── services/             # React API request hooks or client calls (e.g., useApiRequest.ts)
-└── routes.js             # Route configurations
-```
+
+- **File extensions**: `.tsx` for anything containing JSX, `.ts` otherwise. **New work is TypeScript — do not add new `.jsx`/`.js` files**, even when the sibling files in the module are still `.jsx`.
+- **State** is React Context + hooks. There is no Pinia, Redux, or Zustand — do not introduce one.
+- **Design system** lives at `src/components/ui/` with a barrel export. Read it before writing any component (see §5).
+- **HTTP client** is the `http` wrapper (`@/app/axios/http`), which returns the **already-unwrapped** body — do not add another `.data`. Rejections normalize to `ApiError`; narrow with `isApiError()`.
 
 ---
 
@@ -497,7 +554,7 @@ export { default as <feature>Routes } from './route/<feature>.routes';
   - Floating action buttons for mobile layouts (`lg:hidden`).
   - **Premium Tailwind gradients, subtle shadows, and borders**: Use premium aesthetics.
   - **Card Background & Border Standard (Dark Mode Pop)**: All layout cards, panel blocks, and table containers must use `bg-white dark:bg-slate-800` backgrounds (rather than `dark:bg-slate-900` which blends flatly into the body background in dark mode), paired with borders using `border-slate-200/60 dark:border-slate-700` and soft shadow styling (e.g., `shadow-sm` or `shadow-md`).
-  - **Portal-Specific Accent Colors**: All layout accent classes, welcome banner gradients, button styles (hovers/active borders), and active sidebar link classes MUST be synchronized based on the target portal theme:
+  - **Portal-Specific Accent Colors** *(SubHRMS only — ScaleUP has no portals; use its theme tokens and skip this table)*: All layout accent classes, welcome banner gradients, button styles (hovers/active borders), and active sidebar link classes MUST be synchronized based on the target portal theme:
     - **Employee**: Amber/Orange (e.g. `bg-amber-600`, `from-amber-700 via-amber-600 to-orange-600`, `active-class="nav-link-active-employee"`)
     - **Manager**: Red (e.g. `bg-red-600`, `from-red-700 via-red-650 to-rose-600`, `active-class="nav-link-active-manager"`)
     - **HR**: Emerald (e.g. `bg-emerald-600`, `from-emerald-700 via-emerald-600 to-teal-600`, `active-class="nav-link-active-hr"`)
@@ -508,24 +565,22 @@ export { default as <feature>Routes } from './route/<feature>.routes';
   - Responsive alignment (flex layouts, responsive grids).
 
 ### 5. Reusable & Global Components Guideline
-The authoritative list of globally-registered components, directives, utils, and composables is in [Project Profile](../../rules/project-profile.md). Do not guess whether something is global — check that list.
-- **Prioritize Reuse**: Always check for existing global or cross-module components before writing components locally:
-  - **Codebase Search**: grep for pre-existing UI modules or table representations (e.g., `TimesheetTable`, `EmployeeSelector`, `LeavesCredit` panels).
-  - **Cross-Module Imports**: If a reusable component is found in another module, import it directly instead of copying its code.
-  - **Use WITHOUT importing (globally registered in `main.js`)**: `CSelect` (dropdowns), `Pagination`, `Spinner` / `Loading` (loaders), `VDatePicker`, `StatusBadge` (all state indicators — Active/Inactive, Approved/Pending/Rejected), `EmptyState` (zero-record states), `TableSkeleton` (tabular loading states).
-  - **Must be IMPORTED (not global)**: `Modal` from `@/src/components/Modal.vue` — do not write custom backdrop overlays. `LoadingState`, and anything else not in the global list above.
-- **Global Utilities**: Leverage shared functions in `@/src/utils/` instead of writing custom inline parsing/formatting logic:
-  - `debounce` (from `@/src/utils/debounce`): Debouncing text inputs.
-  - `throttle` (from `@/src/utils/throttle`): Throttling fast-firing scroll/resize events.
-  - `formatDate`, `daysBetween`, `timeAgo` (from `@/src/utils/dateFormatter`): Managing dates, calculating leave durations, and relative log timestamps.
-  - `formatCurrency`, `parseCurrency` (from `@/src/utils/currency`): Formatting currency rates (e.g. PHP `₱12,500.00`) and payroll parsing.
-- **Global Composables**:
-  - `useLocalStorage` (from `@/src/composables/useLocalStorage`): For persistent reactive state syncing (like saving active tabs, table views, or search filter states).
-- **Custom Directives**:
-  - `v-click-outside` (registered globally): For closing custom dropdowns, select options, and context menus when clicking outside the bound element. No manual import or registration is needed.
-- **Creating New Global Components**: If you are implementing a modular page and realize a component is general-purpose enough to be useful elsewhere (e.g. a custom date range picker, user profile card, file uploader widget), create it inside `resources/views/web/src/components/` (for Web portal) or the corresponding mobile components directory. Make sure to:
-  - Follow the styling patterns of other components in that folder.
-  - Document its props and usage so other components/pages can easily consume it.
+
+> [!CAUTION]
+> **Never search for a component by a name you remember.** The two projects have entirely different design systems, and a name from the wrong one returns zero results — which reads as *"nothing reusable exists"* and produces a hand-built duplicate of a component that was already there. **List the design-system directory and read its barrel export before writing any component.** That takes one command and is the single highest-value step in this skill.
+
+**How to find what already exists** — in this order, always:
+
+1. **The design system.** Open the components directory your project's profile section documents and read its barrel/index export. That is the authoritative inventory — not this skill, not memory. Anything in it is reused, never rebuilt.
+2. **Registration style.** Check how your project consumes them: globally registered (use without importing) or explicitly imported from a barrel. Using the wrong style produces an unresolved-component error, not a duplicate — noisy, and quick to fix.
+3. **Cross-module components.** Grep sibling modules for a component solving the same job; import it rather than copying it.
+4. **Shared utilities, hooks, and composables.** Before writing inline formatting, debouncing, date, currency, or storage logic, check the shared utils/hooks location in the profile. Re-implementing a shared helper inline is the same defect as duplicating a component, and it is easier to miss in review.
+
+**Semantic search, not literal search.** A component solving your problem is often named for a different domain. Translate before concluding nothing exists: `EmployeeTable` → `UsersTable` → `MemberTable` → `DataTable` → `Table`; `StatusBadge` → `Badge` → `Chip` → `Tag`; `CSelect` → `Select` → `Dropdown` → `Combobox`. Search the **generic** name too — design systems name things generically.
+
+**Primitives count.** A raw `<button>`, `<input>`, `<select>`, `<table>`, or a hand-rolled modal backdrop in a page file is a reuse failure whenever the design system ships that primitive — even though nothing errors and the page looks fine. If you are about to write one, check the design system first and record the check in the Reuse Ledger.
+
+- **Creating a new shared component**: if a component is general-purpose enough to be useful elsewhere (date-range picker, profile card, file uploader), create it in the shared components directory your profile documents rather than locally. Follow the styling patterns of the components already in that folder, and document its props so others can consume it.
 
 ### 6. System Design & Performance Optimization Guidelines
 - **Lazy Loading**:
@@ -557,15 +612,18 @@ Before modifying any existing frontend files:
 
 ## Verification (Lightweight)
 
-Automated Vitest execution is out of scope for this skill for now. Still confirm the following before considering the work done:
-1. **Syntax/Lint Check**: The new/edited components and composables have no syntax errors and match the project's linting config if one is detected.
+Automated JS test execution is out of scope for this skill for now (and ScaleUP configures no test runner at all). Still confirm the following before considering the work done:
+1. **Syntax/Lint Check**: The new/edited components and state files have no syntax errors and match the project's linting config if one is detected. Where the project enforces TypeScript, run its typecheck script — do not reference a test runner the project doesn't have.
 2. **Render Sanity Check**: The new page/component mounts without console errors and the route resolves.
-3. **Manual Verification Steps**: Give the user concrete steps to navigate to the new page and confirm the expected UI/behavior, including both light/dark mode if relevant.
+3. **Acceptance Criteria walk (when the spec has them)**: Go through the `AC-n` rows that describe UI state and confirm each is *visibly reachable* in the hard-coded design — empty, error, validation, and per-role variants included. List any row the design cannot yet exercise; that is a design gap to settle now, while it is still cheap.
+4. **Definition of Done**: Tick the DoD boxes this gate owns, and name the ones that remain for `/webkit.backend-implement`.
+5. **Manual Verification Steps**: Give the user concrete steps to navigate to the new page and confirm the expected UI/behavior, including both light/dark mode if relevant.
 
 ---
 
 ## Close the Loop
 
 1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
-2. **Present the design for validation (Gate 1 exit)**: State plainly that the page is built with **hard-coded data** and list which `api/<feature>.api.ts` methods are still stubbed (`TODO(backend)`). Give the user concrete steps to view the page and ask them to confirm the design against the spec — what to **add / adjust / remove** — before any backend work.
-3. **Suggested Next Step (Gate 2)**: Once the user is happy with the design, tell them to run `/webkit.backend-implement <target_path> <prompt>` to add the dynamic data (create/verify the tables, queries, handlers, routes per the spec, and replace the hard-coded api methods with live calls). Point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add payroll processing page (design)`). Do not stage or commit automatically.
+2. **Report the Reuse Ledger**: Print the ledger table — every artifact you created new, what you searched, and why nothing fit. If you reused or extended existing components, say which. This is the user's cheapest opportunity to catch a duplicate before it becomes the module's convention.
+3. **Present the design for validation (Gate 1 exit)**: State plainly that the page is built with **hard-coded data** and list which api methods are still stubbed (`TODO(backend)`). Give the user concrete steps to view the page and ask them to confirm the design against the spec — what to **add / adjust / remove** — before any backend work.
+4. **Suggested Next Step (Gate 2)**: Once the user is happy with the design, tell them to run `/webkit.backend-implement <target_path> <prompt>` to add the dynamic data (create/verify the tables, queries, handlers, routes per the spec, and replace the hard-coded api methods with live calls). Point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add payroll processing page (design)`). Do not stage or commit automatically.

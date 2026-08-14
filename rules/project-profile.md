@@ -284,22 +284,25 @@ The web root is `resources/views/web/` — **not** `.../web/src/`. The `@` alias
 resources/views/web/
 ├── main.jsx                     # entry (registered in vite.config.js input)
 ├── app/
-│   ├── routes.jsx               # THE router — all routes registered here, manually
+│   ├── routes.tsx               # master router — orchestrates layouts, guards, error routes
 │   └── axios/                   # http.ts, axiosInstance.ts, axiosInterceptors.ts, axiosApiErrors.ts
 └── src/
-    ├── types/                   # shared domain types barrel (@/src/types)
+    ├── types/                   # shared domain & router types barrel (@/src/types)
     ├── theme/                   # ThemeProvider + useTheme
+    ├── errors/                  # Error views (NotFoundPage, UnauthorizedPage, ServerErrorPage)
     ├── components/ui/           # design system (Button, Card, Input, Table, Chart, …)
     └── module/<domain>/         # feature modules
+        ├── route/               # modular route definition (e.g. <domain>.routes.tsx)
+        ├── useApiWebRoute.ts    # module route aggregator
         ├── api/<domain>.api.ts  # use<Domain>Api() service hook
         ├── pages/               # route-level components
         ├── components/          # sub-components
         ├── hooks/ context/ guards/
-        └── index.jsx            # barrel
+        └── index.jsx            # barrel exporting routes, components, hooks
 ```
 
 - **File extensions**: `.tsx` for anything containing JSX, `.ts` for everything else. New work is TypeScript — do not add new `.jsx`/`.js` files.
-- **Routing is MANUAL and central.** There is no glob-based auto-aggregation (that is a SubHRMS mechanism). To add a route, import the page in `app/routes.jsx` and add it to the `createBrowserRouter` tree, inside `<AuthGuard>` or `<GuestGuard>` as appropriate.
+- **Modular Routing**: Each module defines its own routes in `route/<domain>.routes.tsx` exporting an `AppRouteObject[]` and optionally provides a `useApiWebRoute.ts` aggregator. The master router at `app/routes.tsx` loads the module routes into their respective layout trees (`GuestGuard`, `AuthGuard`, `AppShell` context).
 - **State**: React Context + hooks. There is no Pinia, Redux, or Zustand — do not introduce one without asking.
 
 ### HTTP client

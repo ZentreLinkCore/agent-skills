@@ -54,7 +54,7 @@ The skill automatically detects and handles the following investigation types:
 - **Security Issues**: CSRF vulnerabilities, inadequate gate/policy validation, mass assignment exposure.
 - **Architecture & Code Quality**: Code smells, duplication, lack of separation of concerns, refactoring analysis.
 - **Feature Enhancements**: Analyzing feasibility, scoping context, and designing interfaces for new requirements.
-- **Environment & Build Errors**: Vitest/PHPUnit failures, compilation errors, permission issues, Docker orchestration mismatches.
+- **Environment & Build Errors**: PHPUnit / typecheck / build failures, compilation errors, permission issues, Docker orchestration mismatches.
 
 ---
 
@@ -66,10 +66,11 @@ Determine and document:
 3. **Behavior Comparison**:
    - **Expected behavior**: How the system is designed to behave.
    - **Actual behavior**: How the system currently behaves (with logs, exception details, or visual descriptions).
-4. **Scope Identification**:
-   - **Affected Module**: (e.g., `leave_conversion`, `myteam`)
-   - **Affected Portal**: (e.g., `hr`, `employee`, `manager`, `timekeeping`)
-   - **Affected Layer**: (e.g., frontend components, API routing, query domain, database schema)
+4. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project**. Then read only that project's sections. An investigation that traces a React bug through Vue conventions — or cites the other project's schema rules as the root cause — produces a confident report that sends `/webkit.fix` to the wrong file.
+5. **Scope Identification**:
+   - **Affected Module / Domain**: (e.g., `leave_conversion`, `myteam`, `organization`, `community`)
+   - **Affected Portal or Domain group**: SubHRMS uses portals (`hr`, `employee`, `manager`, `timekeeping`); **ScaleUP has no portals** — name the domain instead (`auth`, `community`, `dashboard`, `onboarding`, `organization`, `settings`)
+   - **Affected Layer**: (e.g., frontend components, API routing, Query/Handler layer, database schema)
    - **Affected Feature**: (e.g., file attachments, timesheet processing)
 
 > [!WARNING]
@@ -103,7 +104,7 @@ Analyze the discovered context to form a chain of reasoning:
 
 - **Symptoms**: What triggers the problem, and how does it manifest?
 - **Possible Causes**: Formulate hypotheses explaining the symptoms.
-- **Evidence**: Provide file links and exact line numbers (e.g., [HandleTimesheet.php:L435](file:///Users/macbookpro/Desktop/app/projects/DockerTemplate/src/hrms/app/Domain/Handlers/Timesheet/HandleTimesheet.php#L435)) showing where code is broken or misaligned.
+- **Evidence**: Provide file links and exact line numbers relative to the repo you are in (e.g., `app/Handlers/Timesheet/HandleTimesheet.php:435`) showing where code is broken or misaligned. Use repo-relative paths — an absolute path from another machine or a sibling repo is not a link the reader can follow, and `app/Domain/` is a retired directory that no longer exists in either project.
 - **Confidence Level**: Clearly state your confidence in the diagnosis (High, Medium, Low) and justify it based on the evidence.
 
 ---
@@ -149,7 +150,7 @@ Deep-dive into the risks of the recommended solution:
 - **Regressions**: What could break that currently works?
 - **Database Changes**: Does it need migration or schema changes? Is there data loss risk?
 - **Deployment Risks**: Does it require server downtime, job queue flushing, or specific configuration changes?
-- **Testing Requirements**: How can we ensure correctness? What Vitest or PHPUnit tests are needed?
+- **Testing Requirements**: How can we ensure correctness — using the checks the project actually has? PHPUnit exists in both projects; **ScaleUP has no Vitest configured**, so its equivalents are `npm run typecheck` and `npm run build`. Do not prescribe a test command the project cannot run.
 - **Rollback Complexity**: How easily can we revert the change if it fails in production?
 
 ---
@@ -176,7 +177,8 @@ Compile the findings into a single, cohesive markdown report. The report must us
 
 ## 1. Summary
 - **Investigation Type**: [Bug / Performance / Security / UI / API / refactoring]
-- **Target Portal & Module**: [e.g., HR / Employees]
+- **Project**: [SubHRMS | ScaleUP — as resolved by the Project Gate]
+- **Target Portal/Domain & Module**: [e.g., HR / Employees — or Organization / Members in ScaleUP]
 - **Confidence Level**: [High / Medium / Low]
 
 ## 2. Issue Description
@@ -216,7 +218,7 @@ Explain why the recommended option is superior (e.g., matching existing architec
 
 ### Testing & Verification Checklist
 - [ ] Run PHPUnit tests: `vendor/bin/phpunit --filter ...`
-- [ ] Run Vitest tests: `npm run test ...`
+- [ ] Frontend checks — **the ones this project has** (ScaleUP: `npm run typecheck` / `npm run build`; a JS test runner only where one is configured)
 - [ ] Manual test case: ...
 ```
 
@@ -224,7 +226,7 @@ Explain why the recommended option is superior (e.g., matching existing architec
 
 Displaying the report in chat is not enough — `webkit.fix` and `webkit.refactor` are frequently invoked in a **separate session** and have no access to this conversation's history. If the report isn't written to disk, the handoff silently breaks and the next skill re-investigates from scratch (or worse, guesses).
 
-- Write the full report to `.agents/reports/<portal>-<module>-<slug>-<YYYYMMDD>.md` (e.g. `.agents/reports/tk-timesheet-late-log-miscalculation-20260708.md`). Create the `.agents/reports/` directory if it doesn't exist.
+- Write the full report to `.agents/reports/<portal-or-domain>-<module>-<slug>-<YYYYMMDD>.md` (e.g. `.agents/reports/tk-timesheet-late-log-miscalculation-20260708.md`, or `.agents/reports/organization-member-invite-expiry-20260814.md` in ScaleUP). Create the `.agents/reports/` directory if it doesn't exist.
 - Use today's date and a short kebab-case slug of the issue/feature name for the filename so multiple investigations on the same module don't collide.
 - If this investigation is a re-run or follow-up on an existing report for the same issue, update that file in place rather than creating a near-duplicate.
 

@@ -24,6 +24,11 @@ When the user requests to implement or scaffold the backend structure of a modul
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
 4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/<repo_name>/` e.g. `.agents/specs/scaleup/` or `.agents/specs/subhrms/`) for a spec matching the target module/feature. If one exists, **read it in full and build to it** — the tables/columns, Query & Handler classes, controller methods, routes, gating rules, and API contract all come from the spec's backend design. The spec supersedes ad-hoc schema guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+
+   **Three spec sections bind this skill specifically** — and the backend owns most of what they demand:
+   - **Non-Functional & Failure-Mode Checklist** — this is a build list, not background reading. **Authorization** (who is rejected, and with what status), **concurrency / double-submit** guards, **idempotency on retry**, **error response shape and status codes**, and **input validation boundaries** are all backend obligations. A feature that satisfies only the happy-path contract has not implemented its spec. An `N/A because ...` entry still needs a glance: confirm the stated reason actually holds in the code you are writing.
+   - **Acceptance Criteria** (`AC-n` Given/When/Then rows) — the exact status codes, error messages, and computed values your endpoints must return. Build to the literal rows; they are what `/webkit.verify` will check you against, so a paraphrase is a failure you could have avoided.
+   - **Definition of Done** — the completion gate. Do not report this gate finished while a DoD box remains unticked without explanation.
 5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
 6. **Confirm the design was validated (Gate 2 precondition)**: This skill is the second gate of the design-first flow. Confirm the hard-coded frontend design exists (from `/webkit.frontend-implement`) and the user has reviewed it. If the frontend design doesn't exist yet, backend/API-first is still valid — but prefer building the design first so the schema is validated against a reviewed UI.
 7. **Mandatory Architecture Discovery**: Before generating any backend code or migrations, perform the Architecture Discovery step to identify the project's Laravel design pattern.
@@ -52,7 +57,37 @@ Spec (.agents/specs/…)  ──►  GATE 1: /webkit.frontend-implement   ──
 
 ---
 
-## Phase 0 — Branch Gate (BLOCKING)
+## Phase 0 — Project Gate (BLOCKING)
+
+> [!CAUTION]
+> **Resolve which project you are in before you read anything else in this skill.** This workspace holds two Laravel projects whose **database conventions are direct opposites**. Carrying one project's rule into the other produces migrations that look conventional and are wrong — and schema mistakes are the most expensive kind to undo.
+
+Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile (read `composer.json` / `package.json` and the secondary tells), then read **only** that project's sections:
+
+| Resolved | Read | Ignore completely |
+| :--- | :--- | :--- |
+| **SubHRMS** — `vue`, `pinia`; `app/Models/Employee.php` | the `SubHRMS —` sections | the ScaleUP Profile |
+| **ScaleUP** — `react`, `react-dom`; `app/Models/Organization.php`, `.agents/blueprint/scaleup/` | the **ScaleUP Profile** section | every `SubHRMS —` section |
+
+**State the resolved project in your first message**, before generating anything.
+
+The differences that will bite hardest, per the profile:
+
+| | SubHRMS | ScaleUP |
+| :--- | :--- | :--- |
+| Foreign keys | **No DB-level FKs** — index the column instead | **Real FKs** — `foreignId()->constrained()` |
+| Relationship columns | `id`-prefixed (`idacct`, `idpayperiod`) | `<parent>_id` (`organization_id`) |
+| Soft delete | a `status` column on most tables | `deleted_at` / `softDeletes()` |
+| Route grouping | per-**portal** files, `tk` namespace vs `timekeeping` URL prefix | per-**domain** files; **no portals** |
+| Controller namespace | `app/Http/Controllers/<portal>/` | `app/Http/Controllers/<Domain>/` (PascalCase) |
+| Auth | Sanctum bearer tokens | Sanctum **stateful SPA session** (cookies) |
+
+> [!IMPORTANT]
+> **Where this skill and the profile disagree, the profile wins** — it is maintained; this skill's examples are illustrations of *shape*. Any path or convention below that contradicts your project's profile section is stale, and following it will send you looking for classes that do not exist, which reads as "nothing to reuse" and ends in a duplicate.
+
+---
+
+## Phase 0.5 — Branch Gate (BLOCKING)
 
 > [!CAUTION]
 > **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to a `feature/` branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
@@ -120,7 +155,7 @@ Only load context that is required.
 ### Search Priority
 1. Current module (controllers, queries, handlers)
 2. Related model (e.g., `app/Models/<ModelName>.php`)
-3. Related domain classes (in `app/Domain/`)
+3. Related domain classes (`app/Queries/<Domain>/`, `app/Handlers/<Domain>/`, `app/Actions/<Domain>/` — **not** `app/Domain/`, which is retired)
 4. Controller
 5. Routes (`routes/api.php` orchestrator + the per-portal files in `routes/api/`)
 6. Request classes (FormRequests)
@@ -161,6 +196,24 @@ If the budget is exceeded:
 Before creating any controller, model, request, resource, helper, action, query, policy, service, or migration, check if it already exists.
 - Reuse or extend existing classes instead of duplicating logic. Never create parallel duplicates.
 
+### The Reuse Ledger (MANDATORY)
+
+"Check if it already exists" has always been the rule, and parallel classes still get created. The reason is structural: **reuse is merely asserted, while creating a class requires no evidence.** Nothing records what was searched — so a search that found nothing looks exactly like a search that never ran, and a search pointed at a directory that doesn't exist (`app/Domain/`) looks like proof that nothing exists.
+
+Invert the burden, the way `/webkit.verify` does for spec claims: **a new class is a claim that nothing reusable exists, and that claim needs evidence.**
+
+Before creating **any** controller, Query, Handler, Action, model, migration, or FormRequest, record one row:
+
+| Artifact | Searched | Found | Decision |
+|---|---|---|---|
+| `<class you are about to create>` | `<the actual path/grep you ran — and it must be a path that exists>` | `<file, or NONE>` | `REUSE` / `EXTEND` / `CREATE — <why nothing fit>` |
+
+- **`CREATE` with no recorded search is a violation.** If there is no row, the class should not exist.
+- **The searched path must be real.** A row reading *"searched `app/Domain/Queries/` — NONE"* establishes nothing except that you searched a retired directory. Verify the path exists before treating an empty result as absence.
+- **Search by domain, not by feature name.** `GetPayrollListQuery` will not match an existing `GetPayrollQuery`. List the domain folder and read the class names in it.
+- **A new migration is the highest-stakes `CREATE` in this skill.** A duplicate table is far more expensive than a duplicate class — the ledger row for a migration must name the models and tables you checked.
+- **Report the ledger at hand-off**, so a wrong `CREATE` is caught while it is still one file.
+
 ### Incremental Generation
 If a file already exists:
 - Update only the required sections (e.g. adding a method, field validation, or route binding).
@@ -171,12 +224,16 @@ If a file already exists:
 
 ## Architecture & Convention Detection
 
-### Laravel Architecture — Already Known
-This project's backend architecture is documented in [Project Profile](../../rules/project-profile.md). **Read it and follow it — do not re-detect or introduce a different pattern.** Summary:
-- **Thin controllers + Domain Query/Handler** (`app/Domain/Queries/<Domain>/` for reads, `app/Domain/Handlers/<Domain>/` for writes, static `execute()`). Do NOT add Service / Repository / Action classes for standard CRUD.
+### Laravel Architecture — Read It, Don't Recall It
+The backend architecture is documented in [Project Profile](../../rules/project-profile.md). **Read your project's sections and follow them — do not re-detect, and do not introduce a different pattern.** What holds for **both** projects:
+- **Thin controllers + Query/Handler** with static `execute()` — reads in `app/Queries/<Domain>/` (`App\Queries\<Domain>`), writes in `app/Handlers/<Domain>/` (`App\Handlers\<Domain>`), and `app/Actions/<Domain>/` where the domain already uses Actions. `<Domain>` is a **PascalCase domain folder**, never a lowercase portal.
 - **NO API Resources** — return `response()->json(...)` directly inside `try/catch`. Never scaffold a `JsonResource`.
 - **Validation** is mostly inline (`$request->all()`); FormRequests are rare and flat in `app/Http/Requests/`.
-- **Routes** grouped by portal prefix inside one `auth:sanctum` group. Mind the `tk` (namespace) vs `timekeeping` (URL prefix) gotcha.
+
+> [!CAUTION]
+> **`app/Domain/` is retired.** These classes live at the **top level of `app/`**. Do not write anything under `app/Domain/`, and do not reference `App\Domain\...` — a few legacy files still carry that stale namespace mid-migration; the target is `App\Queries` / `App\Handlers` / `App\Actions`. This matters for reuse as much as for placement: **searching `app/Domain/` for an existing Query returns nothing because the directory isn't there**, which reads as "none exists" and produces a duplicate class in a dead namespace. Search `app/Queries/` and `app/Handlers/`.
+
+**Route grouping is project-specific** — SubHRMS groups by portal prefix (mind `tk` namespace vs `timekeeping` URL prefix); ScaleUP groups by domain and has no portals. Read your project's routes section before adding one.
 
 ### Naming Convention Detection
 Follow existing backend casing and class suffixes: `<ModuleName>Controller.php`, `Get<X>Query.php`, `Save<X>Handler.php`, and (only where already used) `Store<ModelName>Request.php`. Do NOT invent `*Resource.php` classes — they don't exist in this project.
@@ -201,19 +258,22 @@ database/migrations/           # Database migrations
 app/Models/                    # Eloquent models
 └── <ModelName>.php            # The Eloquent model representation
 app/Http/Controllers/
-└── <namespace>/               # e.g., hr, payroll, tk, employee, manager, admin (tk = timekeeping)
-    └── <ModuleName>Controller.php # Thin controller: dispatches to Query/Handler in try/catch
-app/Http/Requests/             # FormRequests are FLAT here (no portal subfolder) and RARE
+└── <namespace>/               # SubHRMS: lowercase portal (hr, payroll, tk, employee, manager, admin — tk = timekeeping)
+    └── <ModuleName>Controller.php # ScaleUP: PascalCase domain (Auth, Community, Dashboard, Onboarding, Organization)
+app/Http/Requests/             # FormRequests are FLAT here (no subfolder) and RARE
 └── Store<ModuleName>Request.php  #   only add if the target controller already uses one
-app/Domain/
-├── Queries/<Domain>/          # Read logic:  Get<X>Query.php   (extends Query, static execute)
-└── Handlers/<Domain>/         # Write logic: Save<X>Handler.php (extends Handler, static execute, DB::transaction)
+app/Queries/<Domain>/          # Read logic:  Get<X>Query.php   (extends Query, static execute)
+app/Handlers/<Domain>/         # Write logic: Save<X>Handler.php (extends Handler, static execute, DB::transaction)
+app/Actions/<Domain>/          # Where the domain already uses Actions — mirror the Handler's domain folder
 routes/
-├── api.php                    # Orchestrator: public routes, auth:sanctum group, per-portal group() loaders
+├── api.php                    # Orchestrator: public routes, auth group, per-file group() loaders
 └── api/
-    └── <portal>.php           # One file per portal (employee|manager|hr|timekeeping|payroll|admin)
-                               #   holds that portal's routes + its own controller `use` imports
+    └── <group>.php            # SubHRMS: one file per portal (employee|manager|hr|timekeeping|payroll|admin)
+                               # ScaleUP: one file per domain (auth|community|dashboard|onboarding|organizations)
+                               #   each holds its own routes + its own controller `use` imports
 ```
+
+> `<Domain>` is a **PascalCase domain folder** (`Payroll`, `Timesheet`, `Leave`, `Organization`, `Community`, …) — never a lowercase portal name. **There is no `app/Domain/` directory**; do not create one. Match the folder the sibling classes for your feature already use.
 
 > There are **no** `app/Http/Resources/` API Resource classes in this project — do not create that directory. See [Project Profile](../../rules/project-profile.md).
 
@@ -225,7 +285,14 @@ routes/
 - **Reuse Before Create**: Always complete the System Awareness Phase (Steps 1–2) before deciding to create a new migration. If an existing table covers the requirement, use it directly.
 - **Do NOT Run Migrations Automatically**: Generate migration files and Eloquent models only when a new table is confirmed necessary. Explain that migrations must only be run upon explicit user request.
 - **No Duplicate Tables**: Never create a migration for a table name that already exists. Search `database/migrations/` for any prior `Schema::create('<table_name>')` definition before generating a new one.
-- **Optimization Standard**: Add `->index()` on relationship columns (e.g. `idacct`, `idpayperiod`, `idtranstype`, `idclass`) and frequently filtered columns, plus timestamps. **Do NOT add DB-level foreign key constraints (`->foreign()->references()`)** — this project has **zero** DB-level FKs; enforce referential integrity in the Query/Handler layer and just index the column instead. Adding `->foreign()` has repeatedly broken migrations here (e.g. an FK to a non-existent `account` table when the real one is `accounts`). For soft-delete, match sibling tables — most use a `status` column, not Laravel `SoftDeletes`. Avoid duplicate schema definitions.
+- **Optimization Standard**: Add `->index()` on relationship columns and frequently filtered columns, plus timestamps. Avoid duplicate schema definitions.
+- **Foreign keys and soft deletes are OPPOSITE between the two projects.** Getting this backwards produces a migration that looks idiomatic and violates the schema conventions of the project it lands in. Confirm against your project's profile section before writing a column:
+
+| | SubHRMS | ScaleUP |
+| :--- | :--- | :--- |
+| FK constraints | **Never** `->foreign()->references()` — the project has **zero** DB-level FKs. Index the column and enforce integrity in the Query/Handler layer. Adding one has repeatedly broken migrations here (an FK to a non-existent `account` table when the real one is `accounts`) | **Yes** — real foreign keys, `foreignId()->constrained()` |
+| Relationship column | `id`-prefixed: `idacct`, `idpayperiod`, `idtranstype`, `idclass` | `<parent>_id`: `organization_id` |
+| Soft delete | a `status` column — match sibling tables, **not** Laravel `SoftDeletes` | `softDeletes()` / `deleted_at` |
 
 ### 2. Validation Standards
 - This project validates **inline** by default (`Request $request` → `$request->all()`). FormRequests are rare and flat in `app/Http/Requests/`. Only create/extend a FormRequest if the target controller already uses one — otherwise validate inline to match siblings.
@@ -249,13 +316,13 @@ routes/
 
 *These mirror the verified conventions in [Project Profile](../../rules/project-profile.md). Before writing, open the closest sibling Query/Handler/Controller for your portal and match it exactly — arg shapes and response wrappers vary slightly per module.*
 
-#### 1. Domain Query (reads) — `app/Domain/Queries/<Domain>/Get<X>Query.php`
+#### 1. Domain Query (reads) — `app/Queries/<Domain>/Get<X>Query.php`
 ```php
 <?php
 
-namespace App\Domain\Queries\<Domain>;
+namespace App\Queries\<Domain>;
 
-use App\Domain\Queries\Query;
+use App\Queries\Query;
 use App\Models\<ModelName>;
 
 class Get<ModuleName>Query extends Query
@@ -269,13 +336,13 @@ class Get<ModuleName>Query extends Query
 }
 ```
 
-#### 2. Domain Handler (writes) — `app/Domain/Handlers/<Domain>/Save<X>Handler.php`
+#### 2. Domain Handler (writes) — `app/Handlers/<Domain>/Save<X>Handler.php`
 ```php
 <?php
 
-namespace App\Domain\Handlers\<Domain>;
+namespace App\Handlers\<Domain>;
 
-use App\Domain\Handlers\Handler;
+use App\Handlers\Handler;
 use App\Models\<ModelName>;
 use Illuminate\Support\Facades\DB;
 
@@ -300,8 +367,8 @@ class Save<ModuleName>Handler extends Handler
 namespace App\Http\Controllers\<namespace>;   // e.g. tk, hr, payroll, employee, manager, admin
 
 use App\Http\Controllers\Controller;
-use App\Domain\Queries\<Domain>\Get<ModuleName>Query;
-use App\Domain\Handlers\<Domain>\Save<ModuleName>Handler;
+use App\Queries\<Domain>\Get<ModuleName>Query;
+use App\Handlers\<Domain>\Save<ModuleName>Handler;
 use Illuminate\Http\Request;
 use Exception;
 
@@ -340,7 +407,7 @@ Route::post('/<module_endpoint>/save', [<ModuleName>Controller::class, 'store'])
 Route::apiResource('<resource>', <ModuleName>Controller::class)->only(['index', 'store', 'update', 'destroy']);
 Route::post('/<resource>/{id}/<action>', [<ModuleName>Controller::class, '<action>']);
 ```
-Do NOT add routes to `routes/api.php` for an existing portal — it only holds the per-portal `group()` loaders. Remember: Timekeeping's file is `routes/api/timekeeping.php` and its URL prefix is **`timekeeping`** even though the controller namespace is `tk`.
+Do NOT add routes to `routes/api.php` for an existing group — it only holds the `group()` loaders. *(SubHRMS gotcha: Timekeeping's file is `routes/api/timekeeping.php` and its URL prefix is **`timekeeping`** even though the controller namespace is `tk`. ScaleUP has no portals — its files are per-domain, e.g. `routes/api/organizations.php`.)*
 
 ---
 
@@ -350,13 +417,13 @@ Work top-to-bottom; stop at the first branch that applies.
 
 1. **Does a Model + table already cover this entity?** (System Awareness scan)
    - Yes → reuse it. Skip migration/model creation entirely.
-   - No → scaffold migration + model (indexes on FKs + filtered columns, `SoftDeletes`, timestamps). Do NOT run the migration — tell the user to.
-2. **Does a route for this resource already exist in the portal file (`routes/api/<portal>.php`)?**
+   - No → scaffold migration + model (indexes on relationship + filtered columns, timestamps, and the **soft-delete and FK style your project uses** — they are opposite between the two, see §1). Do NOT run the migration — tell the user to.
+2. **Does a route for this resource already exist in its group file (`routes/api/<group>.php`)?**
    - Yes → add a method to the existing controller; wire it to a new/existing Query or Handler. Do NOT add a duplicate route.
-   - No → add the route inside the correct portal file (+ its `use` import there). Never a new top-level group or a new portal loader in `api.php`.
-3. **Read or write?**
-   - Read → `Get<X>Query` under `app/Domain/Queries/<Domain>/`.
-   - Write → `Save<X>Handler` (or `Update.../Delete...`) under `app/Domain/Handlers/<Domain>/`, wrapped in `DB::transaction`.
+   - No → add the route inside the correct group file (+ its `use` import there). Never a new top-level group or a new loader in `api.php`.
+3. **Read or write?** — search `app/Queries/` and `app/Handlers/` for an existing class first; **do not search `app/Domain/`, it does not exist.**
+   - Read → `Get<X>Query` under `app/Queries/<Domain>/`.
+   - Write → `Save<X>Handler` (or `Update.../Delete...`) under `app/Handlers/<Domain>/`, wrapped in `DB::transaction`.
 4. **Controller** → thin method, `try/catch`, `response()->json(...)`. Never a `JsonResource`.
 5. **Frontend wiring (add dynamic data)** → if the design-first `api/<feature>.api.ts` (or legacy `useApiRequest.js`) exists, swap each hard-coded / `TODO(backend)` method for `http.get/post("api/<prefix>/...")`, keeping the response shape identical. If not, stop and suggest `/webkit.frontend-implement` first.
 6. **Domain calculations** (payroll, OT, leave credits) → follow the spec's compute step and [HRMS Domain Rules](../../rules/hrms-rules.md) for exact rates/factors; do not hardcode ad-hoc numbers.
@@ -392,13 +459,17 @@ export function use<Feature>Api() {
 
 Automated PHPUnit execution is out of scope for this skill for now — pair with `/webkit.fix`'s test-running verification phase when regression coverage is actually needed. Still confirm the following before considering the work done:
 1. **Syntax Check**: The new/edited PHP files parse cleanly (e.g. `php -l <file>`) and match the surrounding code's formatting.
-2. **Route Sanity Check**: The new/modified route sits in the correct `routes/api/<portal>.php` file (with its `use` import added there), doesn't collide with an existing URI, and — confirm with `php artisan route:list --path=api` — resolves under the right prefix with `auth:sanctum`.
-3. **Manual Verification Steps**: Give the user concrete steps to hit the new endpoint (e.g. via curl/Postman) and confirm the response shape matches the API Resource / JSON structure implemented.
+2. **Route Sanity Check**: The new/modified route sits in the correct `routes/api/<group>.php` file (with its `use` import added there), doesn't collide with an existing URI, and — confirm with `php artisan route:list --path=api` — resolves under the right prefix and auth middleware.
+3. **Acceptance Criteria walk (when the spec has them)**: Take the `AC-n` rows your endpoints own and check each literally — exact status code, exact message, exact computed value. Rows describing rejection (unauthorized, validation failure, conflict, replayed request) are the ones most often skipped and are exactly what `/webkit.verify` hunts for. Name any row you could not exercise, and why.
+4. **Non-Functional checklist sweep**: For each category — authorization, concurrency/double-submit, idempotency, error shape, validation boundaries — point at the code that implements it. "The handler looks fine" is not a check; a guard nothing calls is not a guard.
+5. **Definition of Done**: Tick the boxes this gate closes; list what remains.
+6. **Manual Verification Steps**: Give the user concrete steps to hit the new endpoint (e.g. via curl/Postman) and confirm the response shape matches the JSON structure implemented.
 
 ---
 
 ## Close the Loop
 
 1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
-2. **Confirm the dynamic swap**: State which `api/<feature>.api.ts` methods are now live and that the page renders on real data with the same shape as the validated design. Call out any field that changed shape from the hard-coded version.
-3. **Suggested Next Step**: If no frontend existed for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` to build the design against these endpoints. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): wire payroll processing to live data`). Do not stage or commit automatically.
+2. **Report the Reuse Ledger**: Print the ledger table — every class, migration, and route you created new, what you searched, and why nothing fit. Call out any `CREATE` whose search came back empty, so the user can point you at an existing class before the duplicate sets a precedent.
+3. **Confirm the dynamic swap**: State which api methods are now live and that the page renders on real data with the same shape as the validated design. Call out any field that changed shape from the hard-coded version.
+4. **Suggested Next Step**: If no frontend existed for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` to build the design against these endpoints. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): wire payroll processing to live data`). Do not stage or commit automatically.

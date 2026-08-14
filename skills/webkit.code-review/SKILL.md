@@ -83,7 +83,7 @@ Pick the scope in this order:
 
 ## Phase 2 — Load the Applicable Rules
 
-Read [project-profile.md](../../rules/project-profile.md) first and resolve which project you are in — reviewing React against Vue standards produces pure noise.
+**Resolve which project you are in before loading a single rule.** Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and state the answer — then read only that project's sections. Reviewing React against Vue standards produces pure noise, and citing the wrong project's DB conventions turns a correct migration into a "finding". The two projects are opposite on foreign keys, relationship-column naming, and soft deletes, so a confidently-cited rule from the wrong half is worse than no citation.
 
 Then load only the rules the diff actually touches:
 

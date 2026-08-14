@@ -36,6 +36,7 @@ A saved report is optional input, not a hard prerequisite — this skill also ru
 ## Phase 1 — Target & Context Discovery
 
 Before writing any code:
+0. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project**, then read only its sections. A fix applied with the other project's conventions in mind — its schema rules, its component names, its file layout — lands looking idiomatic and is wrong, and this skill writes to application code.
 1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report file, read it directly. Otherwise, check `.agents/reports/` for a report matching the target path or feature described in the prompt. If found, treat its Root Cause Analysis, Evidence, and Recommended Solution sections as the primary source of truth instead of re-deriving them — this skill is commonly invoked in a fresh session with no memory of a `webkit.investigate` run that happened earlier. If no report is referenced or found, proceed directly from the prompt/target path — a report is not required to run this skill.
 2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
 3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
@@ -50,12 +51,12 @@ Match the layer of the bug to the right file, using this project's known structu
 
 | Symptom is in… | Fix lives in… |
 |---|---|
-| Wrong data returned / query logic | The `Get<X>Query` in `app/Domain/Queries/<Domain>/` |
-| Wrong write / save / calculation | The `Save<X>Handler` in `app/Domain/Handlers/<Domain>/` (keep it in `DB::transaction`) |
+| Wrong data returned / query logic | The `Get<X>Query` in `app/Queries/<Domain>/` (**not** `app/Domain/`, which is retired) |
+| Wrong write / save / calculation | The `Save<X>Handler` in `app/Handlers/<Domain>/` (keep it in `DB::transaction`) |
 | Wrong HTTP status / response shape | The controller method — keep `try/catch` + `response()->json(...)`, no API Resource |
-| 404 / wrong endpoint | `routes/api/<portal>.php` — check the portal prefix (Timekeeping = `timekeeping`, not `tk`); `php artisan route:list --path=api` to confirm |
-| Wrong value on screen / UI glitch | The module's `pages/` or `components/` `.vue` file |
-| Wrong API call / mock still in use | The module's `script/useApiRequest.js` (`http.get/post("api/<prefix>/...")`) |
+| 404 / wrong endpoint | `routes/api/<group>.php` — SubHRMS groups by portal (Timekeeping = `timekeeping`, not `tk`), ScaleUP by domain; `php artisan route:list --path=api` to confirm |
+| Wrong value on screen / UI glitch | The module's `pages/` or `components/` file (`.vue` in SubHRMS, `.tsx`/`.jsx` in ScaleUP) |
+| Wrong API call / mock still in use | The module's api layer — confirm the client and path against the profile before editing |
 | Wrong payroll/OT/leave number | Verify the formula against [HRMS Domain Rules](../../rules/hrms-rules.md) before editing |
 
 Then apply the smallest diff that resolves it (Phase 2), verify (Phase 3), close the loop (Phase 4).
@@ -92,7 +93,7 @@ Immediately after applying the code changes:
 1. **Lint & Static Analysis Check**: Fix any syntax or lint errors introduced by the edits.
 2. **Execute Tests**:
    - For backend fixes: Run PHPUnit filter tests (`vendor/bin/phpunit --filter <test_name>`).
-   - For frontend fixes: Run Vitest tests (`npm run test -- <file_name>`).
+   - For frontend fixes: run the checks the project actually has — **ScaleUP has no Vitest configured**, so use `npm run typecheck` (`tsc --noEmit`) and `npm run build`. Only run a JS test suite where one exists; a command that fails because it was never configured is not a failing test.
 3. **Manual Verification**: Specify step-by-step instructions for the developer/user to verify that the fix resolves the issue without introducing side effects.
 
 ---
@@ -100,4 +101,4 @@ Immediately after applying the code changes:
 ## Phase 4 — Close the Loop
 
 1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `.agents/reports/<file>.md` reflects current status instead of going stale for whoever reads it next.
-2. **Suggested Next Step**: Point the user to `vendor/bin/phpunit`/`npm run test` if not already run in Phase 3, and to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `fix(tk): correct late computation grace period`). Do not stage or commit automatically — that decision belongs to the user.
+2. **Suggested Next Step**: Point the user to the project's own checks (`vendor/bin/phpunit`; `npm run typecheck`/`npm run build` in ScaleUP) if not already run in Phase 3, and to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `fix(tk): correct late computation grace period`). Do not stage or commit automatically — that decision belongs to the user.

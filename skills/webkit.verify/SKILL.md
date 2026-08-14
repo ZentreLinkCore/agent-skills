@@ -82,6 +82,7 @@ State a concrete failure scenario: specific inputs or state → the wrong outcom
 1. **Locate the spec.** From `<spec_path>`, or by matching `<target_path>` to a file under `.agents/specs/<repo_name>/`. If no spec exists, **stop and say so** — there is nothing to verify against, and inventing a standard to judge against is the failure mode this skill exists to prevent. Suggest `/webkit.spec` instead.
 2. **Identify the repo/project.** Read [project-profile.md](../../rules/project-profile.md) and resolve which project you are in (its "Which Project Am I In?" section). Verifying React code against Vue conventions produces pure noise.
 3. **Read the spec completely, once, before opening any code.** Reading code first anchors you to what exists; you will then unconsciously read the spec as a description of it.
+4. **Check the spec carries an Acceptance Criteria table.** A spec written by the current `/webkit.spec` has an `Acceptance Criteria` section of `AC-n` Given/When/Then rows — the intended primary input to this skill. If it is missing (older specs predate it), do **not** stop: derive claims from `Business Rules` and `Edge Cases` as usual, but record the gap in §7 Verification Limits — *"spec carries no Acceptance Criteria table; claims derived from prose, so coverage is an estimate rather than a count"* — and suggest re-running `/webkit.spec` to add one. A spec that cannot be decomposed cleanly is a finding about the spec, not a reason to verify loosely.
 
 ### Separate DECIDED from OPEN
 
@@ -107,16 +108,20 @@ Turn every one of these into claims:
 
 | Spec section | Yields claims about |
 | :--- | :--- |
+| `Acceptance Criteria` | **One claim per `AC-n` row — reuse the row's id as the claim id.** These rows were written to be mechanically checkable (exact inputs → exact status codes, messages, values), so they are the highest-fidelity claim source in the spec. Do not paraphrase them; verify the literal Given/When/Then |
 | `Database` | Each table exists; each column, type, nullability, default; each FK and its on-delete behavior; each index and unique constraint |
 | `Backend` | Each class exists at the specified namespace; each route registered at the exact path/method; each response shape |
 | `Frontend` | Each page/component/route; the API contract; the module layout |
 | `Business Rules` | **One claim per rule.** These are the highest-value and most-often-absent |
 | `Edge Cases` | **One claim per row.** Each stated handling either exists or does not |
+| `Non-Functional & Failure-Mode Checklist` | One claim per category: authorization per portal/role, concurrency / double-submit guard, idempotency on retry, error shape + status codes, validation boundaries. An `N/A because ...` entry **is** a claim — verify the stated reason still holds, because it is where an unexamined assumption hides |
 | `Permissions` | One claim per role × capability cell |
 | `Build Order` | Each step's stated outcome |
-| `Success Criteria` | Each criterion, restated as something observable |
+| `Definition of Done` | Each checkbox, restated as something observable |
 
-Number them (`C1`, `C2`, …). Record the spec section each came from. **The count matters** — the report states coverage as a number, and a checklist of 8 claims for a 300-line spec is itself a finding about the verification, not about the code.
+Number them: **reuse `AC-n` verbatim for every claim that came from the Acceptance Criteria table**, and number the rest `C1`, `C2`, … Keeping the spec's own ids means the report and the spec cite the same row, and a reader can diff them without re-deriving anything.
+
+Record the spec section each claim came from. **The count matters** — the report states coverage as a number, and a checklist of 8 claims for a 300-line spec is itself a finding about the verification, not about the code. Where the spec has an Acceptance Criteria table, its row count is the **floor**: every `AC-n` must appear in the checklist with a verdict, and a missing one is an unverified claim, not an omission you may make silently.
 
 > [!WARNING]
 > Do not merge claims to keep the list short. "Migrations are correct" is not a claim — it is twenty claims wearing one coat, and it will be marked conformant on the strength of the two you happened to check.
@@ -163,7 +168,7 @@ Reading proves what the code says; running proves what it does. Prefer evidence 
 - `php artisan tinker --execute="..."` to exercise a handler or dump a real response shape
 - `php artisan migrate:fresh --seed` in a **disposable/local** database to prove migrations and seeders actually run
 - `npm run typecheck`, `npm run build` for frontend contract claims
-- `vendor/bin/phpunit`, `npm run test` where tests exist
+- `vendor/bin/phpunit` for backend tests; a JS test runner **only where the project configures one** (ScaleUP does not — it has no Vitest)
 - `grep -rn` with a **negative** target — searching for what should *not* exist is often faster proof than searching for what should
 
 > [!CAUTION]
@@ -300,8 +305,9 @@ number above meaningful rather than a claim of its own.>
 
 | # | Claim | Verdict | Evidence |
 | :--- | :--- | :--- | :--- |
-| C1 | ... | CONFORMS | `file.php:42` |
-| C2 | ... | ABSENT | — |
+| AC-1 | ... | CONFORMS | `file.php:42` |
+| AC-2 | ... | ABSENT | — |
+| C1 | ... | CONFORMS | `file.php:88` |
 
 ## 4. Fix Plan
 

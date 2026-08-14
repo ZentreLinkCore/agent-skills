@@ -22,7 +22,7 @@ This skill moves a feature from this **HRMS (Vue 3 + Laravel Domain Query/Handle
 > ```
 > /webkit.migrate <source_path> <target_path>
 > ```
-> - `<source_path>` — the feature in **this** repo (`hrms`), e.g. `resources/views/web/src/module/payroll/reports/.../payslip` or a backend `app/Domain/.../<Domain>` folder. This is **asa kuhaon** (what to migrate).
+> - `<source_path>` — the feature in **the repo you are invoked from** (resolve it in Phase 0 — do not assume `hrms`), e.g. `resources/views/web/src/module/payroll/reports/.../payslip` or a backend `app/Queries/<Domain>` / `app/Handlers/<Domain>` folder. This is **asa kuhaon** (what to migrate).
 > - `<target_path>` — where it lands in the **target** project, e.g. `../hrms_react/resources/views/pages/payroll/payslip`. This is **asa e-migrate** (destination).
 > - If `<target_path>` is omitted, infer the matching destination in the default target (`hrms_react`) from the source's portal/feature and confirm with the user before writing.
 
@@ -89,9 +89,22 @@ Source feature (hrms: Vue + Laravel Domain Q/H)  +  spec (.agents/specs/…, if 
 
 ---
 
+## Phase 0 — Resolve Which Repo Is Which (BLOCKING)
+
+> [!CAUTION]
+> **Do not assume the source is `hrms`.** This skill lives in more than one repo under `src/`, and each copy drifts independently. "This repo" is whichever one you were invoked from — which may be **ScaleUP** (React 19 + `app/Queries`/`app/Handlers`), **hrms** (Vue 3 + the same Query/Handler pattern), or another sibling. Migrating *out of* the wrong assumed source means extracting a contract from files that don't exist.
+
+1. **Identify the source repo** — the one you are running in. Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution and state the answer.
+2. **Identify the target repo** — from `<target_path>`, or ask. Confirm it exists on disk before writing anything.
+3. **State both explicitly** — *"migrating FROM `<source repo>` INTO `<target repo>`"* — and get the user's confirmation before Phase 4 writes a single file. The write-scope exception this skill carries makes a wrong target expensive.
+
+> The sibling repos each carry their **own `.agents/` copy** (rules and skills), and they are separate directories, not symlinks. The target's conventions come from the **target's** profile where it has one — never from this repo's.
+
+---
+
 ## Phase 1 — Resolve Both Sides & Load Ground Truth
 
-1. **Resolve the source** (in `hrms`). Parse the dragged/passed `<source_path>` or the prompt → `<portal>`/`<feature>`. Confirm the frontend folder (`resources/views/web/src/module/<portal>/<feature>/`) and the backend surface (controller + `app/Domain/Queries|Handlers/<Domain>/`).
+1. **Resolve the source** (in the repo resolved in Phase 0). Parse the dragged/passed `<source_path>` or the prompt → `<portal-or-domain>`/`<feature>`. Confirm the frontend folder and the backend surface (controller + `app/Queries/<Domain>/` and `app/Handlers/<Domain>/` — **not** `app/Domain/`, which is retired and absent from every repo here).
 2. **Resolve the target** (in `hrms_react` or a user-named project). Parse `<target_path>`; if omitted, map the source portal/feature to the target's layout (`resources/views/pages/<portal>/<feature>/`, remembering `employee→emp`, `timekeeping→tk`) and **confirm the destination with the user before writing**.
 3. **Load the spec (primary source of truth).** Look under `.agents/specs/` (incl. `subhrms/`) for the feature; if present, read it in full — it already frames the flow, data contract, and rules. Trust the source code's runtime behavior where it and the spec disagree, and flag the drift.
 4. **Load any investigation report** under `.agents/reports/` matching the feature for edge cases/gotchas worth carrying over.
@@ -132,7 +145,7 @@ Using the Target Profile (+ the target scan), lay out how each source layer beco
 | `api/<feature>.api.ts` (`http` from `@/app/axios/axiosInstance`) | service module importing the target's `@/app/axios` | Keep the **same endpoint strings, params, and response handling**. Do NOT create a new axios instance. |
 | Pinia `store/` | React Context provider (or lift state) — only if shared across pages | Same trigger as source. |
 | `route/<feature>.routes.ts` auto-globbed | route object added **manually** to `resources/app/router.jsx` | Target has no auto-glob — register explicitly under the right portal branch + `ProtectedRoute`. |
-| Global components (`CSelect`, `Pagination`, `StatusBadge`, `EmptyState`, `TableSkeleton`, `Spinner`, `VDatePicker`) | MUI/PrimeReact equivalents (`Select`, `DataTable`/`TablePagination`, `Chip`, PrimeReact `Dropdown`, etc.) | List each source component used → pick the target's library equivalent; preserve behavior. |
+| Source design-system components — *SubHRMS globals are `CSelect`, `Pagination`, `StatusBadge`, `EmptyState`, `TableSkeleton`, `Spinner`, `VDatePicker`; **ScaleUP's are entirely different** (`Button`, `Select`, `Badge`, `Modal`, `Table`, … under `components/ui/`). Read the **source's** profile for the real list* | MUI/PrimeReact equivalents (`Select`, `DataTable`/`TablePagination`, `Chip`, PrimeReact `Dropdown`, etc.) | Inventory the components the source feature actually imports → pick the target's equivalent; preserve behavior. Never assume the source's component vocabulary — a name from the wrong project matches nothing. |
 | Tailwind classes + portal accent + `dark:` | MUI `sx`/theme or Bootstrap classes per target | UI *behavior* is the contract; exact styling is the target's. |
 | `debounce` (300ms), `onUnmounted` cleanup | debounce util + `useEffect` cleanup return | Preserve interval + cleanup semantics ([performance](../../rules/performance.md)). |
 | `formatCurrency`/`dateFormatter` (`@/src/utils`) | target's formatting utils (create if absent) | Preserve rounding/format *semantics*. |
@@ -141,7 +154,7 @@ Using the Target Profile (+ the target scan), lay out how each source layer beco
 
 | Source (`hrms`) | Target (`hrms_react`) | Note |
 |---|---|---|
-| Thin controller → `Get<X>Query::execute()` / `<X>Handler::execute()` | controller method with the logic **inline** (target's style) or a small private method | Same computation & output shape; drop the Domain layer to match the target. |
+| Thin controller → `Get<X>Query::execute()` / `<X>Handler::execute()` (in `app/Queries/` / `app/Handlers/`) | controller method with the logic **inline** (target's style) or a small private method | Same computation & output shape; drop the Query/Handler layer to match the target. |
 | `DB::transaction(...)` on writes | `DB::transaction(...)` in the target too | Transactionality is a data-integrity requirement, not a source detail — keep it. |
 | Eloquent model (source) | target Eloquent model — **reuse if the target already has it**, else create matching the target's model style | Fields from the Phase-2 data contract. |
 | Migration (source) | new migration in the target **only if the target lacks the table** (confirmed in Phase 1 target scan) | Match the target's migration conventions; never duplicate an existing target table. |
