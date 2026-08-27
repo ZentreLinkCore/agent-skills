@@ -770,16 +770,16 @@ Dependency-first. Steps 1–5 are the security and failure-visibility core and a
 
 - [ ] Every row in the **Acceptance Criteria** table passes (AC-1 … AC-31)
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed — answered or explicitly `N/A because ...`
-- [ ] `grep -rn "mockLeaveBalances\|mockApprovals\|mockEmployees\|mockIncidents\|mockAnomalies\|mockPermissions\|mockAuditLogs\|mockChartData\|mockPolicies\|mockRoster" resources/views/web/src/components/Chatbot/` returns nothing
-- [ ] `grep -n "mcp/execute" routes/api.php` returns nothing
-- [ ] `where('idhead'` appears in exactly one place (`GetManagedEmployeesQuery`) across `app/`
-- [ ] `grep -n "z-999\|z-1000" resources/views/web/src/components/Chatbot/HRMSChatbot.vue` returns nothing
-- [ ] `grep -c "HRMS Copilot" resources/views/web/src/components/Chatbot/HRMSChatbot.vue` counts only the drawer header — not the launcher
+- [x] `grep -rn "mockLeaveBalances\|mockApprovals\|mockEmployees\|mockIncidents\|mockAnomalies\|mockPermissions\|mockAuditLogs\|mockChartData\|mockPolicies\|mockRoster" resources/views/web/src/components/Chatbot/` returns nothing — in fact `grep -rn "mock"` over that folder returns nothing
+- [x] `grep -n "mcp/execute" routes/api.php` returns nothing
+- [x] `where('idhead'` appears in exactly one place (`GetManagedEmployeesQuery`) across `app/` — in fact zero: the shared query resolves heads with a typed `filter()` instead of a loose `where()`, so the grep returns nothing and the scope walk exists only in `GetManagedEmployeesQuery::managedUnitIds()`
+- [x] `grep -n "z-999\|z-1000" resources/views/web/src/components/Chatbot/HRMSChatbot.vue` returns nothing — the settings dialog's `z-10001` also moved into the scale, to `z-[100]`
+- [x] `grep -c "HRMS Copilot" resources/views/web/src/components/Chatbot/HRMSChatbot.vue` counts only the drawer header — not the launcher (returns 1)
 - [ ] On a paginated list scrolled to the bottom, every pagination button is clickable with the chatbot closed (AC-32) — checked on at least one page per portal
-- [ ] `grep -c "route.path !== '/messages'" resources/views/web/src/layout/DashboardLayout.vue` returns `0` (AC-42)
-- [ ] All 6 portal records in `resources/views/web/app/routes.ts` carry an explicit `chatbot` value — none left implicit (AC-39, AC-40)
+- [x] `grep -c "route.path !== '/messages'" resources/views/web/src/layout/DashboardLayout.vue` returns `0` (AC-42)
+- [x] All 6 portal records in `resources/views/web/app/routes.ts` carry an explicit `chatbot` value — none left implicit (AC-39, AC-40)
 - [ ] The defaults table in Decision 12 has been confirmed by the team, timekeeping row included
-- [ ] `.agents/docs/hrms-chatbot.md` "Known issues" section updated to reflect what was fixed
+- [x] `.agents/docs/hrms-chatbot.md` "Known issues" section updated to reflect what was fixed
 - [ ] No open findings from adversarial verification — see the latest `.agents/reports/global-hrms_chatbot-verify-<date>.md`
 
 ---
