@@ -5,8 +5,9 @@ description: >
   N+1s, duplication, and violations of the project's own rules in `.agents/rules/`. Complements `/webkit.verify`:
   verify asks "does this match the spec", this asks "is this code any good". Grades every finding
   CRITICAL/HIGH/MEDIUM/LOW with a suggested fix and a dependency-first Fix Plan. Never edits code;
-  writes a review report to `.agents/reports/`.
-  Triggered by `/webkit.code-review`, `/webkit.code-review <target_path>`, or `/webkit.code-review <branch>`.
+  writes `code-review.md` into the ticket folder of the spec the change belongs to
+  (`.agents/specs/<project>/T#####/code-review.md`), or to `.agents/reports/` when the change has no ticket.
+  Triggered by `/webkit.code-review`, `/webkit.code-review <target_path>`, `/webkit.code-review T#####`, or `/webkit.code-review <branch>`.
 ---
 
 # Webkit Code Review
@@ -14,7 +15,7 @@ description: >
 This skill reviews code the way a senior engineer reviews a colleague's pull request: **on the diff, against the project's own rules, looking for what will actually break.**
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application code.** Its only file output is the review report under `.agents/reports/`. Fixing is `/webkit.fix`'s job. A reviewer who fixes as they go cannot report honestly on what they changed, and the report stops matching any commit.
+> **This skill MUST NOT modify application code.** Its only file output is the review report — `code-review.md` in the change's ticket folder, or a dated report under `.agents/reports/` when there is no ticket. Fixing is `/webkit.fix`'s job. A reviewer who fixes as they go cannot report honestly on what they changed, and the report stops matching any commit.
 
 ---
 
@@ -46,7 +47,7 @@ A change can conform perfectly to its spec and still be bad code. A change can b
  (spec match)      (code quality)
       └────────┬────────┘
                ▼
-   Review Report (.agents/reports/<scope>-review-<date>.md)
+   Review Report (.agents/specs/<project>/T#####/code-review.md)
                │
                ▼
           webkit.fix
@@ -192,8 +193,10 @@ Every finding carries a **concrete suggested fix**: name the file and the constr
 ```markdown
 # Code Review: <scope>
 
+> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/code-review.md`. (Or: *no ticket — <why>*.)
 > **Scope:** <branch / uncommitted / path> — <n> files, <+a/-d> lines
 > **Branch:** <branch name>
+> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of what changed since the previous run, or "initial">.
 > **Reviewed:** <YYYY-MM-DD>
 > **Verdict:** APPROVE | APPROVE WITH COMMENTS | REQUEST CHANGES
 
@@ -263,8 +266,24 @@ Derive it, do not judge it:
 
 ### Persist the Report (MANDATORY)
 
-- Write to `.agents/reports/<scope>-review-<YYYYMMDD>.md` (e.g. `.agents/reports/organization-schema-correction-review-20260812.md`).
-- Re-reviewing the same scope **updates that file in place** ([duplicate-prevention.md](../../rules/duplicate-prevention.md)).
+**Step 1 — Resolve the ticket the diff belongs to.** This skill needs no spec to run, but its report belongs with the spec when one exists ([ticket-numbering.md](../../rules/ticket-numbering.md) §4):
+
+1. **The branch usually says it outright.** You already read it in Phase 1: `git rev-parse --abbrev-ref HEAD` returning `T00004` (or `T00004-<slug>`) *is* the ticket, because implementing skills branch on the ticket number ([git-workflow.md](../../rules/git-workflow.md#step-3--derive-the-branch-name)).
+2. The prompt names one (`/webkit.code-review T00004`) → use it.
+3. Otherwise match the diff to a ticket by the modules, routes, or tables it touches, inside the resolved project (numbers are per project, so `T00004` exists in both):
+
+   ```bash
+   grep -ril '<module|route|table from the diff>' ".agents/specs/$project" --include='specs.md' 2>/dev/null
+   ```
+
+4. Still nothing → the change has **no ticket**. Say so and fall back to `.agents/reports/<scope>-review-<YYYYMMDD>.md` (e.g. `.agents/reports/organization-schema-correction-review-20260812.md`).
+
+Do **not** allocate a ticket number here — allocating is `/webkit.spec`'s job. State which ticket you resolved to (or that there is none) in your first message.
+
+**Step 2 — Write the report.**
+
+- Write to **`.agents/specs/<project>/<ticket>/code-review.md`** — that exact filename, no dates or scope names in it ([ticket-numbering.md](../../rules/ticket-numbering.md) §5). Only an unticketed change goes to the dated `.agents/reports/` path.
+- Re-reviewing the same scope **overwrites that file in place** ([duplicate-prevention.md](../../rules/duplicate-prevention.md)) — history lives inside the file: increment the `> **Run:**` `v<N>`, set today's date, write one line on what changed since the previous run, and append the superseded run line verbatim to a `<!-- Run history -->` list at the bottom.
 - Every `file:line` must be real and current. One stale line number makes the whole report untrustworthy.
 
 ---
@@ -288,6 +307,6 @@ Derive it, do not judge it:
 
 ## Follow-up Commands
 
-- Apply the findings: `/webkit.fix <target_path> using .agents/reports/<report>.md`
-- Also check spec conformance: `/webkit.verify <spec_path>`
-- Deeper root-cause on one finding: `/webkit.investigate <target_path> <finding F<n> from .agents/reports/<report>.md>`
+- Apply the findings: `/webkit.fix <target_path> using .agents/specs/<project>/<ticket>/code-review.md` — **on the ticket's existing branch**, not a new one
+- Also check spec conformance: `/webkit.verify <ticket>` — writes `verify.md` into the same ticket folder
+- Deeper root-cause on one finding: `/webkit.investigate <target_path> <finding F<n> from .agents/specs/<project>/<ticket>/code-review.md>`

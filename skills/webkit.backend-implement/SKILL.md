@@ -20,13 +20,13 @@ When the user requests to implement or scaffold the backend structure of a modul
 1. Check if a folder or file path was dragged/passed into the command.
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
-4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/<repo_name>/` e.g. `.agents/specs/scaleup/` or `.agents/specs/subhrms/`) for a spec matching the target module/feature. If one exists, **read it in full and build to it** — the tables/columns, Query & Handler classes, controller methods, routes, gating rules, and API contract all come from the spec's backend design. The spec supersedes ad-hoc schema guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Resolve the project first, then look for a spec matching the target module/feature inside it — **ticket folders first** (`.agents/specs/<project>/T#####/specs.md`), then the legacy portal folders (`.agents/specs/<project>/<portal>/<feature>.md`). One command covers both: `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'`. If you are already on a `T#####` branch, that names the ticket outright. Ticket folder names carry no feature name, so grep their contents rather than their names; the spec's `> **Ticket:**` / `> **Portal:**` header confirms the match ([ticket-numbering.md](../../rules/ticket-numbering.md)). If one exists, **read it in full and build to it** — the tables/columns, Query & Handler classes, controller methods, routes, gating rules, and API contract all come from the spec's backend design. The spec supersedes ad-hoc schema guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
 
    **Three spec sections bind this skill specifically** — and the backend owns most of what they demand:
    - **Non-Functional & Failure-Mode Checklist** — this is a build list, not background reading. **Authorization** (who is rejected, and with what status), **concurrency / double-submit** guards, **idempotency on retry**, **error response shape and status codes**, and **input validation boundaries** are all backend obligations. A feature that satisfies only the happy-path contract has not implemented its spec. An `N/A because ...` entry still needs a glance: confirm the stated reason actually holds in the code you are writing.
    - **Acceptance Criteria** (`AC-n` Given/When/Then rows) — the exact status codes, error messages, and computed values your endpoints must return. Build to the literal rows; they are what `/webkit.verify` will check you against, so a paraphrase is a failure you could have avoided.
    - **Definition of Done** — the completion gate. Do not report this gate finished while a DoD box remains unticked without explanation.
-5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
+5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, read it directly. Otherwise check the ticket folder you just resolved for an `investigation.md` (and `verify.md` / `code-review.md` from earlier passes); `.agents/reports/` holds the pre-ticket archive. Use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
 6. **Confirm the design was validated (Gate 2 precondition)**: This skill is the second gate of the design-first flow. Confirm the hard-coded frontend design exists (from `/webkit.frontend-implement`) and the user has reviewed it. If the frontend design doesn't exist yet, backend/API-first is still valid — but prefer building the design first so the schema is validated against a reviewed UI.
 7. **Mandatory Architecture Discovery**: Before generating any backend code or migrations, perform the Architecture Discovery step to identify the project's Laravel design pattern.
 8. **Mandatory System Awareness**: Before writing any controller, query, migration, or model, run the scan defined in [System Awareness](../../rules/system-awareness.md) to identify what already exists. The backend implementation MUST reuse existing models and tables. Never create a new migration or model when an existing one already satisfies the data requirement.
@@ -87,17 +87,21 @@ The differences that will bite hardest, per the profile:
 ## Phase 0.5 — Branch Gate (BLOCKING)
 
 > [!CAUTION]
-> **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to a `feature/` branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
+> **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to the ticket's branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
 >
 > This is not "confirm a branch exists". Confirming has repeatedly failed: the agent checks, sees `main`, notes it, and implements anyway. **Create the branch.**
+
+**The branch is the ticket number** — bare `T00001`, matching the spec folder you just loaded (`.agents/specs/<project>/T00001/`) character for character. No prefix, no slug: that exact match is what lets `/webkit.verify` and `/webkit.code-review` find the right spec later from the branch alone.
 
 ```bash
 git rev-parse --abbrev-ref HEAD          # where am I?
 git status --short                       # what am I carrying over?
-git checkout -b feature/<domain>-<feature-kebab>
+git checkout -b T00001                   # the ticket from the spec you loaded
 ```
 
-Already on a correctly-named branch for this work? Continue there — do not open a second one. On a branch for *different* work, or detached HEAD? **Stop and ask.** Then state the branch you are on before writing anything.
+Working from a spec with **no ticket** (a legacy portal-folder spec) or no spec at all? Fall back to the categorised form — `feature/<domain>-<feature-kebab>` ([git-workflow.md](../../rules/git-workflow.md) Rule 1) — and say which you used and why.
+
+**Already on the ticket's branch?** Continue there — do not open a second one. One ticket, one branch: this gate and the other gate share it. On a branch for *different* work, or detached HEAD? **Stop and ask.** Then state the branch you are on before writing anything.
 
 Committing remains the user's call. This gate only guarantees the work is isolated and revertible.
 
@@ -385,7 +389,7 @@ Automated PHPUnit execution is out of scope for this skill for now — pair with
 
 ## Close the Loop
 
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `investigation.md` stays current.
 2. **Report the Reuse Ledger**: Print the ledger table — every class, migration, and route you created new, what you searched, and why nothing fit. Call out any `CREATE` whose search came back empty, so the user can point you at an existing class before the duplicate sets a precedent.
 3. **Confirm the dynamic swap**: State which api methods are now live and that the page renders on real data with the same shape as the validated design. Call out any field that changed shape from the hard-coded version.
 4. **Suggested Next Step**: If no frontend existed for this module, tell the user to run `/webkit.frontend-implement <target_path> <prompt>` to build the design against these endpoints. Otherwise, point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): wire payroll processing to live data`). Do not stage or commit automatically.

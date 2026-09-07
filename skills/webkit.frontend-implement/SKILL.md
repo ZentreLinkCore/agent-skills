@@ -21,13 +21,13 @@ When the user requests to implement or scaffold the frontend structure of a modu
 1. Check if a folder or file path was dragged/passed into the command.
 2. If a path is provided, parse it to extract the `<portal_name>` (e.g., `hr`, `employee`, `manager`, `admin`, `payroll`, `timekeeping`) and `<module_name>`.
 3. If no path is provided, dynamically resolve the portal and module names from the prompt text or context.
-4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Look under `.agents/specs/` (including sub-folders like `.agents/specs/<repo_name>/` e.g. `.agents/specs/scaleup/` or `.agents/specs/subhrms/`) for a spec matching the target module/feature (by filename, title, portal, or the connection point it documents). If one exists, **read it in full and let it drive the implementation** — folder structure, page layout, components, filters, pagination, sorting, TS types, stats, and the API contract all come from the spec. The spec supersedes ad-hoc design guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
+4. **Load the Spec (PRIMARY SOURCE OF TRUTH — check first)**: Resolve the project first, then look for a spec matching the target module/feature inside it — **ticket folders first** (`.agents/specs/<project>/T#####/specs.md`), then the legacy portal folders (`.agents/specs/<project>/<portal>/<feature>.md`). One command covers both: `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'`. If you are already on a `T#####` branch, that names the ticket outright — matching by ticket number, title, portal, filename, or the connection point it documents. Ticket folder names carry no feature name, so grep their contents rather than their names; the spec's `> **Ticket:**` / `> **Portal:**` header confirms the match ([ticket-numbering.md](../../rules/ticket-numbering.md)). If one exists, **read it in full and let it drive the implementation** — folder structure, page layout, components, filters, pagination, sorting, TS types, stats, and the API contract all come from the spec. The spec supersedes ad-hoc design guesses; where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and note the conflict. If **no** spec exists, proceed from the prompt/report as before.
 
    **Three spec sections bind this skill specifically** — read them before building, not at review time:
    - **Acceptance Criteria** (`AC-n` Given/When/Then rows) — the frontend owns every row describing rendered state: empty, loading, error, validation messages, disabled controls, per-role visibility. Seed the hard-coded data so **each** such row is visibly exercised in the design.
    - **Non-Functional & Failure-Mode Checklist** — the Authorization row decides what this UI must hide or disable per role; the error-shape row decides what the page renders on failure, not just on success. A design that only draws the happy path fails its own spec.
    - **Definition of Done** — the completion gate. Do not report the design as finished while a DoD box covering UI behavior is unticked.
-5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it and use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
+5. **Load Investigation Report (if referenced)**: If the prompt names or links a report, read it directly. Otherwise check the ticket folder you just resolved for an `investigation.md` (and `verify.md` / `code-review.md` from earlier passes); `.agents/reports/` holds the pre-ticket archive. Use its scope/dependency analysis to inform the implementation plan — don't assume this skill has access to an earlier `webkit.investigate` conversation.
 6. **Mandatory Architecture Discovery**: Before generating any code or folder, perform the Architecture Discovery step to identify the framework, directories, routing, state, API layer, and style patterns.
 7. **Mandatory System Awareness**: Before designing data shapes, run the scan defined in [System Awareness](../../rules/system-awareness.md) so the hard-coded design uses **real field names** (from the spec's data contract and/or existing models). Never invent field names — even for hard-coded placeholder data. Never assume a new table is needed without first verifying no existing model satisfies the requirement.
 8. **Design-First (Hard-Coded) Build**: Implement the UI with **hard-coded / static placeholder data only** — no live HTTP calls. This is the default mode of this skill now (see [Design-First (Hard-Coded) Mode](#design-first-hard-coded-mode)). The goal is to render the design so the user can confirm it matches the spec and flag anything to add/adjust **before** any backend work.
@@ -92,17 +92,21 @@ Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution 
 ## Phase 0.5 — Branch Gate (BLOCKING)
 
 > [!CAUTION]
-> **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to a `feature/` branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
+> **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to the ticket's branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
 >
 > This is not "confirm a branch exists". Confirming has repeatedly failed: the agent checks, sees `main`, notes it, and implements anyway. **Create the branch.**
+
+**The branch is the ticket number** — bare `T00001`, matching the spec folder you just loaded (`.agents/specs/<project>/T00001/`) character for character. No prefix, no slug: that exact match is what lets `/webkit.verify` and `/webkit.code-review` find the right spec later from the branch alone.
 
 ```bash
 git rev-parse --abbrev-ref HEAD          # where am I?
 git status --short                       # what am I carrying over?
-git checkout -b feature/<domain>-<feature-kebab>
+git checkout -b T00001                   # the ticket from the spec you loaded
 ```
 
-Already on a correctly-named branch for this work? Continue there — do not open a second one. On a branch for *different* work, or detached HEAD? **Stop and ask.** Then state the branch you are on before writing anything.
+Working from a spec with **no ticket** (a legacy portal-folder spec) or no spec at all? Fall back to the categorised form — `feature/<domain>-<feature-kebab>` ([git-workflow.md](../../rules/git-workflow.md) Rule 1) — and say which you used and why.
+
+**Already on the ticket's branch?** Continue there — do not open a second one. One ticket, one branch: this gate and the other gate share it. On a branch for *different* work, or detached HEAD? **Stop and ask.** Then state the branch you are on before writing anything.
 
 Committing remains the user's call. This gate only guarantees the work is isolated and revertible.
 
@@ -380,7 +384,7 @@ Automated JS test execution is out of scope for this skill for now (and ScaleUP 
 
 ## Close the Loop
 
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `.agents/reports/<file>.md` stays current.
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what was built, and the date) so `investigation.md` stays current.
 2. **Report the Reuse Ledger**: Print the ledger table — every artifact you created new, what you searched, and why nothing fit. If you reused or extended existing components, say which. This is the user's cheapest opportunity to catch a duplicate before it becomes the module's convention.
 3. **Present the design for validation (Gate 1 exit)**: State plainly that the page is built with **hard-coded data** and list which api methods are still stubbed (`TODO(backend)`). Give the user concrete steps to view the page and ask them to confirm the design against the spec — what to **add / adjust / remove** — before any backend work.
 4. **Suggested Next Step (Gate 2)**: Once the user is happy with the design, tell them to run `/webkit.backend-implement <target_path> <prompt>` to add the dynamic data (create/verify the tables, queries, handlers, routes per the spec, and replace the hard-coded api methods with live calls). Point to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `feat(payroll): add payroll processing page (design)`). Do not stage or commit automatically.

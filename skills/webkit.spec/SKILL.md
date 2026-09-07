@@ -4,9 +4,11 @@ description: >
   Produces an implementation-ready specification document BEFORE any code is written — purpose, data,
   backend, frontend, acceptance criteria, non-functional/failure modes, edge cases, and build order —
   with the load-bearing design decisions laid out as options WITH PROS AND CONS so the user chooses first.
-  Writes only to `.agents/specs/`; never touches application code. The spec it writes is the source of
+  Allocates the next ticket folder in the project (`.agents/specs/<project>/T#####/`) and writes the spec to `specs.md` inside it;
+  never touches application code. The spec it writes is the source of
   truth later consumed by `/webkit.frontend-implement` and `/webkit.backend-implement`.
-  Triggered by `/webkit.spec <target_path> <prompt>` or `/webkit.spec <prompt>`.
+  Triggered by `/webkit.spec <target_path> <prompt>`, `/webkit.spec <prompt>`, or `/webkit.spec T##### <prompt>`
+  to work on an existing ticket.
 ---
 
 # Webkit Spec
@@ -14,7 +16,7 @@ description: >
 This skill is the **Specification Phase** of the AI development workflow. It turns a feature request into a single, cohesive **spec document** that defines exactly what should be built — grounded in the real backend (models, tables, routes) — and presents the load-bearing design decisions as options **with pros and cons** so the user can decide before a single line of implementation code is written.
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application files.** It does not write controllers, migrations, routes, components, or composables. Its only file output is the spec markdown under `.agents/specs/`. Implementation is done later by `/webkit.frontend-implement` and `/webkit.backend-implement`.
+> **This skill MUST NOT modify application files.** It does not write controllers, migrations, routes, components, or composables. Its only file output is `specs.md` inside its ticket folder under `.agents/specs/`. Implementation is done later by `/webkit.frontend-implement` and `/webkit.backend-implement`.
 
 ---
 
@@ -27,9 +29,9 @@ This skill is the **Specification Phase** of the AI development workflow. It tur
          webkit.spec
                │
                ▼
-   Spec Document (saved to
-   .agents/specs/<repo_name>/<portal>/<feature>.md
-    — see Phase 6)
+   Ticket folder allocated
+   .agents/specs/<project>/T#####/
+    └── specs.md   (see Phase 6)
                │
                ▼
          User reviews &
@@ -42,6 +44,8 @@ webkit.frontend-    webkit.backend-
 ```
 
 The spec is a **file on disk**, not just chat output. `/webkit.frontend-implement` and `/webkit.backend-implement` are commonly invoked in a **new session** with no memory of this conversation — they can only follow the spec if it was actually persisted (see Phase 6).
+
+The ticket folder this skill creates is also where `/webkit.verify` later writes `verify.md` and `/webkit.code-review` writes `code-review.md`, so one feature's spec and both of its reports stay in one place. The numbering and reuse rules are canonical in [ticket-numbering.md](../../rules/ticket-numbering.md).
 
 ---
 
@@ -176,11 +180,12 @@ Always mark the recommended option and give a short rationale. When a decision i
 
 ## Phase 6 — Spec Document Structure
 
-Compile everything into a single markdown file using this standard format (modeled on existing specs under `.agents/specs/<repo_name>/`):
+Compile everything into a single markdown file using this standard format (modeled on the existing specs in the repo):
 
 ```markdown
 # Spec — <Feature Name>
 
+> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/specs.md`; branch `T#####`.
 > **Kind:** Greenfield | Extension — <one-line note>.
 > **Portal:** **<Portal>** (`/api/<prefix>/...` routes, `<module>` frontend module).
 > **Version:** v<N> — <YYYY-MM-DD> — <one-line summary of what changed from the previous version, or "initial" for v1>.
@@ -225,17 +230,48 @@ Compile everything into a single markdown file using this standard format (model
 ## 9. Definition of Done
 - [ ] Every row in the **Acceptance Criteria** table passes (AC-1 … AC-<n>)
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed — answered or explicitly `N/A because ...`
-- [ ] No open findings from adversarial verification — see the latest `.agents/reports/<portal>-<feature>-verify-<date>.md`
+- [ ] No open findings from adversarial verification — see `verify.md` beside this file
+- [ ] No open `CRITICAL`/`HIGH` findings from diff review — see `code-review.md` beside this file
 ```
 
 ### Persist the Spec (MANDATORY)
 
 Displaying the spec in chat is not enough — the implement skills run in separate sessions.
 
-- **Determine the repo name / project name**: Detect the repository or project folder name (in lower-case, e.g. `ScaleUP` -> `scaleup`, `SubHRMS` -> `subhrms`).
-- Write the full spec to `.agents/specs/<repo_name>/<portal>/<feature_snake_case>.md` (e.g. `.agents/specs/scaleup/payroll/retro_active.md`). Create the directory if it doesn't exist.
-- Use the portal folder matching the target portal and a `snake_case` filename derived from the feature name, to sit alongside the existing specs.
-- If a spec for the same feature already exists, **update it in place** rather than creating a near-duplicate ([duplicate-prevention.md](../../rules/duplicate-prevention.md), [incremental-generation.md](../../rules/incremental-generation.md)).
+The spec goes into a **ticket folder** as `specs.md`. The convention is canonical in [ticket-numbering.md](../../rules/ticket-numbering.md); the steps below are the whole procedure this skill needs.
+
+**Step 1 — Resolve the project.** Ticket numbers are **per project**, so the counter you increment depends on which one you are in. You already resolved this in Phase 2 ([project-profile.md](../../rules/project-profile.md) "Which Project Am I In?") — restate it now as a lower-case folder name (`ScaleUP` → `scaleup`, `SubHRMS` → `subhrms`) and use it in every path below. Allocating into the wrong project's folder takes a number off the wrong counter and collides with real work there.
+
+**Step 2 — Reuse or allocate the ticket (in this order).**
+
+1. **The user named a ticket** (`/webkit.spec T00007 ...`, or a path inside `T00007/`) → use `.agents/specs/<project>/T00007/`. Create it only if genuinely absent, and say so.
+2. **A ticket already covers this feature** → use it and update in place. Check before allocating — this one command covers the project's ticket folders *and* its legacy portal folders:
+
+   ```bash
+   grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>/dev/null
+   ```
+
+   If the hit is a **legacy** spec (`.agents/specs/<project>/<portal>/<feature>.md`), say so and ask whether to keep editing it in place or migrate it into a new ticket folder. Never silently duplicate a spec that already exists ([duplicate-prevention.md](../../rules/duplicate-prevention.md), [incremental-generation.md](../../rules/incremental-generation.md)).
+3. **Nothing matches** → allocate the next number **within that project**. Scan the disk; never guess from memory or chat history:
+
+   ```bash
+   project=subhrms   # or scaleup — resolved in Step 1, never assumed
+
+   max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
+         | sed 's#.*/T##' | sort -n | tail -1)
+   next=$(printf 'T%05d' $(( ${max:-0} + 1 )))
+   mkdir -p ".agents/specs/$project/$next"   # claim it before writing anything
+   echo "$project/$next"
+   ```
+
+   Format is `T` + five zero-padded digits, no hyphen (`T00001`, `T00002`, …). It is always **`max + 1`, never the first free gap** — a deleted `T00002` stays a gap, because reusing a retired number silently re-points every older reference, branch, and PR to different work. `-maxdepth 1` inside the project folder is what keeps the two projects' counters separate.
+
+**Step 3 — Write the spec.**
+
+- Write the full spec to `.agents/specs/<project>/<ticket>/specs.md` — that exact filename, no dates, no feature name, no portal prefix.
+- Fill the `> **Ticket:**` line in the header with the allocated number **and** the project, since the same number exists in both.
+- Ticket folders sit **one level inside the project folder**, as siblings of its legacy portal folders — never at the top of `.agents/specs/`, and never inside a portal folder. Portal is recorded in the `> **Portal:**` header line, since the path no longer carries it.
+- Do not create `verify.md` or `code-review.md`. Those are `/webkit.verify`'s and `/webkit.code-review`'s outputs; an empty placeholder reads as "already verified".
 - **Version every in-place update.** Read the existing `> **Version:**` line first, then:
   1. Increment `v<N>` by one (`v1` → `v2`).
   2. Set the date to today.
@@ -244,7 +280,7 @@ Displaying the spec in chat is not enough — the implement skills run in separa
 
   Never overwrite a spec while leaving the version line untouched — downstream skills use it to tell whether the spec they verified is the spec now on disk.
 
-- **Starting numbers.** A brand-new spec starts at `v1 — <today> — initial`. An **existing spec with no `> **Version:**` line** (every spec written before versioning) is not left unnumbered: stamp the baseline line `v1 — <today> — baseline (pre-versioning)` into the changelog, and write the edit you are making as `v2 — <today> — <what changed>`. Never invent a version history that was not recorded.
+- **Starting version.** A brand-new spec starts at `v1 — <today> — initial`. An **existing spec with no `> **Version:**` line** (every spec written before versioning) is not left unnumbered: stamp the baseline line `v1 — <today> — baseline (pre-versioning)` into the changelog, and write the edit you are making as `v2 — <today> — <what changed>`. Never invent a version history that was not recorded.
 
 ---
 
@@ -252,5 +288,9 @@ Displaying the spec in chat is not enough — the implement skills run in separa
 
 At the end, suggest next steps, **always including the saved spec path** so the next skill loads it directly instead of relying on chat memory:
 
-- "To build the frontend from this spec (design-first, hard-coded data): `/webkit.frontend-implement <target_path> using .agents/specs/<repo_name>/<portal>/<feature>.md`"
-- "To build the backend and wire the live data: `/webkit.backend-implement <target_path> using .agents/specs/<repo_name>/<portal>/<feature>.md`"
+- "To build the frontend from this spec (design-first, hard-coded data): `/webkit.frontend-implement <target_path> using .agents/specs/<project>/<ticket>/specs.md`"
+- "To build the backend and wire the live data: `/webkit.backend-implement <target_path> using .agents/specs/<project>/<ticket>/specs.md`"
+- "To prove the result matches this spec: `/webkit.verify <ticket>` — writes `.agents/specs/<project>/<ticket>/verify.md`"
+- "To review the diff for code quality: `/webkit.code-review <ticket>` — writes `.agents/specs/<project>/<ticket>/code-review.md`"
+
+Always state the **allocated ticket number** explicitly in your closing message (e.g. "Spec saved as `T00003` → `.agents/specs/subhrms/T00003/specs.md`; implement it on branch `T00003`"), so the user can hand that one token to the next skill. The implementing skills will branch on that number ([git-workflow.md](../../rules/git-workflow.md#step-3--derive-the-branch-name)) — this skill itself creates no branch, since it writes no application code.

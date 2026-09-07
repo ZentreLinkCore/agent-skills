@@ -2,7 +2,8 @@
 name: webkit-refactor
 description: >
   Restructures existing code to improve maintainability, readability, performance, or DRY compliance without changing its external behavior. Follows project architecture and standards.
-  Triggered when the user runs the command `/webkit.refactor <target_path> <prompt>` or `/webkit.refactor <prompt>`.
+  Records what was restructured — and the regression checks that prove behavior held — in `refactor.md` inside the work's ticket folder (`.agents/specs/<project>/T#####/refactor.md`).
+  Triggered when the user runs the command `/webkit.refactor <target_path> <prompt>`, `/webkit.refactor T##### <prompt>`, or `/webkit.refactor <prompt>`.
 ---
 
 # Webkit Refactor
@@ -17,7 +18,7 @@ When code duplication, architectural drift, or complex logic needs cleanup:
 
 ```
    Target Selection / Investigation Report
-       (.agents/reports/*.md, optional)
+   (.agents/specs/<project>/T#####/investigation.md, optional)
                  │
                  ▼
           webkit.refactor
@@ -27,6 +28,9 @@ When code duplication, architectural drift, or complex logic needs cleanup:
                  │
                  ▼
        Regression Verification
+                 │
+                 ▼
+   Refactor Record (.agents/specs/<project>/T#####/refactor.md)
 ```
 
 This skill is also the natural follow-up `webkit.investigate` suggests for "Architecture & Code Quality" findings — see that report's "Recommended Solution" and "High-Level Implementation Plan" sections when one exists.
@@ -37,10 +41,10 @@ This skill is also the natural follow-up `webkit.investigate` suggests for "Arch
 
 Before restructuring anything:
 1. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project before touching anything**. Then read only that project's sections. Refactoring toward the *other* project's conventions is not a cleanup — it is drift introduced under the banner of removing drift, and it is the hardest kind to spot in review because every line looks idiomatic.
-2. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, or `.agents/reports/` has one matching the target module, read it — its scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
+2. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, read it directly. Otherwise look for the ticket covering this module — the current branch names it if it is `T#####`, else `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'` ([ticket-numbering.md](../../rules/ticket-numbering.md)) — and read its `investigation.md`, `verify.md`, or `code-review.md`; `.agents/reports/` holds the pre-ticket archive. Their scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
 3. **Locate Target Files**: Parse the command argument path, or the report's "Affected Files" section if one was loaded, or search the workspace for the described duplication/drift.
 4. **Verify Constraints**: Review the rules in `.agents/rules/` that the target actually touches — [Laravel Standards](../../rules/laravel-standards.md) for PHP, your project's frontend standards ([Vue.js Standards](../../rules/vue-standards.md) for SubHRMS; the **ScaleUP Profile** in [project-profile.md](../../rules/project-profile.md) for ScaleUP), and [Duplicate Prevention](../../rules/duplicate-prevention.md).
-4. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. If on `main`/`master`, **create and switch to a `refactor/` branch now** — do not merely confirm one is needed and proceed. Already on a correctly-named branch for this cleanup? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
+4. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. Resolve or allocate the ticket first (Phase 5, Step 1) so the branch and the ticket folder carry the same number, then: if on `main`/`master`, **create and switch to `T#####` now** — do not merely confirm one is needed and proceed. Cleaning up a ticket's own implementation? Stay on that ticket's branch, do not open a second one. Already on the right branch? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
 
 ---
 
@@ -94,5 +98,61 @@ Refactoring is only successful if no functionality is broken:
 
 ## Phase 4 — Close the Loop
 
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `.agents/reports/<file>.md` stays current for whoever reads it next.
-2. **Suggested Next Step**: Point the user to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `refactor(hr): extract shared leave-credit calculation`). Do not stage or commit automatically.
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `investigation.md` stays current for whoever reads it next.
+2. **Write the Refactor Record (MANDATORY)**: see below. A behavior-preserving change with no record is indistinguishable from an accidental one six months later.
+3. **Suggested Next Step**: Point the user to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `refactor(hr): extract shared leave-credit calculation`). Do not stage or commit automatically.
+
+---
+
+## Phase 5 — Refactor Record
+
+A refactor's whole claim is *"behavior did not change."* That claim is only checkable if what moved, and what proved it, is written down.
+
+```markdown
+# Refactor Record: <scope>
+
+> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/refactor.md`.
+> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of this cleanup, or "initial">.
+> **Branch:** <branch name — normally `T#####`>
+> **Behavior change:** NONE (if anything did change, it is a finding, not a refactor — say so here explicitly)
+
+## 1. Scope
+<what was restructured — files, classes, components — and what was deliberately left alone>
+
+## 2. What Moved Where
+
+| Before | After | Why |
+| :--- | :--- | :--- |
+| `File.php:120-180` inline logic | `app/Queries/<Domain>/<Name>.php` | thin-controller rule |
+
+## 3. Duplication Removed
+<local copies replaced by shared components/helpers, and the props/behaviour check that proved the shared one covers the old one — or "none">
+
+## 4. Regression Evidence
+<the checks you actually RAN, with their real output — the project's own commands, not invented ones.
+State the before baseline and the after result. An unrun check reported as passing is a false baseline.>
+
+## 5. Deliberately Not Done
+<drift you found and left alone, and why — out of scope, needs a spec decision, would change behavior>
+```
+
+### Persist the Record (MANDATORY)
+
+**Step 1 — Resolve the project**, then **resolve or allocate the ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §2, §4), in this order:
+
+1. **On a `T#####` branch, or the prompt names a ticket, or you loaded an `investigation.md`** → that is the ticket. Cleaning up a ticket's own implementation belongs **in that ticket**; write `refactor.md` beside its other documents and do not allocate a new number.
+2. **A standalone cleanup with no ticket** → this skill starts that workstream, so allocate the next number in the project:
+
+   ```bash
+   project=subhrms   # or scaleup — resolved, never assumed
+
+   max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
+         | sed 's#.*/T##' | sort -n | tail -1)
+   next=$(printf 'T%05d' $(( ${max:-0} + 1 )))
+   mkdir -p ".agents/specs/$project/$next"   # claim it before writing anything
+   echo "$project/$next"
+   ```
+
+   Always `max + 1`, never the first free gap. Do this **at the branch gate**, before editing code, so the branch and the folder carry the same number.
+
+**Step 2 — Write it** to `.agents/specs/<project>/<ticket>/refactor.md` — that exact filename. A second cleanup on the same ticket **updates the file in place**: increment `> **Run:**` `v<N>`, set today's date, one line on what this pass changed, and append the superseded run line to a `<!-- Run history -->` list at the bottom. Never overwrite a record while leaving its `> **Run:**` line untouched.

@@ -3,9 +3,11 @@ name: webkit-investigate
 description: >
   Investigates bugs, performance problems, and architecture questions like a senior engineer, and produces
   a complete investigation report — root cause with evidence, dependency analysis, solution options with
-  trade-offs, risks, and an implementation plan — before any code is written. Never modifies files.
-  Writes the report to `.agents/reports/` for `/webkit.fix` and the implement skills to pick up.
-  Triggered by `/webkit.investigate <target_path> <prompt>` or `/webkit.investigate <prompt>`.
+  trade-offs, risks, and an implementation plan — before any code is written. Never modifies application code.
+  Allocates the ticket folder for the work (`.agents/specs/<project>/T#####/`) and writes `investigation.md`
+  inside it for `/webkit.fix` and the implement skills to pick up.
+  Triggered by `/webkit.investigate <target_path> <prompt>`, `/webkit.investigate <prompt>`, or
+  `/webkit.investigate T##### <prompt>` to investigate within an existing ticket.
 ---
 
 # Webkit Investigate
@@ -25,9 +27,9 @@ When a user reports a bug, error, or requests a feature review, the typical work
        webkit.investigate
                │
                ▼
-  Investigation Report (saved to
-   .agents/reports/*.md — see
-   Phase 9)
+  Ticket folder allocated
+   .agents/specs/<project>/T#####/
+    └── investigation.md  (see Phase 9)
                │
                ▼
          User Decision
@@ -41,7 +43,7 @@ webkit.fix  webkit.    webkit.    webkit.refactor
 The report is a **file on disk**, not just chat output — `webkit.fix`, `webkit.backend-implement`, `webkit.frontend-implement`, and `webkit.refactor` are commonly invoked in a new session with no memory of this conversation, so they can only pick up the investigation's findings if it was actually persisted (see Phase 9).
 
 > [!IMPORTANT]
-> **This skill itself MUST NOT modify files or generate code, migrations, routes, or patches.** Its sole responsibility is to analyze, document, and plan.
+> **This skill itself MUST NOT modify application files or generate code, migrations, routes, or patches.** Its sole responsibility is to analyze, document, and plan. Its only writes are its own ticket folder and the `investigation.md` inside it.
 
 ---
 
@@ -177,6 +179,9 @@ Compile the findings into a single, cohesive markdown report. The report must us
 ```markdown
 # Investigation Report: [Issue / Feature Name]
 
+> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/investigation.md`; fix it on branch `T#####`.
+> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of what changed since the previous run, or "initial">.
+
 ## 1. Summary
 - **Investigation Type**: [Bug / Performance / Security / UI / API / refactoring]
 - **Project**: [SubHRMS | ScaleUP — as resolved by the Project Gate]
@@ -228,9 +233,39 @@ Explain why the recommended option is superior (e.g., matching existing architec
 
 Displaying the report in chat is not enough — `webkit.fix` and `webkit.refactor` are frequently invoked in a **separate session** and have no access to this conversation's history. If the report isn't written to disk, the handoff silently breaks and the next skill re-investigates from scratch (or worse, guesses).
 
-- Write the full report to `.agents/reports/<portal-or-domain>-<module>-<slug>-<YYYYMMDD>.md` (e.g. `.agents/reports/tk-timesheet-late-log-miscalculation-20260708.md`, or `.agents/reports/organization-member-invite-expiry-20260814.md` in ScaleUP). Create the `.agents/reports/` directory if it doesn't exist.
-- Use today's date and a short kebab-case slug of the issue/feature name for the filename so multiple investigations on the same module don't collide.
-- If this investigation is a re-run or follow-up on an existing report for the same issue, update that file in place rather than creating a near-duplicate.
+The report goes into a **ticket folder** as `investigation.md`. The convention is canonical in [ticket-numbering.md](../../rules/ticket-numbering.md); the steps below are the whole procedure this skill needs.
+
+**Step 1 — Resolve the project.** Ticket numbers are **per project**, so the counter depends on which one you are in. You already resolved this at the Project Gate — restate it as a lower-case folder name (`SubHRMS` → `subhrms`, `ScaleUP` → `scaleup`) and use it in every path below.
+
+**Step 2 — Reuse or allocate the ticket.** This skill **starts** bug/RCA work, so it is one of the skills allowed to allocate ([ticket-numbering.md](../../rules/ticket-numbering.md) §2):
+
+1. **The prompt names a ticket** (`/webkit.investigate T00007 ...`), or you are already on a `T#####` branch (`git rev-parse --abbrev-ref HEAD`) → investigate within that ticket and write `investigation.md` there. A defect found while implementing a feature belongs to that feature's ticket.
+2. **An existing ticket already covers this issue** → update its `investigation.md` in place rather than creating a near-duplicate ([duplicate-prevention.md](../../rules/duplicate-prevention.md)):
+
+   ```bash
+   grep -ril '<issue|module|route|table>' ".agents/specs/$project" --include='*.md' 2>/dev/null
+   ```
+
+3. **Nothing matches** → allocate the next number **within that project**. Scan the disk; never guess from memory or chat history:
+
+   ```bash
+   project=subhrms   # or scaleup — resolved in Step 1, never assumed
+
+   max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
+         | sed 's#.*/T##' | sort -n | tail -1)
+   next=$(printf 'T%05d' $(( ${max:-0} + 1 )))
+   mkdir -p ".agents/specs/$project/$next"   # claim it before writing anything
+   echo "$project/$next"
+   ```
+
+   It is always **`max + 1`, never the first free gap.** A bug ticket with no `specs.md` is perfectly normal — the folder exists to hold the investigation and everything that follows from it.
+
+**Step 3 — Write the report.**
+
+- Write the full report to `.agents/specs/<project>/<ticket>/investigation.md` — that exact filename. No dates, no module names, no slugs in the filename: several investigations on one module no longer collide because each has its own ticket folder.
+- Fill the `> **Ticket:**` and `> **Run:**` header lines. On a re-run or follow-up, **update the file in place**: increment `v<N>`, set today's date, write one line on what changed, and append the superseded run line to a `<!-- Run history -->` list at the bottom.
+- **Create no branch.** This skill writes no application code, so there is nothing to isolate; the `T#####` branch appears when `/webkit.fix` or an implement skill picks the ticket up.
+- State the allocated ticket number explicitly in your closing message, so the user can hand that one token to the next skill.
 
 ---
 
@@ -238,7 +273,8 @@ Displaying the report in chat is not enough — `webkit.fix` and `webkit.refacto
 
 At the end of the report, suggest next steps to the user, **always including the saved report path** so the next skill invocation can load it directly instead of relying on chat memory:
 
-- "To apply the recommended fix automatically, you can run: `/webkit.fix <target_path> <prompt> using .agents/reports/<report_file>.md`"
-- "To scaffold the frontend implementation, you can run: `/webkit.frontend-implement <target_path> <prompt> using .agents/reports/<report_file>.md`"
-- "To scaffold the backend implementation, you can run: `/webkit.backend-implement <target_path> <prompt> using .agents/reports/<report_file>.md`"
-- "To refactor or optimize the affected module, run: `/webkit.refactor <target_path> <prompt> using .agents/reports/<report_file>.md`"
+- "To apply the recommended fix automatically, you can run: `/webkit.fix <target_path> <prompt> using .agents/specs/<project>/<ticket>/investigation.md` — it will branch on `<ticket>`"
+- "To scaffold the frontend implementation, you can run: `/webkit.frontend-implement <target_path> <prompt> using .agents/specs/<project>/<ticket>/investigation.md`"
+- "To scaffold the backend implementation, you can run: `/webkit.backend-implement <target_path> <prompt> using .agents/specs/<project>/<ticket>/investigation.md`"
+- "To refactor or optimize the affected module, run: `/webkit.refactor <target_path> <prompt> using .agents/specs/<project>/<ticket>/investigation.md` — it writes `refactor.md` into the same ticket folder"
+- "If this needs a full feature spec rather than a fix, run: `/webkit.spec <ticket> <prompt>` — it writes `specs.md` into the same ticket folder"

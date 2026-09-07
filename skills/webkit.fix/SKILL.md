@@ -16,8 +16,8 @@ This skill coordinates the application of bug fixes, logic corrections, and issu
 When a bug or issue has been investigated and a fix is approved, the developer/agent runs this skill:
 
 ```
-  Investigation Report (.agents/reports/*.md)
-        / Approved Plan / Direct Prompt
+  Findings (.agents/specs/<project>/T#####/{investigation,verify,code-review}.md
+            or .agents/reports/*.md) / Approved Plan / Direct Prompt
                      │
                      ▼
                 webkit.fix
@@ -37,11 +37,11 @@ A saved report is optional input, not a hard prerequisite — this skill also ru
 
 Before writing any code:
 0. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project**, then read only its sections. A fix applied with the other project's conventions in mind — its schema rules, its component names, its file layout — lands looking idiomatic and is wrong, and this skill writes to application code.
-1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report file, read it directly. Otherwise, check `.agents/reports/` for a report matching the target path or feature described in the prompt. If found, treat its Root Cause Analysis, Evidence, and Recommended Solution sections as the primary source of truth instead of re-deriving them — this skill is commonly invoked in a fresh session with no memory of a `webkit.investigate` run that happened earlier. If no report is referenced or found, proceed directly from the prompt/target path — a report is not required to run this skill.
+1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report file, read it directly. Otherwise find the ticket covering this work — the current branch names it outright if it is `T#####`, else `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'` resolves it ([ticket-numbering.md](../../rules/ticket-numbering.md)) — and read whichever of its `investigation.md` (root cause), `verify.md` (spec violations), or `code-review.md` (code defects) exists. `.agents/reports/` holds the pre-ticket archive; check it for older investigations matching the target path or feature described in the prompt. If found, treat its Root Cause Analysis, Evidence, and Recommended Solution sections as the primary source of truth instead of re-deriving them — this skill is commonly invoked in a fresh session with no memory of a `webkit.investigate` run that happened earlier. If no report is referenced or found, proceed directly from the prompt/target path — a report is not required to run this skill.
 2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
 3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
 4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
-5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. If on `main`/`master`, **create and switch to a `bugfix/` (or `hotfix/`) branch now** — do not merely confirm one is needed and proceed. Already on a correctly-named branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
+5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. **Fixing findings from a ticket's `verify.md`/`code-review.md` belongs on that ticket's existing branch (`T#####`) — continue there, do not open a `bugfix/` branch for it.** If on `main`/`master`, create and switch now: `T#####` when the work has a ticket, otherwise a `bugfix/` (or `hotfix/`) branch — do not merely confirm one is needed and proceed. Already on the right branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
 
 ---
 
@@ -100,5 +100,5 @@ Immediately after applying the code changes:
 
 ## Phase 4 — Close the Loop
 
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `.agents/reports/<file>.md` reflects current status instead of going stale for whoever reads it next.
+1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so the report reflects current status instead of going stale for whoever reads it next.
 2. **Suggested Next Step**: Point the user to the project's own checks (`vendor/bin/phpunit`; `npm run typecheck`/`npm run build` in ScaleUP) if not already run in Phase 3, and to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `fix(tk): correct late computation grace period`). Do not stage or commit automatically — that decision belongs to the user.

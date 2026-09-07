@@ -11,7 +11,7 @@ Applicable to all branches, commits, staging changes, and merge requests in the 
 - **Developer/User**: Approves and merges branches, manages merge conflicts, and controls releases.
 
 ## Actionable Rules
-1. **Branch Naming Categories**: Always prefix branch names matching their implementation focus:
+1. **Branch Naming**: Work that has a ticket is branched on **the ticket number itself** — `T00001`, matching its folder in `.agents/specs/<project>/T00001/` character for character ([ticket-numbering.md](./ticket-numbering.md) §6). Work with **no** ticket uses the categorised form, prefixed by implementation focus:
   - `feature/`: Adding new page templates, modules, or features.
   - `bugfix/`: Correcting active bugs, exceptions, or visual glitches.
   - `refactor/`: Performance updates, cleanup tasks, or logic optimization without adding features.
@@ -40,18 +40,24 @@ git rev-parse --abbrev-ref HEAD
 | Current branch | Action |
 | :--- | :--- |
 | `main` / `master` | **Create and switch to the branch now.** Do not ask permission — Rule 3 already forbids working here, so creating it is compliance, not a new decision. |
-| A correctly-prefixed branch for **this** work | Continue on it. Do not create a second branch. |
+| The ticket's own branch (`T00001`), or a correctly-prefixed branch for **this** work | Continue on it. Do not create a second branch. |
 | A branch for **different** work | **Stop and ask.** Committing this feature onto an unrelated branch mixes two changes into one history and is not recoverable by the agent. |
 | Detached HEAD | **Stop and ask.** Commits here are unreachable. |
 
 ### Step 3 — Derive the branch name
 
-Prefix from the work type (see Rule 1), slug from the spec or target:
+**Has a ticket? The branch IS the ticket number.** Nothing else — no prefix, no slug:
 
 ```bash
-# From a spec: .agents/specs/scaleup/organization/schema_correction.md
-git checkout -b feature/organization-schema-correction
+# From a spec: .agents/specs/subhrms/T00001/specs.md
+git checkout -b T00001
+```
 
+This is what lets a later skill in a fresh session read `git rev-parse --abbrev-ref HEAD`, get `T00001`, and go straight to the right spec, verify report, and review. A prefix or a slug breaks that match.
+
+**No ticket** (a fix from an investigation report, a standalone refactor)? Prefix from the work type (Rule 1), slug from the target:
+
+```bash
 # From a bug/investigation report
 git checkout -b bugfix/timesheet-late-log-miscalculation
 
@@ -59,7 +65,9 @@ git checkout -b bugfix/timesheet-late-log-miscalculation
 git checkout -b refactor/payroll-handler-extraction
 ```
 
-Rules: `<prefix>/<domain>-<feature-kebab-case>`, no dates, no ticket numbers unless the user supplies one, and one branch per spec.
+Rules: `T#####` when a ticket exists, otherwise `<prefix>/<domain>-<feature-kebab-case>`; no dates; **one branch per ticket** — the frontend gate, the backend gate, and the fixes that follow verification all share it. `T#####-<short-slug>` only when a second branch is genuinely unavoidable (e.g. the first is already merged), and say why.
+
+Ticket numbers are **per project**, so `T00001` can exist in both repos as unrelated work. Never assume a `T00001` branch in one repo relates to `T00001` in the other.
 
 ### Step 4 — Pre-existing uncommitted changes
 
@@ -80,7 +88,8 @@ Report the branch you are on in your first message after the gate, so the user c
 ---
 
 ## Best Practices
-- **Single Responsibility Branches**: Keep branches dedicated to a single feature card or bug.
+- **Single Responsibility Branches**: Keep branches dedicated to a single ticket, feature card, or bug.
+- **Ticket in the PR title**: `T00001 — Loan amortization schedule`, with the spec path (`.agents/specs/<project>/T00001/specs.md`) in the body. Commit messages stay plain Conventional Commits — the branch already carries the ticket, so no `T00001:` prefix on every commit.
 - **Clean Commit History**: Squash commits to group related work cleanly before merging.
 
 ## AI Behavior Expectations

@@ -5,8 +5,9 @@ description: >
   rather than confirming that it does. Every spec claim starts UNPROVEN and needs `file:line` evidence to pass.
   Hunts the three failure modes a normal review misses: rules silently never coded, rules coded backwards,
   and code the spec never authorized. Grades findings CRITICAL/HIGH/MEDIUM/LOW with concrete fixes and a
-  dependency-first Fix Plan for `/webkit.fix`. Never edits code; writes a report to `.agents/reports/`.
-  Triggered by `/webkit.verify <spec_path>` or `/webkit.verify <target_path> <spec_path>`.
+  dependency-first Fix Plan for `/webkit.fix`. Never edits code; writes `verify.md` into the spec's own ticket
+  folder (`.agents/specs/<project>/T#####/verify.md`).
+  Triggered by `/webkit.verify <spec_path>`, `/webkit.verify T#####`, or `/webkit.verify <target_path> <spec_path>`.
 ---
 
 # Webkit Verify
@@ -18,14 +19,14 @@ This skill is the **Verification Phase** of the AI development workflow. It answ
 It is deliberately hostile to the implementation. A normal review reads the code and asks "does this look right?" — which reliably passes code that looks right and is wrong. This skill inverts the burden: **the spec is the claim, the code is the defendant, and every claim is presumed unimplemented until evidence convicts it of working.**
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application code, migrations, routes, components, or the spec.** Its only file output is the conformance report under `.agents/reports/`. Fixing is `/webkit.fix`'s job. A verifier that fixes what it finds stops being able to report honestly on it.
+> **This skill MUST NOT modify application code, migrations, routes, components, or the spec.** Its only file output is `verify.md` inside the ticket folder beside the spec it verified. Fixing is `/webkit.fix`'s job. A verifier that fixes what it finds stops being able to report honestly on it.
 
 ---
 
 ## Workflow Integration
 
 ```text
-   Spec (.agents/specs/<repo>/<domain>/<feature>.md)
+   Spec (.agents/specs/<project>/T#####/specs.md)
                │
                ▼
    webkit.frontend-implement  →  webkit.backend-implement
@@ -34,7 +35,7 @@ It is deliberately hostile to the implementation. A normal review reads the code
          webkit.verify          ← you are here
                │
                ▼
-   Conformance Report (.agents/reports/<domain>-<feature>-verify-<date>.md)
+   Conformance Report (.agents/specs/<project>/T#####/verify.md)
                │
       ┌────────┴────────┐
       ▼                 ▼
@@ -74,8 +75,19 @@ State a concrete failure scenario: specific inputs or state → the wrong outcom
 
 ## Phase 1 — Establish What Is Being Verified
 
-1. **Locate the spec.** From `<spec_path>`, or by matching `<target_path>` to a file under `.agents/specs/<repo_name>/`. If no spec exists, **stop and say so** — there is nothing to verify against, and inventing a standard to judge against is the failure mode this skill exists to prevent. Suggest `/webkit.spec` instead.
-2. **Identify the repo/project.** Read [project-profile.md](../../rules/project-profile.md) and resolve which project you are in (its "Which Project Am I In?" section). Verifying React code against Vue conventions produces pure noise.
+1. **Identify the repo/project — first, because everything below is scoped to it.** Read [project-profile.md](../../rules/project-profile.md) and resolve which project you are in (its "Which Project Am I In?" section). Verifying React code against Vue conventions produces pure noise, and ticket numbers are per project, so `T00004` exists in both.
+2. **Locate the spec and its ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §4):
+   - A `<spec_path>`, or a bare ticket (`/webkit.verify T00004`) → `.agents/specs/<project>/T00004/specs.md`.
+   - **The current branch is often the answer** — `git rev-parse --abbrev-ref HEAD` returning `T00004` names the ticket outright, since implementing skills branch on the ticket number.
+   - Otherwise resolve `<target_path>` / the feature name against that project's ticket folders and its legacy tree, in one command:
+
+     ```bash
+     grep -ril '<feature|route|table|module>' ".agents/specs/$project" --include='*.md' 2>/dev/null
+     ```
+
+   - Several hits inside one `T#####/` are **one** ticket, not three — `verify.md` and `code-review.md` mention the same feature as their `specs.md`. Read the header of each distinct candidate to confirm the portal matches before committing to one.
+
+   **State the ticket you resolved to, and on what evidence, in your first message.** Verifying against the wrong ticket's spec produces a report that is confidently wrong about a feature nobody touched. If no spec exists at all, **stop and say so** — there is nothing to verify against, and inventing a standard to judge against is the failure mode this skill exists to prevent. Suggest `/webkit.spec` instead.
 3. **Read the spec completely, once, before opening any code.** Reading code first anchors you to what exists; you will then unconsciously read the spec as a description of it.
 4. **Check the spec carries an Acceptance Criteria table.** A spec written by the current `/webkit.spec` has an `Acceptance Criteria` section of `AC-n` Given/When/Then rows — the intended primary input to this skill. If it is missing (older specs predate it), do **not** stop: derive claims from `Business Rules` and `Edge Cases` as usual, but record the gap in §7 Verification Limits — *"spec carries no Acceptance Criteria table; claims derived from prose, so coverage is an estimate rather than a count"* — and suggest re-running `/webkit.spec` to add one. A spec that cannot be decomposed cleanly is a finding about the spec, not a reason to verify loosely.
 
@@ -256,7 +268,10 @@ A finding without a fix suggestion is a complaint. Before writing any finding, b
 ```markdown
 # Conformance Report: <Feature Name>
 
-> **Spec:** [<feature>.md](../specs/<repo>/<domain>/<feature>.md)
+> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/verify.md`.
+> **Branch:** <branch name — normally `T#####`>
+> **Spec:** [specs.md](./specs.md)
+> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of what changed since the previous run, or "initial">.
 > **Verified:** <YYYY-MM-DD>
 > **Verdict:** CONFORMS | CONFORMS WITH FINDINGS | DOES NOT CONFORM
 > **Coverage:** <N> claims — <c> conforms, <v> violated, <a> absent, <u> unverified, <o> out-of-scope
@@ -338,8 +353,13 @@ runtime-dependent state. Being explicit here is what separates "verified" from "
 
 ### Persist the Report (MANDATORY)
 
-- Write to `.agents/reports/<domain>-<feature>-verify-<YYYYMMDD>.md` (e.g. `.agents/reports/organization-schema-correction-verify-20260812.md`). Create the directory if needed.
-- Re-verifying the same feature **updates that file in place** rather than creating a near-duplicate ([duplicate-prevention.md](../../rules/duplicate-prevention.md)).
+- Write to **`.agents/specs/<project>/<ticket>/verify.md`** — the same folder as the `specs.md` you verified, that exact filename. No dates, no feature name, no portal prefix in the filename, and never a copy under `.agents/reports/` ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
+- The folder already exists (`/webkit.spec` created it). If you resolved a **legacy** spec at `.agents/specs/<repo>/<portal>/<feature>.md`, it has no ticket folder: keep the old dated path `.agents/reports/<domain>-<feature>-verify-<YYYYMMDD>.md`, say that is why, and suggest re-running `/webkit.spec` to migrate the spec into a ticket. Do **not** write `verify.md` into a portal folder — those folders hold several specs, so a fixed filename there would collide between features. Do **not** allocate a ticket number yourself either; allocating is `/webkit.spec`'s job.
+- Re-verifying the same feature **overwrites that file in place** rather than creating a near-duplicate ([duplicate-prevention.md](../../rules/duplicate-prevention.md)) — history lives inside the file:
+  1. Increment the `> **Run:**` `v<N>`, set today's date, and write one line on what changed since the previous run (e.g. "F2 and F3 fixed; F1 still open; 1 new finding").
+  2. Append the superseded run line verbatim to a `<!-- Run history -->` list at the bottom of the file.
+
+  Overwriting the report while leaving the `> **Run:**` line untouched destroys the only record that an earlier run disagreed.
 - Every `file:line` reference must be a real, current location. A stale line number makes the whole report untrustworthy.
 
 ---
@@ -370,6 +390,7 @@ Each of these has produced a verification that passed a broken implementation.
 
 Always include the saved report path so the next skill loads it directly:
 
-- Apply the confirmed findings: `/webkit.fix <target_path> using .agents/reports/<report>.md`
-- The spec was wrong, not the code: `/webkit.spec <spec_path> amend per .agents/reports/<report>.md`
-- Deeper root-cause on one finding: `/webkit.investigate <target_path> <finding F<n> from .agents/reports/<report>.md>`
+- Apply the confirmed findings: `/webkit.fix <target_path> using .agents/specs/<project>/<ticket>/verify.md` — **on the ticket's existing branch**, not a new one
+- The spec was wrong, not the code: `/webkit.spec <ticket> amend per .agents/specs/<project>/<ticket>/verify.md`
+- Deeper root-cause on one finding: `/webkit.investigate <target_path> <finding F<n> from .agents/specs/<project>/<ticket>/verify.md>`
+- Review the same change for code quality, not just conformance: `/webkit.code-review <ticket>` — writes `code-review.md` into the same ticket folder
