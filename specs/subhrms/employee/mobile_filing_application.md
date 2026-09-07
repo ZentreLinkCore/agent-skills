@@ -2,8 +2,8 @@
 
 > **Kind:** Greenfield / UI Migration & Redesign — Porting, elevating, and aligning the 5 timekeeping filing applications (`leave`, `cs`, `aa`, `ot`, `obt`) into the modern **React Native Expo Mobile Application** (`resources/views/mobapp`).  
 > **Portal:** **Employee Mobile App** (`/api/employee/...` routes, `filing` mobile module).  
-> **Version:** v2 — 2026-09-03 — updated flow: application type selection opens date range modal first, redirects to web-aligned application form, then redirects to my requests status screen on submit.  
-> **Route:** `/(app)/apply/[type]` (`FilingApplicationScreen`), triggered via floating action button (FAB) in `/(app)/_layout.tsx` -> `NewApplicationModal.tsx` -> `FilingDatePickerModal.tsx` -> `/(app)/apply/[type]` -> `/(app)/requests`.  
+> **Version:** v3 — 2026-09-07 — amended route to /(app)/apply query params, enforced single-day overtime, live expo-document-picker, and biometric vs filed application calendar separation per verify report.  
+> **Route:** `/(app)/apply` (`FilingApplicationScreen`), triggered via floating action button (FAB) in `/(app)/_layout.tsx` -> `NewApplicationModal.tsx` -> `FilingDatePickerModal.tsx` -> `/(app)/apply` -> `/(app)/requests`.  
 > **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [hrms-rules.md](../../rules/hrms-rules.md), [laravel-standards.md](../../rules/laravel-standards.md).  
 > **System Awareness:**  
 > - **Models Reused:** `AppLeave`, `AppChangeShift`, `AppOvertime`, `AppAdjustment`, `AppOfficialBusinessTrip`, `PayPeriod`, `Timesheet`, `AccountDetailVW`, `ApproverMatrix`.  
@@ -19,17 +19,17 @@ In the legacy Vue mobile app (`mobapp-vue`), timekeeping applications were scatt
 
 This specification defines the **end-to-end Mobile Filing Application workflow for React Native Expo (`resources/views/mobapp`)**, matching the exact **functional concepts and design consistency of the Web HRMS portal**:
 1. **Application Type Picker (`NewApplicationModal.tsx`)**: Tapping the center `+` FAB opens the bottom sheet with 5 application options: Leave, Change Shift, Attendance Adjustment, Overtime, and Official Business Trip.
-2. **Dedicated Date Range Selection Modal (`FilingDatePickerModal.tsx`)**: Tapping an application type immediately opens a calendar modal with cutoff-period awareness, shift indicator dots, rest days, and holiday badges. The user confirms their date range (`From Date` → `To Date`) before advancing.
-3. **Web-Aligned Application Form (`/(app)/apply/[type]`)**: After confirming dates, the user is redirected to the full-screen filing form replicating the web's layout and controls:
+2. **Dedicated Date Range Selection Modal (`FilingDatePickerModal.tsx`)**: Tapping an application type immediately opens a calendar modal with cutoff-period awareness, shift indicator dots, rest days, holiday badges, and distinct biometric time logs (Sky Blue dot `#0EA5E9`) separated from filed applications (Amber dot `#F59E0B`). The user confirms their date range (`From Date` → `To Date`, or single-day for Overtime) before advancing.
+3. **Web-Aligned Application Form (`/(app)/apply`)**: After confirming dates, the user is redirected to the full-screen filing form replicating the web's layout and controls:
    - **Recap Header**: Shows the chosen type, date range, and a badge with the total days count (`X Day(s) Selected`).
    - **Type-Specific Schedule & Controls**:
      - **Change Shift (`cs`)**: "Shift Change Setup" with "Generate Schedule" button, Bulk Apply bar ("Apply to all" shift selector), progress bar (`X/Y set`), and day-by-day cards showing `Current Shift -> New Shift` with a clear button.
      - **Attendance Adjustment (`aa`)**: "Time Log Correction" with "Generate Schedule" button, day-by-day `Time In` and `Time Out` time pickers, and automated net hours computation (auto-deducting 1-hour lunch when > 5 hours).
-     - **Overtime (`ot`)**: "Overtime Summary" with "Generate Schedule" button, Shift summary card, Reference Time, and Est. OT Hours (enforcing minimum 1h beyond regular shift and maximum 2 consecutive days).
+     - **Overtime (`ot`)**: "Overtime Summary" with "Generate Schedule" button, Shift summary card, Reference Time, and Est. OT Hours (enforcing minimum 1h beyond regular shift and strictly single-day filing matching daily attendance punch logs).
      - **Official Business Trip (`obt`)**: "Trip Type" selector, "Trip Schedule" with "Generate Schedule" button, and day-by-day period selectors (`Whole Day`, `First Half`, `Second Half`).
      - **Leave (`leave`)**: Leave Credit selector with balance cards (entitled, used, pending, balance, or LWOP), "Leave Schedule" with "Generate Schedule" button, and day-by-day period selectors.
    - **Reason / Justification**: Required multi-line text input (minimum 5 characters).
-   - **Supporting Attachment**: File/document upload (PDF, JPG, PNG up to 5MB). **Conditionally rendered: hidden for Change Shift (`cs`) and Overtime (`ot`)** to match web behavior exactly.
+   - **Supporting Attachment**: File/document upload (PDF, JPG, PNG up to 5MB via `expo-document-picker`). **Conditionally rendered: hidden for Change Shift (`cs`) and Overtime (`ot`)** to match web behavior exactly.
 4. **Post-Submission Redirect to Application Status Page (`/(app)/requests`)**: Upon successful submission, the screen shows a success toast and haptic feedback, then **immediately redirects to the mobile app's Application Status page (`/(app)/requests`)**, refreshing the requests list so the new application appears with its real-time `PENDING` status badge.
 
 ---
@@ -41,7 +41,7 @@ This specification defines the **end-to-end Mobile Filing Application workflow f
 **Option A — 3-Step Flow: Type Modal → Date Picker Modal → Form Screen → Redirect to Requests Status Page (Recommended)**
 - **Step 1:** Center FAB `+` opens `NewApplicationModal` (5 options).
 - **Step 2:** Selecting a type closes the type sheet and presents `FilingDatePickerModal` to select start/end dates.
-- **Step 3:** Confirming dates redirects to `/(app)/apply/[type]?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`.
+- **Step 3:** Confirming dates redirects to `/(app)/apply?type=[type]&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`.
 - **Step 4:** On submit success, screen navigates to `/(app)/requests` ("My Requests" status screen) with an updated list.
 
 | Pros | Cons |
@@ -142,21 +142,22 @@ Replicate the exact web structure inside `FilingApplicationScreen`:
 |---|-------|------|------|
 | **AC-1** | User is on any main app tab and taps the center `+` FAB | FAB is pressed | `NewApplicationModal` opens from bottom displaying the 5 application options: Change Shift, Attendance Adjustment, Overtime, Official Business Trip, and Leave. |
 | **AC-2** | User selects any application type (e.g. Leave) from `NewApplicationModal` | Option is tapped | `NewApplicationModal` closes, and `FilingDatePickerModal` immediately opens displaying the calendar grid with active pay period boundaries and shift/holiday dots. |
-| **AC-3** | User picks `startDate` and `endDate` in `FilingDatePickerModal` | User taps "Continue to Form" / "Proceed" | Date modal closes, light haptic feedback fires, and user is redirected to `/(app)/apply/[type]?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`. |
+| **AC-3** | User picks `startDate` and `endDate` in `FilingDatePickerModal` | User taps "Continue to Form" / "Proceed" | Date modal closes, light haptic feedback fires, and user is redirected to `/(app)/apply?type=[type]&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`. |
 | **AC-4** | `FilingApplicationScreen` loads with query params | Screen initializes | Header displays the application title, type icon, and a recap chip: `YYYY-MM-DD → YYYY-MM-DD` with `X Day(s) Selected` and an "Edit Dates" link. |
 | **AC-5** | User files **Change Shift (`cs`)** and taps **Generate Schedule** | `POST /api/employee/generate_schedule` returns data | Screen displays Bulk Apply Bar ("Apply to all" shift selector), Progress bar (`X/Y set`), and Day Cards showing Current Shift → New Shift dropdown with clear `(X)` button. |
 | **AC-6** | User files **Change Shift** and selects a shift in the Bulk Apply Bar | Bulk shift is selected | All generated day cards instantly update their `newshift` value, and progress updates to `100% (X/X set)`. |
 | **AC-7** | User files **Attendance Adjustment (`aa`)** and taps **Generate Schedule** | Schedule is generated | Day cards render `Time In` and `Time Out` time pickers for each date. Entering `08:00` to `17:00` automatically computes net `8.0h` (1-hour lunch deducted). |
 | **AC-8** | User files **Overtime (`ot`)** and taps **Generate Schedule** | Schedule is generated | Displays shift summary card, reference times, and estimated OT hours (`otPlanHours`). If OT is less than 1 hour beyond shift, banner warns `"Overtime must be at least 1 hour beyond regular shift"`. |
-| **AC-9** | User selects more than 2 consecutive days for **Overtime** | Date range exceeds 2 days | Date picker or form validation blocks progression with warning: `"Overtime cannot exceed 2 consecutive days."` |
+| **AC-9** | User selects date for **Overtime (`ot`)** | Date picker is configured for Overtime | Calendar operates in single-date mode (`isRangeMode = false`); selecting a date locks both start and end dates to that single calendar date, blocking multi-day overtime spans. |
 | **AC-10** | User files **Official Business Trip (`obt`)** | Form renders | Screen displays "Trip Type" selector (Client Visit, Conference, Field Work, etc.), "Trip Schedule" with "Generate Schedule", and day cards with Period selector (`Whole Day`, `First Half`, `Second Half`). |
 | **AC-11** | User files **Leave (`leave`)** | Screen renders | Displays leave credit balances carousel/cards (`Entitled`, `Used`, `Pending`, `Balance`, and `LWOP`). Selecting a leave type populates day cards with Period selectors (`Whole Day`, `First Half`, `Second Half`). |
 | **AC-12** | Form is loaded for **Change Shift (`cs`)** or **Overtime (`ot`)** | Attachment section checks type | Attachment upload section is **completely hidden** from the screen. |
-| **AC-13** | Form is loaded for **Leave (`leave`)**, **Attendance Adjustment (`aa`)**, or **Official Business Trip (`obt`)** | Attachment section checks type | Attachment upload section is **visible**, allowing document/image selection up to 5MB with file chip and remove `(X)` button. |
+| **AC-13** | Form is loaded for **Leave (`leave`)**, **Attendance Adjustment (`aa`)**, or **Official Business Trip (`obt`)** | User taps "Attach document or image" | Native file picker (`expo-document-picker`) opens allowing document/image selection (`.pdf`, `.png`, `.jpg`, `.jpeg`) up to 5MB with file chip and remove `(X)` button. Files exceeding 5MB trigger an alert and are blocked. |
 | **AC-14** | User enters reason with fewer than 5 characters | Form validates | Submit button remains disabled; helper text indicates `"Remarks must be at least 5 characters."` |
 | **AC-15** | All required fields and schedules are configured and user taps **Submit Application** | Button is tapped | Medium haptic triggers, button shows loading spinner and disables (`isSubmitting = true`), and payload is sent to `POST /api/employee/submit_application`. |
 | **AC-16** | Submission succeeds (`200 OK`) | Backend responds | Success toast displays, success haptic triggers, and app **immediately redirects to `/(app)/requests` (Application Status Page)**, where the newly submitted application appears at the top of "My Requests" with a `PENDING` status badge. |
 | **AC-17** | Server returns `400` or `422` error | Backend responds with error | Error toast displays the server message (`error.message`), form remains open with user-entered inputs intact, and submit button re-enables. |
+| **AC-18** | User views calendar in `FilingDatePickerModal` on dates with biometric punches and filed applications | Calendar renders day dots and event list | Biometric punches (`Time In` / `Time Out`) display under `BIOMETRIC TIME LOG` (Sky Blue dot `#0EA5E9`) without approval badges; genuine filed applications display under `FILED APPLICATION` (Amber dot `#F59E0B`) with approval status badges (`pending`/`approved`/`declined`). |
 
 ---
 
@@ -237,9 +238,7 @@ resources/views/mobapp/src/
 │   └── (app)/
 │       ├── _layout.tsx                     # FAB triggers NewApplicationModal & DatePickerModal
 │       ├── requests.tsx                    # Application Status Page ("My Requests")
-│       └── apply/
-│           ├── _layout.tsx                 # Stack configuration for apply routes
-│           └── [type].tsx                  # Dynamic route receiving ?startDate&endDate
+│       └── apply.tsx                       # Unified Application Form Screen receiving ?type&startDate&endDate
 └── module/
     └── employee/
         ├── requests/                       # Application Status Module
@@ -271,7 +270,7 @@ resources/views/mobapp/src/
                     └── LeaveForm.tsx       # Day-by-day period configuration list
 ```
 
-### Dynamic Route Handler (`src/app/(app)/apply/[type].tsx`)
+### Form Route Handler (`src/app/(app)/apply.tsx`)
 
 ```tsx
 import React from 'react';
@@ -280,7 +279,7 @@ import { FilingApplicationScreen } from '@/module/employee/filing';
 
 export default function ApplyRoute() {
   const { type, startDate, endDate } = useLocalSearchParams<{
-    type: string;
+    type?: string;
     startDate?: string;
     endDate?: string;
   }>();
@@ -315,7 +314,7 @@ sequenceDiagram
     Layout->>DateModal: Opens FilingDatePickerModal(type='leave')
     Employee->>DateModal: Selects Start & End Date Range
     Employee->>DateModal: Taps "Continue to Form"
-    DateModal->>FormScreen: router.push('/(app)/apply/leave?startDate=...&endDate=...')
+    DateModal->>FormScreen: router.push('/(app)/apply?type=leave&startDate=...&endDate=...')
     FormScreen->>Backend: POST /generate_schedule (Fetches schedule comparison)
     Backend-->>FormScreen: Returns schedule events & options
     FormScreen->>Employee: Renders Web-Aligned Form (Day Cards, Bulk Bar, Period)
@@ -340,16 +339,19 @@ sequenceDiagram
 2. **Leave Balance Check**:
    - Paid leave submissions require `balance >= requested_days`.
    - If credits are 0, user must select **Leave Without Pay (LWOP)** (`idleave = 3 or 34`).
-3. **Overtime Threshold & Consecutive Limit**:
+3. **Overtime Threshold & Single-Day Constraint**:
    - Overtime must be at least 1 hour beyond regular shift hours.
-   - Overtime spanning more than 2 consecutive calendar days is blocked by client validation and rejected by backend handler.
+   - Overtime application is strictly single-date only (`isRangeMode = false`), evaluated and validated against that date's biometric attendance punch logs. Multi-day date selection is blocked in the calendar modal.
 4. **Lunch Break Deduction**:
    - Attendance Adjustment work hours automatically subtract 1 hour for unpaid lunch when gross hours exceed 5 hours.
 5. **Conditional File Upload Rules**:
    - **Hidden**: For Change Shift (`cs`) and Overtime (`ot`), file attachments are omitted from the form.
-   - **Visible**: For Leave (`leave`), Attendance Adjustment (`aa`), and Official Business Trip (`obt`), file attachments (up to 5MB) are supported.
+   - **Visible**: For Leave (`leave`), Attendance Adjustment (`aa`), and Official Business Trip (`obt`), file attachments (up to 5MB via `expo-document-picker`) are supported.
 6. **Post-Submit Redirection**:
    - Submissions must never leave the user hanging on a completed form. Upon receiving `200 OK`, the application must navigate immediately to `/(app)/requests` ("My Requests" status page).
+7. **Biometric Punch vs. Filed Application Isolation**:
+   - Biometric punches (`Time In` and `Time Out`) fetched from attendance endpoints represent raw punch records, rendered under `BIOMETRIC TIME LOG` with Sky Blue dot (`#0EA5E9`) and no approval status badge.
+   - Genuine employee-filed requests (`leave`, `cs`, `aa`, `ot`, `obt`) render under `FILED APPLICATION` with Amber dot (`#F59E0B`) and interactive approval status badges (`PENDING`, `APPROVED`, `DECLINED`).
 
 ### Non-Functional & Failure-Mode Checklist
 
@@ -372,8 +374,8 @@ Following the design-first workflow (`Gate 1` static UI mockup -> `Gate 2` dynam
    - Connect `NewApplicationModal.tsx` to open `FilingDatePickerModal.tsx` upon type selection.
    - Implement `FilingDatePickerModal.tsx` displaying the interactive calendar, active pay period range, and "Continue to Form" action.
 2. **Route Configuration**:
-   - Create `src/app/(app)/apply/_layout.tsx` (stack navigator) and `src/app/(app)/apply/[type].tsx`.
-   - Ensure `FilingDatePickerModal` redirects to `/(app)/apply/[type]?startDate=...&endDate=...`.
+   - Create `src/app/(app)/apply.tsx` (unified route handler accepting query parameters `?type=&startDate=&endDate=`).
+   - Ensure `FilingDatePickerModal` redirects to `/(app)/apply?type=[type]&startDate=...&endDate=...`.
 3. **Web-Aligned Form Components**:
    - Create `FilingDateRecapCard.tsx` with date range and `X Days Selected` badge.
    - Create `ChangeShiftForm.tsx` with Bulk Apply bar, progress bar, and day cards (`Current -> New`).
@@ -404,7 +406,7 @@ Following the design-first workflow (`Gate 1` static UI mockup -> `Gate 2` dynam
 
 ## 9. Definition of Done
 
-- [ ] Every row in the **Acceptance Criteria** table passes (`AC-1` through `AC-17`).
+- [ ] Every row in the **Acceptance Criteria** table passes (`AC-1` through `AC-18`).
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is fulfilled.
 - [ ] Flow matches: FAB `+` -> Type Selection -> Date Picker Modal -> Application Form -> Redirect to `/(app)/requests` Status Page.
 - [ ] Form strictly matches web concepts from `ApplicationTypeSelectorModal.vue` (Change Shift bulk bar, Attendance Adjustment hours, Overtime summary, Leave credit selector, OBT trip type, conditional attachment hidden for CS/OT).
@@ -413,3 +415,5 @@ Following the design-first workflow (`Gate 1` static UI mockup -> `Gate 2` dynam
 
 <!-- Changelog -->
 - v1 — 2026-09-03 — initial
+- v2 — 2026-09-03 — updated flow: application type selection opens date range modal first, redirects to web-aligned application form, then redirects to my requests status screen on submit.
+- v3 — 2026-09-07 — amended route to /(app)/apply query params, enforced single-day overtime, live expo-document-picker, and biometric vs filed application calendar separation per verify report.
