@@ -101,6 +101,11 @@ Then load only the rules the diff actually touches:
 
 A rule violation is a finding **with a citation**. Quote the rule; do not paraphrase your preference as project policy.
 
+> [!NOTE]
+> **The visual layer belongs to [`/webkit.design-review`](../webkit.design-review/SKILL.md).** When that skill has run on this
+> change, cite its `design-review.md` for accent, contrast, dark-mode, and component-reuse findings instead of re-listing them.
+> When it has not, keep [ui-design.md](../../rules/ui-design.md) checks here to clear violations only — depth is its job, not this one's.
+
 ---
 
 ## Phase 3 — Review Dimensions

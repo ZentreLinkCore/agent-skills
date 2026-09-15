@@ -1,6 +1,6 @@
 # Ticket Numbering, Ticket Folders & Ticket Branches
 
-Every spec-driven piece of work gets a **ticket**: a number, a folder inside its project holding all three of its documents, and a git branch named after it.
+Every spec-driven piece of work gets a **ticket**: a number, a folder inside its project holding all of its documents, and a git branch named after it.
 
 ```text
 .agents/specs/
@@ -10,7 +10,8 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 │   │   ├── investigation.md    ← written by /webkit.investigate
 │   │   ├── refactor.md         ← written by /webkit.refactor
 │   │   ├── verify.md           ← written by /webkit.verify
-│   │   └── code-review.md      ← written by /webkit.code-review
+│   │   ├── code-review.md      ← written by /webkit.code-review
+│   │   └── design-review.md    ← written by /webkit.design-review
 │   ├── T00002/
 │   │   └── investigation.md    ← a bug ticket: no spec, and that is fine
 │   ├── hr/                     ← legacy path-based specs (still valid, see §7)
@@ -20,9 +21,9 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
         └── specs.md
 ```
 
-One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, the root-cause investigation, the refactor record, the conformance report, the diff review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
+One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, the root-cause investigation, the refactor record, the conformance report, the diff review, the design review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
 
-A ticket does **not** need all five files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no `specs.md`. What is present tells you what has been done.
+A ticket does **not** need all six files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no `specs.md`. What is present tells you what has been done.
 
 ---
 
@@ -44,7 +45,7 @@ A ticket does **not** need all five files. A feature ticket may never have an `i
 | `/webkit.spec` | **Yes** — it starts feature work |
 | `/webkit.investigate` | **Yes** — it starts bug / RCA work |
 | `/webkit.refactor` | **Yes**, but only for a *standalone* cleanup. Cleaning up a ticket's own implementation belongs in that ticket. |
-| `/webkit.verify`, `/webkit.code-review`, `/webkit.fix`, the implement skills, `/webkit.migrate` | **No** — they continue existing work. They resolve, and if there is no ticket they say so (§4) rather than inventing one. |
+| `/webkit.verify`, `/webkit.code-review`, `/webkit.design-review`, `/webkit.fix`, the implement skills, `/webkit.migrate` | **No** — they continue existing work. They resolve, and if there is no ticket they say so (§4) rather than inventing one. |
 
 **Resolve the project first.** Run the "Which Project Am I In?" resolution in [project-profile.md](./project-profile.md) and state the answer *before* scanning — a ticket allocated into the wrong project's folder is numbered off the wrong counter and collides with real work there.
 
@@ -86,7 +87,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 
 ## 4. Finding a ticket from a feature or a path
 
-`/webkit.verify`, `/webkit.code-review`, `/webkit.fix`, and the implement skills are usually invoked in a fresh session with only a target path or a feature name. Resolve the ticket, do not ask the user to remember it:
+`/webkit.verify`, `/webkit.code-review`, `/webkit.design-review`, `/webkit.fix`, and the implement skills are usually invoked in a fresh session with only a target path or a feature name. Resolve the ticket, do not ask the user to remember it:
 
 1. If the prompt names a ticket (`T00004`) or a path inside one, use it directly — resolving the project the same way, since `T00004` exists in both.
 2. **The current git branch is often the answer.** `git rev-parse --abbrev-ref HEAD` returning `T00004` (or `T00004-<slug>`) names the ticket outright — see §6.
@@ -95,7 +96,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
    - **Several hits inside one `T#####/`** are **one ticket**, not three — `verify.md` and `code-review.md` naturally mention the same feature as their `specs.md`. Collapse to the folder (`… | sed 's#/[^/]*$##' | sort -u` if you want that done for you).
    - **A hit in the legacy tree** (`specs/<project>/<portal>/<feature>.md`) is the spec file itself; its folder is a portal holding many specs, so do not treat the folder as a ticket.
    - Confirm with the `> **Ticket:**` / `> **Portal:**` header of each candidate before committing to one.
-4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit.verify` stops (there is no spec to verify against); `/webkit.code-review` and `/webkit.fix` continue and write to `.agents/reports/` instead (§5).
+4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit.verify` stops (there is no spec to verify against); `/webkit.code-review`, `/webkit.design-review`, and `/webkit.fix` continue and write to `.agents/reports/` instead (§5).
 5. Report which ticket you resolved to, and on what evidence, in your first message. A skill that silently verifies against the wrong ticket is worse than one that stops.
 
 ## 5. The file contract
@@ -107,19 +108,20 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 | `refactor.md` | `/webkit.refactor` | Append-or-update; bump `> **Run:**` so successive cleanups on one ticket each leave a line, and append the superseded line to the run history. |
 | `verify.md` | `/webkit.verify` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
 | `code-review.md` | `/webkit.code-review` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
+| `design-review.md` | `/webkit.design-review` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
 
-- **These five filenames are fixed.** No dates, no feature names, no portal prefixes in the filename — `verify-20260907.md`, `specs-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
-- Every one of the five carries `> **Ticket:** <project> T#####` in its header block, so a document that gets copied or pasted elsewhere still names its own ticket and project.
+- **These six filenames are fixed.** No dates, no feature names, no portal prefixes in the filename — `verify-20260907.md`, `specs-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
+- Every one of the six carries `> **Ticket:** <project> T#####` in its header block, so a document that gets copied or pasted elsewhere still names its own ticket and project.
 - A ticket folder holding only `specs.md` — or only `investigation.md` — is normal. It just means the work has not reached the other steps yet.
 - **One workstream per ticket.** If an investigation turns up a *second, unrelated* defect, that is a second ticket with its own `investigation.md` — not a second investigation file crammed into this folder.
-- **The fixed filenames only work inside a ticket folder.** A legacy spec in a portal folder (§7) shares that folder with other specs, so `verify.md` there would collide between features — reports for legacy specs keep the old dated `.agents/reports/<domain>-<feature>-{verify,review}-<YYYYMMDD>.md` path until the spec is migrated to a ticket.
+- **The fixed filenames only work inside a ticket folder.** A legacy spec in a portal folder (§7) shares that folder with other specs, so `verify.md` there would collide between features — reports for legacy specs keep the old dated `.agents/reports/<domain>-<feature>-{verify,review,design-review}-<YYYYMMDD>.md` path until the spec is migrated to a ticket.
 - A diff review for a change with **no spec at all** likewise goes to `.agents/reports/<scope>-review-<YYYYMMDD>.md`. `/webkit.code-review` runs without a spec by design; it never allocates a ticket to have somewhere to write.
-- Nothing outside these five filenames belongs in a ticket folder.
+- Nothing outside these six filenames belongs in a ticket folder.
 - [`.agents/reports/`](../reports/) is now only the **fallback and the archive**: investigations written before this convention live there and stay valid, and the two unticketed cases above still land there. New ticketed work does not add to it.
 
 ### Run-history block
 
-`investigation.md`, `refactor.md`, `verify.md`, and `code-review.md` all end with:
+`investigation.md`, `refactor.md`, `verify.md`, `code-review.md`, and `design-review.md` all end with:
 
 ```markdown
 <!-- Run history -->
