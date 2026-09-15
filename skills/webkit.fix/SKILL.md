@@ -2,7 +2,9 @@
 name: webkit-fix
 description: >
   Applies targeted bug fixes to files based on an investigation report, reproducing steps, or explicit user prompt, maintaining minimal diffs and strictly following project rules.
-  Triggered when the user runs the command `/webkit.fix <target_path> <prompt>` or `/webkit.fix <prompt>`.
+  Given a ticket (`/webkit.fix F0135`), it fetches that ticket's branch from GitHub and analyzes the changes
+  on it before fixing anything — the ticket is a branch to examine, not just a folder to open.
+  Triggered by `/webkit.fix <ticket>`, `/webkit.fix <target_path> <prompt>`, or `/webkit.fix <prompt>`.
 ---
 
 # Webkit Fix
@@ -33,6 +35,25 @@ A saved report is optional input, not a hard prerequisite — this skill also ru
 
 ---
 
+## Phase 0 — Ticket Argument Gate (BLOCKING)
+
+**Only when the prompt is a ticket** — `/webkit.fix F0135`, `/webkit.fix T00004`. Skip to Phase 1 for a path or a plain description.
+
+> [!CAUTION]
+> A ticket is **a branch to fetch and analyze**, not a folder to open. Reading `.agents/specs/<project>/T#####/` and editing the tree you happen to be sitting on produces a fix against the wrong code — it will not apply, and the mismatch is not obvious until someone tries to merge it.
+
+Run [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) in full. In short:
+
+1. `git fetch origin --prune`, then find **every** branch matching the ticket — case variants and suffixes included.
+2. **More than one match → stop and ask.** On this remote `F0135`, `F0135-fixed` and `f0135` are three different branches; `F0149-F0151` is one branch covering three tickets. Only the user knows which is current.
+3. **No match → say so.** Do not fall back to the working tree silently.
+4. **Analyze before touching anything** — `git log $base..origin/$branch --oneline` and `git diff $base...origin/$branch --stat` (three dots). State the branch, base, commit count, and file count.
+5. Check out under the Branch Gate (step 5 below). **Never `checkout -B` or `reset --hard`** to force a local branch to match the remote — that silently destroys unpushed work.
+
+The bug you are fixing usually lives *in* that branch's diff. Read it before forming a theory.
+
+---
+
 ## Phase 1 — Target & Context Discovery
 
 Before writing any code:
@@ -41,7 +62,7 @@ Before writing any code:
 2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
 3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
 4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
-5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. **Fixing findings from a ticket's `verify.md`/`code-review.md` belongs on that ticket's existing branch (`T#####`) — continue there, do not open a `bugfix/` branch for it.** If on `main`/`master`, create and switch now: `T#####` when the work has a ticket, otherwise a `bugfix/` (or `hotfix/`) branch — do not merely confirm one is needed and proceed. Already on the right branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
+5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. **If Phase 0 already resolved a ticket branch, that branch is the answer** — check it out and continue there; do not derive a new name. **Fixing findings from a ticket's `verify.md`/`code-review.md` belongs on that ticket's existing branch (`T#####`) — continue there, do not open a `bugfix/` branch for it.** If on `main`/`master`, create and switch now: `T#####` when the work has a ticket, otherwise a `bugfix/` (or `hotfix/`) branch — do not merely confirm one is needed and proceed. Already on the right branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
 
 ---
 

@@ -6,7 +6,7 @@ description: >
   any backend wiring (Gate 1; `/webkit.backend-implement` adds the live data). SPEC-DRIVEN when a spec
   exists under `.agents/specs/`. Detects the project and framework, reuses the existing design system
   instead of duplicating it, and never invents backend fields, tables, or endpoints.
-  Triggered by `/webkit.frontend-implement <target_path> <prompt>` or `/webkit.frontend-implement <prompt>`.
+  Triggered by `/webkit.frontend-implement <ticket>`, `/webkit.frontend-implement <target_path> <prompt>`, or `/webkit.frontend-implement <prompt>`.
 ---
 
 # Webkit Frontend Implement
@@ -93,6 +93,8 @@ Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution 
 
 > [!CAUTION]
 > **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to the ticket's branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
+>
+> **Invoked with a ticket** (`/<skill> F0135`, `/<skill> T00004`)? That ticket names a branch on the remote. **Fetch and analyze it first** — [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) — then check it out here rather than deriving a new branch name. Several branches can match one ticket (`F0135`, `F0135-fixed`, `f0135` all exist); when more than one does, **stop and ask**.
 >
 > This is not "confirm a branch exists". Confirming has repeatedly failed: the agent checks, sees `main`, notes it, and implements anyway. **Create the branch.**
 

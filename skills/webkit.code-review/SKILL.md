@@ -64,14 +64,18 @@ git rev-parse --abbrev-ref HEAD          # which branch
 git status --short                       # uncommitted work
 git diff --stat                          # unstaged
 git diff --cached --stat                 # staged
-git diff main...HEAD --stat              # the branch vs its base
+
+# detect the base — it is `master` in SubHRMS, not `main`
+base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
+git diff "$base"...HEAD --stat           # the branch vs its base
 ```
 
 Pick the scope in this order:
 
-1. An explicit `<branch>` or `<target_path>` argument
-2. Uncommitted changes, if any exist
-3. The current branch against `main`
+1. **A ticket argument** (`/webkit.code-review F0135`, `T00004`) — resolve it to its branch and review **that branch's diff**: `git diff "$base"...origin/<branch>`. Follow [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch), and note §8.3 — this skill writes no code, so it **fetches and analyzes without checking out**. Several branches can match one ticket (`F0135`, `F0135-fixed`, `f0135`); when more than one does, stop and ask.
+2. An explicit `<branch>` or `<target_path>` argument
+3. Uncommitted changes, if any exist
+4. The current branch against its base
 
 **State the scope and the file count before reviewing.** If the diff is empty, say so and stop — do not silently expand to a whole-repo review.
 

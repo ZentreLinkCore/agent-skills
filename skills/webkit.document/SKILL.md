@@ -79,7 +79,13 @@ grep -ril '<feature|route|page name>' .agents/docs/ 2>/dev/null
 | A guide covers a *neighbouring* feature | Extend it if a user would see them as one thing; otherwise create a new guide and cross-link both under **Related features**. |
 | Nothing | Create `.agents/docs/<feature-kebab>.md`. |
 
-### 3. Read the spec for intent — then stop trusting it
+### 3. Given a ticket? Document the branch, not the tree
+
+`/webkit.document F0135` means "document what was built on that branch". Fetch and analyze it per
+[ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) — read-only, so **do not check it out** (§8.3) — and record the branch in
+the guide's `> **Verified against:**` header. When several branches match the ticket, stop and ask.
+
+### 4. Read the spec for intent — then stop trusting it
 
 ```bash
 grep -ril '<feature>' .agents/specs/<project> --include='*.md' 2>/dev/null

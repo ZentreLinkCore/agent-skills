@@ -5,7 +5,7 @@ description: >
   then swaps the frontend's hard-coded api methods for live calls (Gate 2 of the design-first flow,
   after the user validates the Gate 1 design). SPEC-DRIVEN. Scans existing models, migrations, and routes
   first and never creates a duplicate table, model, or endpoint.
-  Triggered by `/webkit.backend-implement <target_path> <prompt>` or `/webkit.backend-implement <prompt>`.
+  Triggered by `/webkit.backend-implement <ticket>`, `/webkit.backend-implement <target_path> <prompt>`, or `/webkit.backend-implement <prompt>`.
 ---
 
 # Webkit Backend Implement
@@ -88,6 +88,8 @@ The differences that will bite hardest, per the profile:
 
 > [!CAUTION]
 > **Do not create or edit a single application file until this is done.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) — read the current branch, and if it is `main`/`master`, **create and switch to the ticket's branch now**. Creating it is compliance with Rule 3, not a decision that needs approval.
+>
+> **Invoked with a ticket** (`/<skill> F0135`, `/<skill> T00004`)? That ticket names a branch on the remote. **Fetch and analyze it first** — [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) — then check it out here rather than deriving a new branch name. Several branches can match one ticket (`F0135`, `F0135-fixed`, `f0135` all exist); when more than one does, **stop and ask**.
 >
 > This is not "confirm a branch exists". Confirming has repeatedly failed: the agent checks, sees `main`, notes it, and implements anyway. **Create the branch.**
 

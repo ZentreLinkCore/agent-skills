@@ -79,6 +79,7 @@ State a concrete failure scenario: specific inputs or state → the wrong outcom
 2. **Locate the spec and its ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §4):
    - A `<spec_path>`, or a bare ticket (`/webkit.verify T00004`) → `.agents/specs/<project>/T00004/specs.md`.
    - **The current branch is often the answer** — `git rev-parse --abbrev-ref HEAD` returning `T00004` names the ticket outright, since implementing skills branch on the ticket number.
+   - **Given a ticket as the argument** (`/webkit.verify F0135`), verify the implementation **on that ticket's branch**, not on whatever tree you started in — fetch and analyze it per [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch). This skill writes no code, so it does not check the branch out (§8.3). When several branches match, stop and ask.
    - Otherwise resolve `<target_path>` / the feature name against that project's ticket folders and its legacy tree, in one command:
 
      ```bash

@@ -11,7 +11,7 @@ Applicable to all branches, commits, staging changes, and merge requests in the 
 - **Developer/User**: Approves and merges branches, manages merge conflicts, and controls releases.
 
 ## Actionable Rules
-1. **Branch Naming**: Work that has a ticket is branched on **the ticket number itself** — `T00001`, matching its folder in `.agents/specs/<project>/T00001/` character for character ([ticket-numbering.md](./ticket-numbering.md) §6). Work with **no** ticket uses the categorised form, prefixed by implementation focus:
+1. **Branch Naming**: Work that has a ticket is branched on **the ticket number itself** — `T00001`, matching its folder in `.agents/specs/<project>/T00001/` character for character ([ticket-numbering.md](./ticket-numbering.md) §6). The remote also carries the team's own `F####` ticket branches (`F0135`); those are valid ticket branches, not malformed ones — see [§8](./ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch). Work with **no** ticket uses the categorised form, prefixed by implementation focus:
   - `feature/`: Adding new page templates, modules, or features.
   - `bugfix/`: Correcting active bugs, exceptions, or visual glitches.
   - `refactor/`: Performance updates, cleanup tasks, or logic optimization without adding features.
@@ -28,6 +28,12 @@ Applicable to all branches, commits, staging changes, and merge requests in the 
 
 > [!CAUTION]
 > This is a **blocking gate, not a reminder.** Any skill that writes application code MUST complete this before creating or editing its first file. "Confirm you are on a branch" has repeatedly failed in practice: the agent checks, sees `main`, notes it, and implements anyway. The instruction is therefore to **CREATE the branch**, not to confirm one exists.
+
+### Step 0 — Was a ticket passed as an argument?
+
+If the skill was invoked as `/<skill> <ticket>` (`F0135`, `T00004`), **that ticket names a branch on the remote, and it must be fetched and analyzed before this gate runs** — see [ticket-numbering.md §8](./ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch). Several branches can match one ticket (`F0135`, `F0135-fixed`, `f0135` all exist on this remote); when more than one does, **stop and ask** rather than choosing.
+
+Reaching Step 1 without having done that means you are about to work on whatever tree you happened to start in.
 
 ### Step 1 — Read the current branch
 

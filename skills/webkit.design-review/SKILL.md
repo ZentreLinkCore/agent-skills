@@ -68,9 +68,10 @@ git diff master...HEAD --stat -- '*.vue' '*.tsx' '*.css'   # SubHRMS base is mas
 
 Pick in this order:
 
-1. An explicit `<target_path>` — a page, a module folder, or a single component
-2. The visual files in the uncommitted diff
-3. The visual files in the current branch vs its base
+1. **A ticket argument** (`/webkit.design-review F0135`) — resolve it to its branch and review the visual files in **that branch's diff**, per [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch). Read-only, so **fetch and analyze without checking out** (§8.3); when several branches match the ticket, stop and ask.
+2. An explicit `<target_path>` — a page, a module folder, or a single component
+3. The visual files in the uncommitted diff
+4. The visual files in the current branch vs its base
 
 **State the scope and the file count before reviewing.** If the scope is empty, say so and stop — do not expand to a repo-wide style audit nobody asked for.
 

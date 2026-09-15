@@ -89,7 +89,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 
 `/webkit.verify`, `/webkit.code-review`, `/webkit.design-review`, `/webkit.fix`, and the implement skills are usually invoked in a fresh session with only a target path or a feature name. Resolve the ticket, do not ask the user to remember it:
 
-1. If the prompt names a ticket (`T00004`) or a path inside one, use it directly — resolving the project the same way, since `T00004` exists in both.
+1. If the prompt names a ticket (`T00004`, `F0135`) or a path inside one, use it directly — resolving the project the same way, since `T00004` exists in both. **A ticket passed as a command argument also names a branch that must be fetched and analyzed — see §8.**
 2. **The current git branch is often the answer.** `git rev-parse --abbrev-ref HEAD` returning `T00004` (or `T00004-<slug>`) names the ticket outright — see §6.
 3. Otherwise `grep -ril '<feature|route|table|module>' .agents/specs/<project> --include='*.md'` — that one command covers the project's ticket folders and its legacy tree. Read the hits like this:
 
@@ -132,6 +132,8 @@ Same discipline as spec versioning: increment the run, date it, one line on what
 
 ## 6. The branch is the ticket
 
+> Going the other way — you were *given* a ticket and need to find and analyze its branch — is §8.
+
 Work that has a ticket is done on a branch **named after that ticket**:
 
 ```bash
@@ -158,3 +160,104 @@ Specs written before this convention live at `.agents/specs/<project>/<portal>/<
 - **Do not bulk-migrate them.** Moving a spec breaks every report, commit message, branch, and chat reference that points at its path.
 - **Migrate one only when you are already editing it,** and only if the user asks: allocate a ticket per §2, move the spec to `<project>/T#####/specs.md`, move its newest reports to `verify.md` / `code-review.md` / `investigation.md`, and note the old path in the changelog line so the trail survives.
 - New work always gets a ticket folder.
+
+## 8. Resolving a ticket ARGUMENT to its branch
+
+When a skill is invoked as `/webkit.fix F0135`, `/webkit.frontend-implement T00004`, or `/webkit.code-review F0148`, **the ticket is not just a folder to open.** It names the **branch that holds the work**, and that branch — not the working tree you happen to be sitting on — is what gets analyzed.
+
+> [!CAUTION]
+> Opening `.agents/specs/<project>/T#####/` and starting to edit, without ever fetching the ticket's branch, is the failure this section exists to stop. The spec says what was *intended*; the branch holds what was actually *built*. A fix written against the wrong tree does not apply.
+
+### 8.1 Two ticket formats, both real
+
+| Format | Origin | Example | Match |
+| :--- | :--- | :--- | :--- |
+| `F####` | The team's ticket system. **The dominant convention on the GitHub remote** — `F0004` … `F0174` and growing. | `F0135` | `^[Ff][0-9]{4}` |
+| `T#####` | Allocated by `/webkit.spec`, `/webkit.investigate`, `/webkit.refactor` (§2) | `T00004` | `^T[0-9]{5}$` |
+
+§1's `^T[0-9]{5}$` governs **the folders this repo allocates**. It does **not** govern branches that already exist on the remote: most of those are `F####`, they are not malformed, and they must not be "corrected".
+
+An `F####` ticket usually has **no folder** under `.agents/specs/`. That is normal and not a reason to allocate one — the branch is its source of truth, and any report about it goes to `.agents/reports/` (§5).
+
+### 8.2 The procedure — BLOCKING, before any file is edited
+
+**Step 1 — Refresh, then find every candidate.** Remote branch names are case-sensitive and carry suffixes, so match loosely and look at everything that comes back:
+
+```bash
+ticket=F0135                                   # exactly as the user typed it
+git fetch origin --prune --quiet
+
+base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
+
+# exact, case variants, and suffixed variants — F0135 / f0135 / F0135-fixed / F0136-Fixed
+git for-each-ref --sort=-committerdate \
+    --format='%(refname:short)  %(committerdate:short)  %(authorname)' refs/remotes/origin \
+  | grep -iE "^origin/${ticket}([-_][A-Za-z0-9]+)?[[:space:]]"
+
+# range branches that may CONTAIN it — F0149-F0151 covers F0150
+git branch -r | sed 's#.*origin/##' | grep -iE '^F[0-9]{4}-F[0-9]{4}$'
+```
+
+> [!WARNING]
+> These are **real, verified traps in this remote**, not hypotheticals. `F0004` and `f0004` are two different branches. So are `F0135` and `F0135-fixed`, and `F0136` and `F0136-Fixed`. `F0149-F0151` is a single branch covering three tickets, so an exact-match search for `F0150` finds nothing while the work sits right there.
+
+**Step 2 — More than one match → STOP and ask.** Do not guess, and do not assume `-fixed` is the newer or the right one. Print what you found and wait:
+
+```text
+3 branches match F0135:
+
+  origin/F0135        2026-07-02  fdcJL
+  origin/F0135-fixed  2026-07-09  Sync
+  origin/f0135        2026-06-28  fdcJL
+
+Which one should I work on?
+```
+
+Only the user knows which branch is current. Picking for them is how a fix lands on abandoned code.
+
+**Step 3 — Zero matches → say so plainly.** Never invent a branch, and never silently fall back to the working tree. Report it and offer the alternatives: the ticket may not be pushed yet, may be spelled differently, or may be local-only —
+
+```bash
+git branch --list "*${ticket}*"                # is it local but unpushed?
+grep -ril "$ticket" .agents/specs .agents/reports 2>/dev/null
+```
+
+**Step 4 — Analyze the branch BEFORE checking anything out.** This is the "analyze there, then fix" step, and it is read-only:
+
+```bash
+git log "$base".."origin/$branch" --oneline             # what work is on it
+git diff "$base"..."origin/$branch" --stat              # which files, how much
+git diff "$base"..."origin/$branch" -- <paths of interest>
+```
+
+Use **three dots** (`base...branch`) for the diff: it shows what the branch changed since it diverged, excluding everything that landed on `master` afterwards. Two dots mixes in unrelated master commits and makes the change look far larger than it is.
+
+State the scope you found — branch, base, file count, commit count — before proceeding.
+
+**Step 5 — Then check out, under the [Mandatory Branch Gate](./git-workflow.md#mandatory-branch-gate-for-implementing-skills).**
+
+```bash
+git status --short                                      # say what is carried over first
+
+# local copy does not exist yet — create it tracking the remote
+git checkout -b "$branch" "origin/$branch"
+
+# local copy already exists — just switch, then report any divergence
+git checkout "$branch"
+git rev-list --left-right --count "origin/$branch...$branch"   # behind <TAB> ahead
+```
+
+> [!CAUTION]
+> **Never `git checkout -B`, `git reset --hard`, `git push --force`, or `git branch -f` to make a local branch match the remote.** Those discard local commits that may be the only copy of someone's work. If the local and remote copies have diverged, **report both counts and ask** — reconciling them is the user's call, not the agent's.
+
+### 8.3 Read-only skills stop at Step 4
+
+`/webkit.code-review`, `/webkit.verify`, `/webkit.design-review`, and `/webkit.document` write no application code, so they **analyze the branch without checking it out** — Steps 1–4 only. Switching the user's working tree to run a review is a side effect nobody asked for.
+
+Their report still records which branch was analyzed, in the `> **Scope:**` header line.
+
+### 8.4 Where the report goes
+
+Unchanged from §5, with one addition: a `F####` ticket normally has no ticket folder, so its reports go to **`.agents/reports/<scope>-<kind>-<YYYYMMDD>.md`**. Name the branch in the report header so the trail survives.
+
+If an `F####` ticket *does* have a matching `T#####` folder (the work was specced here and branched there), write to the ticket folder as normal and record both identifiers in the header.
