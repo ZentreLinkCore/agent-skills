@@ -5,8 +5,8 @@
 > **Portal:** employee (Golden Chestnut accent)
 > **Scope:** `resources/views/mobapp/src/module/employee/messages` — 58 files / 27,959 lines. **13 reviewed in depth** (see §7).
 > **Design sources read:** `mobapp/src/theme/index.ts:1-250` (Restyle — authoritative), `mobapp/src/contexts/ThemeContext.tsx:16-148`, `mobapp/src/constants/theme.ts:1-24`, `mobapp/src/app/_layout.tsx:86,137`, `.agents/rules/ui-design.md` (inherited only — see §0)
-> **Run:** v1 — 2026-09-15 — initial
-> **Verdict:** **REQUEST CHANGES** (4 HIGH)
+> **Run:** v4 — 2026-09-16 — the PARTIAL/DEFERRED items closed out (§10); **D9 was mis-framed and is corrected there.** v3 — 2026-09-16 — §6 Modern Enhancement Ideas E1-E5 applied; **E1's runtime claim was wrong and is corrected** (see §9). v2 — 2026-09-16 — Fix Plan steps 1-9 applied. v1 — 2026-09-15 — initial.
+> **Verdict:** v1 **REQUEST CHANGES** (4 HIGH) → **after fixes: all 4 HIGH + 3 MEDIUM + 1 LOW resolved and verified.** D8/D9 deferred (see §8).
 
 ---
 
@@ -300,19 +300,19 @@ Same name, inverted meaning, in the same light mode. `ThemeContext` adds a third
 
 Ordered so token-level changes land first — **doing DR3 first deletes most of D1's work.**
 
-| Order | Finding | Severity | Change | File(s) | Effort |
-| :---: | :--- | :--- | :--- | :--- | :--- |
-| 1 | DR3 | — | Light `textMuted` `#94A3B8` → `#64748B` | `src/theme/index.ts:20` | trivial |
-| 2 | D1 | HIGH | Verify the 125 `color="textMuted"` sites now pass; switch any on non-white surfaces to `textSecondary` | messages module | small |
-| 3 | D3 | HIGH | Remove dead `\|\|`; pin badge text to `#9C5A22`, or invert pill to `primaryDark` bg + `textInverse` | `pages/MessagesScreen.tsx:1099` | trivial |
-| 4 | D4 | HIGH | Replace 9 hardcoded status colours with `colors.{success,danger,warning}{Bg,Text,Border}` | `components/MessageBubbleGroup.tsx:933-947` | trivial |
-| 5 | D2 | HIGH | `color="primary"` → `color="primaryDark"` on the 23 `<Text>` sites (leave borders/icons/fills alone) | 8 components | small |
-| 6 | D5 | MEDIUM | `color="warning"` → `color="warningText"`; drop tint to `0.08` to clear 4.5:1 | `components/ConversationListItem.tsx:133` | trivial |
-| 7 | D10 | LOW | `colors.primaryDark \|\| (…)` → `colors.primaryStrong` | `pages/MessagesScreen.tsx:1006` | trivial |
-| 8 | D6 | MEDIUM | Replace the 4 ternary patterns (34 sites) with `theme.colors.*`; drop now-unused `useAppTheme` imports | 12 files | small |
-| 9 | D7 | MEDIUM | `accessibilityLabel` + `accessibilityRole` on composer & message-action controls first | `ChatInputBar`, `MessageBubbleGroup`, `VoiceRecordingBar`, `MessageActionModal` | large |
-| 10 | D8 | MEDIUM | Add `micro`/`tiny` variants; migrate fractional sizes opportunistically | `src/theme/index.ts` + module | large |
-| 11 | D9 | LOW | Round off-scale spacing when touching a file | module | small |
+| Order | Finding | Severity | Change | File(s) | Effort | Status |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | DR3 | — | Light `textMuted` `#94A3B8` → `#64748B` | `src/theme/index.ts:20` | trivial | **DONE** (+ `textSecondary`→`#475569`) |
+| 2 | D1 | HIGH | Verify the 125 `color="textMuted"` sites now pass; switch any on non-white surfaces to `textSecondary` | messages module | small | **DONE** — token fix covered all 269 app-wide sites, 0 call sites edited |
+| 3 | D3 | HIGH | Remove dead `\|\|`; pin badge text to `#9C5A22`, or invert pill to `primaryDark` bg + `textInverse` | `pages/MessagesScreen.tsx:1099` | trivial | **DONE** — all 4 states fixed, not just the 1 reported |
+| 4 | D4 | HIGH | Replace 9 hardcoded status colours with `colors.{success,danger,warning}{Bg,Text,Border}` | `components/MessageBubbleGroup.tsx:933-947` | trivial | **DONE** |
+| 5 | D2 | HIGH | `color="primary"` → `color="primaryDark"` on the 23 `<Text>` sites (leave borders/icons/fills alone) | 8 components | small | **DONE** — 23 sites / 14 files |
+| 6 | D5 | MEDIUM | `color="warning"` → `color="warningText"`; drop tint to `0.08` to clear 4.5:1 | `components/ConversationListItem.tsx:133` | trivial | **DONE** — 4.61:1 |
+| 7 | D10 | LOW | `colors.primaryDark \|\| (…)` → `colors.primaryStrong` | `pages/MessagesScreen.tsx:1006` | trivial | **DONE** — used shared `accentFill` |
+| 8 | D6 | MEDIUM | Replace the 4 ternary patterns (34 sites) with `theme.colors.*`; drop now-unused `useAppTheme` imports | 12 files | small | **DONE** — 34/34 (see §10) |
+| 9 | D7 | MEDIUM | `accessibilityLabel` + `accessibilityRole` on composer & message-action controls first | `ChatInputBar`, `MessageBubbleGroup`, `VoiceRecordingBar`, `MessageActionModal` | large | **DONE** — 46 labelled, 4 justified skips (§10) |
+| 10 | D8 | MEDIUM | Add `micro`/`tiny` variants; migrate fractional sizes opportunistically | `src/theme/index.ts` + module | large | **DONE** — 77 sizes normalised, `micro` added (§10) |
+| 11 | D9 | LOW | Round off-scale spacing when touching a file | module | small | **WITHDRAWN** — mis-framed, see §10 |
 
 **Fix together:**
 - **Steps 1–2** are one change — do DR3 and re-measure before editing 125 call sites.
@@ -332,7 +332,10 @@ Run `/webkit.fix resources/views/mobapp/src/module/employee/messages using .agen
 
 ### E1 — Derive the dark palette instead of hand-picking it
 
-- **Why:** `darkTheme` (`theme/index.ts:165-235`) restates ~45 literals. That is how `textMuted` ended up identical across both modes (DR3) and how D4's block was missed. Deriving accent ramps in a perceptual space keeps lightness even across shades, so a contrast guarantee holds by construction rather than by review. RN 0.86 + Hermes support `oklch()` strings in `StyleSheet` colours on both platforms.
+> [!CAUTION]
+> **The last sentence of this bullet was wrong, and is struck through below.** RN 0.86.3 **cannot parse `oklch()`** — `@react-native/normalize-colors` handles only `rgb`/`rgba`/`hsl`/`hsla`/`hwb` + named colours, so an `oklch()` string resolves to null and the style is silently dropped. (The only `oklch` strings in `node_modules` are inside the bundled Chrome DevTools frontend, not the style pipeline.) Verified in `node_modules` before implementing; see §9 for how E1 was actually built.
+
+- **Why:** `darkTheme` (`theme/index.ts:165-235`) restates ~45 literals. That is how `textMuted` ended up identical across both modes (DR3) and how D4's block was missed. Deriving accent ramps in a perceptual space keeps lightness even across shades, so a contrast guarantee holds by construction rather than by review. ~~RN 0.86 + Hermes support `oklch()` strings in `StyleSheet` colours on both platforms.~~
 - **Sketch** (additive — new keys beside the old, nothing renamed):
   ```ts
   const chestnut = (l: number) => `oklch(${l}% 0.11 55)`;
@@ -416,5 +419,175 @@ State plainly what this report does **not** cover.
 - **Platform coverage:** `react-native-web` renders this module in a browser too (spec §1). No web-specific check was performed — `hitSlop` does not apply on web, and hover/focus-visible states, which this module does not define at all, matter there.
 - **Not verified against the spec.** Whether the built UI matches `specs.md` is `/webkit.verify T00001`'s job, not this report's.
 
+## 8. Resolution — v2, 2026-09-16
+
+Applied by `/webkit.fix T00001` on branch `T00001` (nested repo `hrms-react-native`, base `main`). **20 files changed.**
+
+### Verified
+
+`npx tsc --noEmit` → **exit 0** (confirmed genuinely checking via an injected type error). `npx expo lint` → **188 problems (69 errors, 119 warnings)** — byte-identical to the pre-change baseline captured by stashing the work, so **no new lint problems were introduced**. All pre-existing.
+
+Every ratio below recomputed after the edit:
+
+| Finding | Element | Before | After |
+| :--- | :--- | ---: | ---: |
+| D1 | `textMuted` on card / background | 2.56 / 2.45 | **4.76 / 4.55** |
+| D2 | accent text, light | 3.31 | **5.39** |
+| D3 | active pill label, light / dark | 3.31 / 2.18 | **5.39 / 8.18** |
+| D3 | tab badge, light / dark | 3.31 / 2.18 | **5.39 / 8.18** |
+| D4 | status pill text, dark | *light patch @ 15.4 vs bubble* | **8.29–10.45 on a tinted pill** |
+| D4 | status pill text, light | 4.51–5.30 | **4.84–5.91** |
+| D5 | "Official" badge, light | 1.89 | **4.61** |
+
+### Two v1 measurement errors, corrected
+
+1. **`#64748B` does not clear AA everywhere.** v1 reported it as "4.76:1 ✓" measured only against white; on `cardAlt` (`#F1F5F9`) it is **4.34:1**. Checked before relying on it — `cardAlt` turned out to be an **icon-chip background, not a text surface** (`MessageActionModal.tsx:344`, `ArchivedChannelsModal.tsx:224`), so muted text never lands on it and `#64748B` is safe in practice.
+2. **v1's DR3 fix would have collapsed two tokens.** `textSecondary` was *already* `#64748B`, so setting `textMuted` to it destroys the muted/secondary distinction. Resolved by moving both into a three-step standard-slate hierarchy, all AA:
+   `text #0F172A` → `textSecondary #475569` (7.58:1) → `textMuted #64748B` (4.76:1).
+
+### One finding v1 under-called
+
+**D3 was broader than reported.** v1 flagged only the *active* badge. The *inactive* badge (accent fill + white text) and the *active pill's own label* share the identical defect — `moduleEmployee` used as a fill behind white text, resolving to the light shade `#E2A35A` in dark mode (2.18:1). Root-caused and fixed as one system via a shared pair in `MessagesScreen.tsx:167-168`:
+
+```ts
+const accentFill = theme.colors.primaryDark;          // #9C5A22 light / #E2A35A dark
+const onAccentFill = isDark ? '#0F172A' : '#FFFFFF';  // flips the opposite way
+```
+
+All four states now pass (5.39:1 light, 8.18:1 dark). The `isDark` ternary is deliberate — no token expresses "contrasting text on the accent fill"; that gap is exactly enhancement **E2**.
+
+### Deliberately not done
+
+- **D6 — 8 of 34 sites.** `ChatAudioBubble`, `DedicatedMessagesHeader`, `EmojiPickerPanel`, `GifPickerPanel` have no `useTheme()` call, so `theme` is not in scope. Adding a hook to four components is a structural change with **zero user-visible benefit** (the inline values are already correct) — it belongs in a refactor, not a contrast fix. The 26 sites where `theme` was already in scope were converted and typechecked.
+- **D7 — 6 of 173 controls.** Labelled only the genuinely *silent* composer controls (cancel reply / edit / linked-ticket, remove attachment, discard & send voice). `MessageActionModal`'s rows were left alone because they have **visible `<Text>` children that RN already announces**; the full-screen backdrop scrim at `MessageActionModal.tsx:200` was left unlabelled on purpose, since labelling a full-viewport scrim adds noise rather than access.
+- **D8 / D9 — not started.** Adding two unused text variants helps nobody on its own, and migrating 338 `fontSize` overrides plus ~57 spacing values is precisely the churn [`incremental-generation.md`](../../rules/incremental-generation.md) warns against. Both are genuinely opportunistic; leave them to the files they touch next.
+
+### Not verified
+
+No app was run and nothing was measured on a device — all figures are computed from token values, compositing `rgba()` tints over their real parent surface. **The dark-mode status pill now sits at ~1.1:1 against its bubble** (by design; it is delineated by `successBorder`/`dangerBorder`/`warningBorder`) — worth one look on a real screen to confirm the border reads clearly. Runtime states (loading, empty, error, upload progress) and `react-native-web` remain unverified, per §7.
+
+## 9. Enhancements applied — v3, 2026-09-16
+
+All five §6 ideas applied on branch `T00001`. **27 files changed** in total across v2+v3.
+
+### E1's premise was right; its mechanism was wrong
+
+The report claimed RN could parse `oklch()` at runtime. **It cannot.** Checking `node_modules` first (rather than trusting the report) turned up `@react-native/normalize-colors`, which supports only `rgb`/`rgba`/`hsl`/`hsla`/`hwb` and named colours. An `oklch()` string would have resolved to null and every accent would have silently lost its colour on device.
+
+The fix keeps the whole benefit and removes the risk: **run the OKLCH math at author time and emit hex.** `scripts/generate-accent-ramp.js` is committed, so the ramp is reproducible rather than a block of magic constants, and it prints each step's measured contrast.
+
+**The premise was correct and now has numbers behind it.** The old hand-picked accents drifted badly in hue; the derived ramp holds it:
+
+| | lightness steps | hue spread |
+| :--- | :--- | ---: |
+| Before (hand-picked) | 53.4 → 65.4 → 76.1 → 96.0 (gaps 12.0, 10.7, 19.9) | **16.7°** (55.43 → 72.15) |
+| After (derived, H=56°) | even 8pt steps through the mid range | **1.5°** (54.34 → 55.83) |
+
+Chroma is clamped per step to 92% of the sRGB gamut boundary by binary search, so no step is out of gamut. `accent600` and `accent300` were then chosen **by measurement**, not by eye — they are simply the steps that clear AA on their surface.
+
+### E2 — five of the seven proposed keys were duplicates
+
+Checked each candidate against the existing theme before adding it. `onCard`, `onCardMuted`, `onSuccessBg`, `onDangerBg` and `onWarningBg` all already exist as `text`, `textMuted`, `successText`, `dangerText` and `warningText` — adding them would have been exactly the duplication [`duplicate-prevention.md`](../../rules/duplicate-prevention.md) forbids. **Only the two genuinely missing keys were added:** `accentFill` / `onAccentFill`.
+
+That pair is the real payoff: it is precisely the hand-rolled ternary v2 introduced for D3, promoted to a token. Restyle swaps it per theme, so `MessagesScreen` no longer needs `isDark` for colour at all:
+
+```diff
+- const accentFill = theme.colors.primaryDark;
+- const onAccentFill = isDark ? '#0F172A' : '#FFFFFF';
++ const { accentFill, onAccentFill } = theme.colors;
+```
+
+It also slightly improves on v2's hand-picked values — 5.50:1 vs 5.39:1 light, 8.59:1 vs 8.18:1 dark.
+
+### E3 / E4 / E5 — built additively, each proven in one component
+
+| | Added | Proven in |
+| :--- | :--- | :--- |
+| **E3** | `src/hooks/use-container-width.ts` — measures the box, buckets it (`compact`/`regular`/`wide`) | `MessageBubbleGroup` — `bubbleColumn` was a flat `maxWidth: '78%'`, so on a wide web/tablet container a bubble stretched to ~780dp. Now capped at 520dp past 600dp, near the 60-75 character measure. |
+| **E4** | `theme.timing` + `theme.easing` (as bezier control points, keeping the theme plain) and `src/hooks/use-motion.ts` | `VoiceRecordingBar`'s recording pulse |
+| **E5** | `src/components/ui/IconButton.tsx` — 44×44 floor, **`label` is a required prop** | `VoiceRecordingBar`'s two 34dp controls |
+
+Two details worth recording:
+
+- **`useMotion` could not naively collapse durations to 0.** The recording dot uses `withRepeat(..., -1)`. Passing `duration: 0` there makes it cycle every frame — *worse* than the original animation. Reduced motion therefore skips the animation entirely and settles on the resting state, which is what WCAG 2.1 SC 2.3.3 actually asks for.
+- **`IconButton` makes `label` required**, so an icon-only control cannot be added without a name. That converts D7's 173-instance review problem into a type error — the remaining sites are now a migration, not a recurring defect.
+
+### Verified
+
+`npx tsc --noEmit` → **exit 0**. `npx expo lint` → **186 problems (69 errors, 117 warnings)** vs the **188** baseline. Diffed normalised (line numbers stripped) against a stashed baseline: **zero new problems introduced**, and two pre-existing warnings removed (`theme` unused in `MessageBubbleGroup`; a `react-hooks/exhaustive-deps` miss in `VoiceRecordingBar`).
+
+One warning I *did* introduce was caught and fixed rather than shipped: converting `ForwardMessageModal` to theme tokens left `isDark` and its `useAppTheme` import dead, so both were removed.
+
+The committed ramp was cross-checked against the generator's output — **all 10 steps identical**. Every adopted pair re-measured: 5.50:1 light / 8.59:1 dark for text on the accent fill, 5.26:1 and 8.99:1 for the fill against its own page.
+
+### Not verified
+
+Still no device or simulator. Specifically unproven by computation: that `useReducedMotion()` reports correctly on this Expo 57 build, that `onLayout` buckets as intended under `react-native-web`, and that the 44×44 targets feel right in the hand. Each needs one pass on a real device with **Reduce Motion** toggled and a tablet or wide browser window.
+
+Adoption is deliberately partial — these are proofs, not migrations. `useMotion` is used in 1 animation of many, `IconButton` in 2 controls of ~173, `useContainerWidth` in 1 component. That is the incremental path each idea's **Migration cost** line specified.
+
+## 10. Partial and deferred items closed — v4, 2026-09-16
+
+### D6 — complete (34/34)
+
+The last 8 sites sat in four components with no `useTheme()` call: `ChatAudioBubble`, `DedicatedMessagesHeader`, `EmojiPickerPanel`, `GifPickerPanel`. Each has exactly one component with `useAppTheme()` already in scope, so adding the Restyle hook was safe. `isDark` went dead in the process and was removed along with its now-unused import.
+
+**Zero instances of the four patterns remain in the messages module.**
+
+> [!NOTE]
+> **Out of scope, worth a follow-up ticket:** the same four ternaries appear **57 more times outside this module** — `module/employee/filing` (23), `components/modals/TimePickerModal.tsx` (11), `components/dashboard/*` (10), plus filing/timekeeping/profile/notifications. D6 was scoped to messages, and T00001 is the messages redesign; folding other modules into this branch would mix unrelated work into one history. Same latent drift risk, same mechanical fix.
+
+### D7 — complete (46 labelled, 4 justified exclusions)
+
+The raw figure of 173 unlabelled touchables overstated the problem. A subtree scan shows most of them **contain visible `<Text>` children, which RN already announces** — a `TouchableOpacity` is `accessible` by default and groups its children. The genuinely silent, icon-only controls numbered **45**, not 173.
+
+40 were labelled here (6 composer controls were already done in v2), each with `accessibilityRole` and a `accessibilityLabel`; two seek controls got `role="adjustable"` rather than `"button"`. Dynamic labels were used where they carry more than a static string — `{isPlaying ? 'Pause voice message' : 'Play voice message'}`, ``{name ? `View ${name}'s profile` : 'View profile'}``.
+
+**Four deliberately left unlabelled**, because a label would make each *worse*:
+
+| Location | Why |
+| :--- | :--- |
+| `ForwardMessageModal.tsx:220`, `MessageActionModal.tsx:200` | Full-viewport backdrop scrims. Naming a screen-sized region adds noise, not access. |
+| `MessageBubbleGroup.tsx:1843` | The bubble wrapper. `accessibilityLabel` on a container **replaces** what its children announce — labelling it would mask the message text itself. |
+| `MessageBubbleGroup.tsx:562` | The non-playable video fallback: `onLongPress` only, no `onPress`. Not a button. |
+
+`SectionHeader`'s `action` prop gained a **required** `label: string`. That is the same enforce-by-types idea as `IconButton`, and it immediately paid for itself — `tsc` rejected the build and surfaced a **second** unlabelled call site (`MessagesScreen.tsx:1310`) that the manual sweep had missed.
+
+### D8 — complete for the part that matters
+
+**77 `fontSize` values normalised**, and the rounding direction was chosen per case rather than uniformly:
+
+| Change | Count | Direction and why |
+| :--- | ---: | :--- |
+| `8.5`, `9`, `9.5` → `10` | 12 | **Up** — below 10 is not comfortably legible on a phone. |
+| `10.5`→`10`, `11.5`→`11`, `12.5`→`12`, `13.5`→`13`, `14.5`→`14`, `15.5`→`15` | 65 | **Down** — most of these sit in badges and pills, so rounding up risked overflow. Nothing grows. |
+
+**No fractional font size remains anywhere in the module, and nothing renders below 10pt.** A `micro` variant (10pt) was added — 10 was the single missing rung and the most-overridden size in the module.
+
+Migrating the ~338 `fontSize` overrides onto `variant=` is still **not** done, and deliberately so: a Restyle variant also carries `fontWeight` and `color`, so swapping `fontSize={11}` for `variant="small"` silently restyles any call site that does not override both. That remains opportunistic, exactly as this finding originally said.
+
+### D9 — withdrawn; the finding was mis-framed
+
+v1 described "spacing off the scale (`p-[13px]` where `p-3` / `p-4` is the rhythm)", which implies tokens being bypassed. Measured, that is not what is happening:
+
+- **Every Restyle spacing prop in the module uses a token name — zero raw numbers.** (`gap="xs"` ×58, `px="m"` ×48, `mt="xxs"` ×41, and so on.) The token path is 100% clean.
+- All **106** off-scale numbers live in `StyleSheet.create` (81) or inline `style` objects (25). **Those never consult the theme**, so they were never on the token path and cannot "drift" from it.
+- The distribution is not noise either: `12dp` ×26, `6dp` ×20, `14dp` ×18 — 64 of the 106 form a coherent 2dp rhythm the t-shirt scale simply does not name. The remainder (`1`, `3`, `5`, `7`, `9`, `11`, `13`, `15`) are optical one-offs, and `36`/`48`/`80`/`112` are fixed dimensions, not spacing at all.
+
+Rewriting 106 hand-tuned layout values would carry real regression risk — unverifiable without a device — in exchange for **no** token-compliance gain, since none of them were token usages. v1's own fix line already said "opportunistically when touching a file, not as a sweep"; the measurement says the sweep should not happen at all.
+
+**If this is ever revisited**, the useful version is the opposite direction: add the missing `6`/`12`/`14` rungs so the scale describes the rhythm the design actually uses, and convert `StyleSheet` spacing to Restyle props file-by-file. That is a refactor, not a fix.
+
+### Verified
+
+`npx tsc --noEmit` → **exit 0**. `npx expo lint` → **186 problems (69 errors, 117 warnings)**, and diffed normalised against the committed `731650f`: **zero new problems introduced**.
+
+### Not verified
+
+No device. Specifically: the 12 text elements raised to 10pt sit in badges and pills, and although nothing else grew, **those badges are worth one look on a real screen**. Screen-reader output was not heard — labels are correct by inspection, not by listening.
+
 <!-- Run history -->
+- v4 — 2026-09-16 — D6 completed (34/34); D7 completed (46 labelled, 4 justified skips) and `SectionHeader.action.label` made required, which caught a missed call site; D8 completed (77 sizes normalised, `micro` variant); D9 withdrawn as mis-framed with measurement. tsc clean, zero new lint.
+- v3 — 2026-09-16 — E1-E5 applied; E1's oklch() runtime claim found wrong and corrected to author-time generation; E2 reduced from 7 keys to 2 after duplicate check; tsc clean, lint 186 vs 188 baseline with zero new problems.
+- v2 — 2026-09-16 — Fix Plan steps 1-9 applied; 20 files; tsc clean, lint parity with baseline; 2 v1 measurement errors corrected; D3 found broader than reported.
 - v1 — 2026-09-15 — initial review; 13 files read in depth, 58 machine-scanned; 10 findings (4 HIGH, 4 MEDIUM, 2 LOW) + 4 drift items.
