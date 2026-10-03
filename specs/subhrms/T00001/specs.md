@@ -1,12 +1,12 @@
 # Spec — Mobile App Messaging Full MVP Redesign (Slack-Inspired Workplace Communication)
 
 > **Ticket:** `T00001` (subhrms) — this file is `.agents/specs/subhrms/T00001/specs.md`; branch `T00001`.
-> **Kind:** Extension / Full MVP Redesign — complete redesign of the Mobile App Messaging module (Messages Landing, More Actions, Conversation, Threads, Composer, Message Requests, New Chat, Create Group, Mentions, Emoji, Message Actions, Voice Recording).
+> **Kind:** Extension / Full MVP Redesign — complete redesign of the Mobile App Messaging module (Messages Landing, More Actions, Conversation, Threads, Composer, Message Requests, New Chat, Create Group, Mentions, Emoji, Message Actions, Voice Recording) + General Default System Channel.
 > **Portal:** **employee** (`/api/employee/messages/...` routes, `resources/views/mobapp/src/module/employee/messages`).
-> **Version:** v2 — 2026-09-12 — Full MVP redesign of entire mobile messaging module: Messages landing, Conversation list & preview, More menu actions, New Chat, Create Group, Message Requests, Slack-inspired Conversation, Message Component System, Composer, Mentions, Emoji, Message Actions, Threads, and Voice recording.
+> **Version:** v3 — 2026-09-29 — Added General Default System Channel spec: automatic membership via account status, backend authorization guard on all endpoints, inactive-user UI, mention audience resolution, and no manual member-management for General.
 > **Route:** `/(app)/(tabs)/messages` (landing screen) & `/(app)/conversation` (fullscreen conversation and thread views).
 > **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
-> **System Awareness:** Models: `Conversation`, `Message`, `MessageAttachment`, `MessageReaction`, `Account`, `AccountDetailVW` (reused); Tables: `conversations`, `messages`, `conversation_members`, `message_attachments`, `message_reactions` (reused); Routes: `routes/api/employee.php` (`api/employee/messages/*`, reused); New migration: no.
+> **System Awareness:** Models: `Conversation`, `Message`, `MessageAttachment`, `MessageReaction`, `Account`, `AccountDetailVW` (reused); Tables: `conversations`, `messages`, `conversation_members`, `message_attachments`, `message_reactions` (reused); Routes: `routes/api/employee.php` (`api/employee/messages/*`, reused); New migration: `alters/messages/` — add `is_system` flag to `conversations`; New action class: `App\Actions\Messages\GeneralAccessAction`.
 
 ---
 
@@ -133,6 +133,34 @@ This specification establishes a **full MVP redesign of the entire Mobile App Me
 
 ---
 
+### Decision 5: General Channel — Access Model
+
+**Option A — Status-Only Check, No `conversation_members` Rows Required (Recommended)**
+- `General` is a public channel (`is_private = false`, `created_by = null`, `is_system = true`).
+- Access is determined solely by `accounts.status = 1` (active account). No `conversation_members` row is needed for read/write.
+- The existing `Conversation::scopeVisibleTo()` already surfaces public channels to all authenticated users; the General guard adds the active-status check on top.
+- A thin `App\Actions\Messages\GeneralAccessAction::check($conversationId, $user)` encapsulates the rule: if the conversation is General (is_system = true), verify `$user->status === 1`. Return `true|false`.
+- All relevant controller methods call this action when `$conversation->is_system` is true, before any Q/H execution.
+- `conversation_members` rows for General are **not created** for normal active users; the row is created **only** when `last_read_message_id` must be persisted (the `markConversationAsRead` flow uses `updateOrInsert`, which is already idempotent).
+
+| Pros | Cons |
+|---|---|
+| Zero membership management overhead: no sync job, no migration per employee. | Unread-count calculation for General must either use `conversation_members` (sparse) or fall back to a global threshold when no row exists (returns 0 — acceptable first load). |
+| Access automatically follows HRMS status: activation/deactivation is a single column update. | `getConversationMembers` endpoint for General cannot return a real member list — must return a count/placeholder or be disabled. |
+| Aligns with spec requirement §14: no per-user General membership management. | None for the overall architecture. |
+
+**Option B — Populate `conversation_members` for Every Active Employee**
+- On account activation, insert a `conversation_members` row for General.
+- On deactivation, remove or flag the row.
+
+| Pros | Cons |
+|---|---|
+| Existing unread logic works unchanged. | Requires an observer, job, or hook on account status change — and a backfill migration for all existing active employees. |
+| Member list API returns real rows. | Introduces a large `conversation_members` table that grows with every hire. |
+| | Violates spec requirement §14 — spec explicitly prohibits a per-user General membership list. |
+
+**Recommendation:** **Option A**. The spec is explicit that General must not require a per-user membership row. Option A is the architecturally correct and scalable approach.
+
 ## 2.5 Acceptance Criteria
 
 | # | Given | When | Then |
@@ -167,12 +195,32 @@ This specification establishes a **full MVP redesign of the entire Mobile App Me
 | AC-28 | User sends a message while offline or network errors | API request fails | Optimistic message shows inline retry indicator (`AlertCircle`) without dropping drafted content. |
 | AC-29 | Desktop Web viewport (>1024px) opens Messages or Conversation | Screen loaded | Viewport is centered with max-width 640px, subtle card borders, and shadow, avoiding awkward wide-screen stretching. |
 | AC-30 | User pastes long multi-line text with mentions into composer | Content pasted | Composer preserves linebreaks, cursor position, and renders all mention segments cleanly. |
+| **General Default Channel — Membership & Access** | | | |
+| AC-31 | Active employee (accounts.status = 1) authenticates | `GET /api/employee/messages/conversations` called | Response includes the General channel (`isDefault: true`, `is_system: true`) without any `conversation_members` row needed for the user. |
+| AC-32 | Active employee opens General conversation | `GET /api/employee/messages/conversations/{id}/messages` called | Returns `200 { success: true, data: [...] }` — messages load normally. |
+| AC-33 | Active employee sends a message to General | `POST /api/employee/messages/conversations/{id}/messages` called | Returns `200 { success: true, data: { ... } }` — message is persisted and broadcast. |
+| AC-34 | Inactive employee (accounts.status = 0) calls any General endpoint | Any messaging API call with General `{id}` | Returns `403 { success: false, message: "Your account is inactive. Please contact HR to restore access." }`. |
+| AC-35 | Inactive employee opens General in the mobile app | ConversationScreen mounts | Composer is hidden; message list is hidden; an informational banner renders: `"Activate your account to view this channel. Please contact HR to activate your account."` |
+| AC-36 | General channel detail / info view is opened | User views channel info | No "Add members", "Remove member", "Invite", or "Leave channel" actions are shown. Description reads: `"Everyone with an active HRMS account has access to this channel."` |
+| AC-37 | User-created channel (isDefault: false) detail is opened | User views channel info | Normal member management actions are present (Add, Remove, Leave). Behaviour is unchanged from existing implementation. |
+| AC-38 | HR activates a previously inactive employee account | Account status changes from 0 → 1 | Employee immediately gains General access on next authenticated API call — no additional setup required. |
+| AC-39 | Inactive employee attempts `POST .../messages` to General directly via API | Raw API call without frontend | Returns `403 { success: false, message: "Your account is inactive. Please contact HR to restore access." }` — frontend UI state is irrelevant. |
+| AC-40 | Inactive employee attempts to load General thread replies | `GET .../messages/{msgId}/replies` for General | Returns `403` with the inactive-account message. |
+| AC-41 | Inactive employee attempts to toggle a reaction in General | `POST .../messages/{msgId}/reactions` for General | Returns `403` with the inactive-account message. |
+| **General — Mention Audience** | | | |
+| AC-42 | User types `@all` in General composer | Mention resolved | `@all` targets **active** employees only (`accounts.status = 1`). No inactive/resigned employees are included. |
+| AC-43 | User types `@here` in General composer | Mention resolved | `@here` resolves to currently active employees (same status filter) — presence rules apply. |
+| AC-44 | User opens mention search (`@jo`) inside General | Mention picker loaded | Server-side debounced search returns only employees with `accounts.status = 1`; inactive employees do not appear in results. |
+| AC-45 | User is a member of a private user-created channel and opens mention search | Mention picker loaded | Inactive employees still do not appear. Filter applies globally to all channels' mention search. |
+| **General — Historical Data** | | | |
+| AC-46 | Employee becomes inactive | System state change | Pre-existing General messages authored by that employee remain in the database; they are not deleted. |
+| AC-47 | Inactive employee is reactivated by HR | Account status returns to 1 | Employee immediately sees full General history on next load — no message gap or re-join ceremony required. |
 
 ---
 
 ## 3. Database
 
-No new database tables or schema migrations required. All data models reuse the existing, production-verified schema in `database/migrations/table/messages/`:
+Minimal schema change required for General Default Channel support. All other models reuse the existing, production-verified schema in `database/migrations/table/messages/`:
 
 ### 3.1 Reused Tables
 - **`conversations`**:
@@ -181,6 +229,10 @@ No new database tables or schema migrations required. All data models reuse the 
   - `type` (enum: `channel`, `dm`, `announcement`, `request`)
   - `description` (string, nullable)
   - `role` (string, default `'all'`)
+  - `created_by` (bigint, nullable, indexed) — **null = system/default channel**
+  - `is_private` (boolean, default false)
+  - `is_archived` (boolean, default false)
+  - `status` (tinyint, default 1) — 0 = disabled
   - `created_at`, `updated_at` (timestamps)
 - **`conversation_members`**:
   - `id` (bigint, PK)
@@ -211,6 +263,37 @@ No new database tables or schema migrations required. All data models reuse the 
   - `account_id` (bigint, FK)
   - `emoji` (string)
 
+### 3.2 New Column — `conversations.is_system` (alter migration)
+
+**Migration location:** `database/migrations/alters/messages/`
+
+```php
+// Migration: add_is_system_to_conversations_table.php
+Schema::table('conversations', function (Blueprint $table) {
+    if (!Schema::hasColumn('conversations', 'is_system')) {
+        $table->boolean('is_system')->default(false)->after('created_by')->index();
+    }
+});
+```
+
+**Seed update** — back-fill the General row:
+```sql
+UPDATE conversations
+SET is_system = 1
+WHERE type = 'channel'
+  AND LOWER(TRIM(name)) = 'general'
+  AND (created_by IS NULL OR created_by = 0);
+```
+
+This is the canonical flag that the backend uses to identify system/default channels. Using `created_by IS NULL` alone is fragile because a future admin tool could set `created_by` on General. `is_system = true` is explicit, indexed, and immutable via normal user operations.
+
+**`Conversation` model** — add to `$fillable` and `$casts`:
+```php
+'is_system' => 'boolean',
+```
+
+**No `conversation_members` rows are created for General membership.** The unread-count logic uses `updateOrInsert` on `markConversationAsRead`, so sparse rows are created only when an employee first reads General (which is correct and idempotent).
+
 ---
 
 ## 4. Backend
@@ -231,11 +314,111 @@ All core endpoints are fully implemented and live in `routes/api/employee.php` u
 - `PUT /api/employee/messages/conversations/{conversationId}/messages/{messageId}`: Edits message text
 - `DELETE /api/employee/messages/conversations/{conversationId}/messages/{messageId}`: Soft-deletes message
 
-### 4.2 Query & Handler Classes
+### 4.2 Query & Handler Classes (Existing)
 - `App\Queries\Messages\GetConversationsQuery::execute()`
 - `App\Queries\Messages\GetMessagesQuery::execute($params)`
+- `App\Queries\Messages\GetThreadRepliesQuery::execute($params)`
+- `App\Queries\Messages\SearchMentionsQuery::execute($params)`
 - `App\Handlers\Messages\SendMessageHandler::execute($params)`
 - `App\Handlers\Messages\ToggleReactionHandler::execute($params)`
+- `App\Handlers\Messages\EditMessageHandler::execute($params)`
+- `App\Handlers\Messages\DeleteMessageHandler::execute($params)`
+- `App\Handlers\Messages\UploadAttachmentHandler::execute($params)`
+
+### 4.3 New: `App\Actions\Messages\GeneralAccessAction` (System-Channel Guard)
+
+**File:** `app/Actions/Messages/GeneralAccessAction.php`
+
+This action encapsulates the single access rule for all system/default channels. It is called from every relevant controller method **before** any Q/H execution whenever the conversation has `is_system = true`.
+
+```php
+<?php
+
+namespace App\Actions\Messages;
+
+use App\Models\Conversation;
+
+class GeneralAccessAction
+{
+    /**
+     * Returns true if the user may interact with this system channel.
+     * Rule: system channels require accounts.status = 1 (active).
+     *
+     * @param  Conversation  $conversation
+     * @param  \App\Models\Account  $user
+     * @return bool
+     */
+    public static function check(Conversation $conversation, $user): bool
+    {
+        if (!$conversation->is_system) {
+            return true; // non-system channels bypass this guard
+        }
+
+        return (int) $user->status === 1;
+    }
+
+    /**
+     * Standard 403 rejection payload for inactive accounts.
+     */
+    public static function denyResponse(): array
+    {
+        return [
+            'success' => false,
+            'message' => 'Your account is inactive. Please contact HR to restore access.',
+            'code'    => 'ACCOUNT_INACTIVE',
+        ];
+    }
+}
+```
+
+**Integration points in `MessagesController`** — add the guard to every system-channel-relevant action:
+
+```php
+// Pseudocode — applied inside each method after fetching $conversation:
+if ($conversation->is_system && !GeneralAccessAction::check($conversation, $user)) {
+    return response()->json(GeneralAccessAction::denyResponse(), 403);
+}
+```
+
+Methods that require the guard:
+- `getMessages()` — reading General messages
+- `sendMessage()` — posting to General
+- `getThreadReplies()` — reading thread replies in General
+- `sendMessage()` (thread reply branch) — replying in General thread
+- `markConversationAsRead()` — mark-read for General
+- `sendTypingEvent()` — typing indicator for General
+- `toggleReaction()` — reactions in General
+- `editMessage()` — editing own message in General
+- `deleteMessage()` — deleting own message in General
+- `uploadAttachment()` — attaching files in General (validated via conversation context)
+
+Methods **not guarded** (General is always publicly readable at the metadata level):
+- `getConversations()` — General appears in the list for all active authenticated employees
+- `getConversationMembers()` — returns a placeholder/count for system channels (see §4.3 note below)
+
+**`getConversationMembers()` behaviour for General:**
+Since General has no real `conversation_members` rows, the endpoint must detect `is_system = true` and return:
+```json
+{
+  "success": true,
+  "is_system": true,
+  "member_count": "<count of accounts with status=1>",
+  "members": [],
+  "message": "General is a company-wide channel. All active employees have access."
+}
+```
+Do **not** return a real list of all active accounts — this could be thousands of rows.
+
+**`GetConversationsQuery` changes:**
+- The existing `$isDefault` flag derivation (`empty($conv->created_by) || in_array(...)`) must be extended to also set `is_system` from the new column:
+  ```php
+  'is_system' => (bool)($conv->is_system ?? $isDefault),
+  ```
+- The response shape already includes `isDefault`; add `is_system` as an alias for forward-compatibility.
+
+**`SearchMentionsQuery` changes:**
+- When `conversation_id` refers to a system channel (General), the people query must filter `accounts.status = 1` (active only). Inactive employees must not appear in mention search results.
+- The `@all` and `@here` special mentions resolve to active employees only: use `Account::where('status', 1)->count()` for the audience size label.
 
 ---
 
@@ -416,6 +599,34 @@ resources/views/mobapp/src/module/employee/messages/
 4. **Optimistic Updates & Resilience**: Messages are appended optimistically with `pending: true`. If the network fails, status shifts to `failed: true` with a retry prompt without dropping drafted text.
 5. **Mark as Read**: Opening a conversation debounces a call to `/read` and updates bottom tab badge counts silently.
 
+### 6.3 General Default Channel Rules
+
+| Rule | Enforcement |
+|---|---|
+| General is a system/default channel | `is_system = true`, `created_by = null`; seeded once via migration. |
+| Membership is automatic | No `conversation_members` rows needed for access. Active account = General member. |
+| Access gate | `GeneralAccessAction::check()` runs on every write/read endpoint. `accounts.status = 1` is the sole criterion. |
+| Inactive employees are denied | API returns `403 { code: 'ACCOUNT_INACTIVE' }`. Frontend shows activation message. |
+| No self-activation | The inactive-state UI shows contact-HR instruction only. No activation button. HR controls account status via the existing HR portal workflow. |
+| Message history preserved | Deactivating an account does NOT delete the employee's past General messages. |
+| Reactivation restores access | `accounts.status` returning to `1` is sufficient. No re-join step needed. |
+| No member-management UI | `Add members`, `Remove member`, `Invite`, and `Leave channel` are hidden for General (`isDefault: true` or `is_system: true`). |
+| Mention audience active-only | `@all`, `@here`, `@channel` in General resolve to employees with `accounts.status = 1` only. |
+| Mention search active-only | People in mention picker filtered to `accounts.status = 1` regardless of channel. |
+| `getConversationMembers` for General | Returns `{ is_system: true, member_count: N, members: [] }` — not a real member list. |
+
+### 6.4 Edge Cases
+
+| Scenario | Expected Behaviour |
+|---|---|
+| Employee account deactivated mid-session (token still valid) | Next API call to a General endpoint returns `403 ACCOUNT_INACTIVE`. Frontend should handle 403 and show the activation banner. |
+| Active employee has no `conversation_members` row for General | `markConversationAsRead` uses `updateOrInsert` — creates the row on first read, no error. |
+| Inactive employee's General messages | Remain in DB; not purged. Other active employees continue to see the messages. |
+| `@all` sent to General with 500+ active employees | Backend resolves audience server-side. Mobile app does not load all 500 accounts. |
+| Two simultaneous `markConversationAsRead` calls from same user | `updateOrInsert` with unique constraint on `(conversation_id, account_id)` — idempotent. |
+| Admin sets `is_system = false` on General via direct DB edit | `GeneralAccessAction::check()` no longer fires; General behaves as a normal public channel. Not a supported workflow. |
+| New employee created but not yet activated | Account created with `status = 0` by default; General access granted only after HR sets `status = 1`. |
+
 ### 6.2 Non-Functional & Failure-Mode Checklist
 
 | Category | Specification & Behavior |
@@ -441,40 +652,63 @@ Implementation strictly follows the MVP priorities:
 6. **New Chat Flow (`NewChatModal.tsx`)**: Rebuild employee search, selection, and conversation resolution.
 7. **Create Group Flow (`CreateGroupModal.tsx`)**: Rebuild multi-select member picking, chip removal, and group creation.
 
+### Phase P0.5 — General Default Channel (Backend)
+
+> **Must run before P1** — the ConversationScreen depends on the `is_system` flag and the 403 response shape.
+
+8. **Alter migration** — `add_is_system_to_conversations_table.php` in `database/migrations/alters/messages/`:
+   - Add `is_system` boolean column (default false).
+   - Back-fill General row: set `is_system = 1` where `LOWER(TRIM(name)) = 'general'` and `created_by IS NULL`.
+9. **Conversation model** — add `is_system` to `$fillable` and `$casts`.
+10. **`GeneralAccessAction`** — create `app/Actions/Messages/GeneralAccessAction.php` with `check()` and `denyResponse()` methods.
+11. **`MessagesController`** — add `GeneralAccessAction::check()` guard to all relevant methods (getMessages, sendMessage, getThreadReplies, markConversationAsRead, sendTypingEvent, toggleReaction, editMessage, deleteMessage, uploadAttachment context).
+12. **`getConversationMembers()`** — add system-channel short-circuit returning `{ is_system: true, member_count: N, members: [] }` for General.
+13. **`GetConversationsQuery`** — extend response payload with `is_system` field.
+14. **`SearchMentionsQuery`** — add `accounts.status = 1` filter to people search.
+
 ### Phase P1 — Core Communication
-8. **Slack-Inspired Conversation Redesign (`ConversationScreen.tsx`)**: Implement the open feed stream, replacing speech bubbles with gutter-aligned messages.
-9. **Message Component System**:
-   - Create `MessageRow.tsx` (Slack layout container).
-   - Create `MessageHeader.tsx` (name, department, timestamp).
-   - Create `MessageAvatar.tsx` (consistent avatar with presence dot).
-   - Create `MessageContent.tsx` (rich text, URLs, and dual-color mentions).
-   - Create `MessageAttachment.tsx` (image grid, inline video, documents).
-   - Create `MessageReaction.tsx` (emoji reaction pills).
-10. **Modern Message Composer (`ChatInputBar.tsx`)**:
+15. **Slack-Inspired Conversation Redesign (`ConversationScreen.tsx`)**: Implement the open feed stream, replacing speech bubbles with gutter-aligned messages.
+    - Handle `403 ACCOUNT_INACTIVE` response: hide composer and message list, show inactive-state banner.
+16. **Message Component System**:
+    - Create `MessageRow.tsx` (Slack layout container).
+    - Create `MessageHeader.tsx` (name, department, timestamp).
+    - Create `MessageAvatar.tsx` (consistent avatar with presence dot).
+    - Create `MessageContent.tsx` (rich text, URLs, and dual-color mentions).
+    - Create `MessageAttachment.tsx` (image grid, inline video, documents).
+    - Create `MessageReaction.tsx` (emoji reaction pills).
+17. **Modern Message Composer (`ChatInputBar.tsx`)**:
     - Rebuild auto-expanding multiline input and keyboard handling.
     - Integrate media and file attachment triggers.
-11. **Mentions Integration**:
+    - Suppress composer entirely when `isSystemChannelLocked` prop is true (inactive user in General).
+18. **General Inactive State UI** — in `ConversationScreen.tsx`:
+    - Detect `isSystem && accountInactive` from API 403 or from conversation + account state.
+    - Render `GeneralInactiveBanner`: card with warning icon, title `"Account Inactive"`, body `"Activate your account to view this channel. Please contact HR to activate your account."`, no activation button.
+19. **Mentions Integration**:
     - Build `@` mention trigger popup.
     - Implement dual-color highlights (`#CB793A` golden chestnut for `@self`, `#0284C7` blue for `@others`).
-12. **Contextual Message Actions (`MessageActionModal.tsx`)**: Implement contextual sheet (`Reply`, `Reply in thread`, `React`, `Copy`, `Edit`, `Delete`).
-13. **Message Requests Redesign**: Redesign the requests tab with accept/decline actions and unified preview.
+20. **Channel Info / Manage Panel** — for General (`isDefault: true` or `is_system: true`):
+    - Hide `Add members`, `Remove member`, `Invite`, `Leave channel` actions.
+    - Show description: `"Everyone with an active HRMS account has access to this channel."`.
+21. **Contextual Message Actions (`MessageActionModal.tsx`)**: Implement contextual sheet (`Reply`, `Reply in thread`, `React`, `Copy`, `Edit`, `Delete`).
+22. **Message Requests Redesign**: Redesign the requests tab with accept/decline actions and unified preview.
 
 ### Phase P2 — Advanced Messaging
-14. **Threads Implementation**:
+23. **Threads Implementation**:
     - Build `MessageThreadPreview.tsx` in message rows.
     - Implement `ThreadScreen.tsx` with pinned root message, reply stream, and reply composer.
     - Wire `useThread` hook with thread message fetching and sending.
-15. **Emoji Integration (`EmojiPickerPanel.tsx`)**:
+    - Apply General inactive guard to thread composer as well.
+24. **Emoji Integration (`EmojiPickerPanel.tsx`)**:
     - Redesign emoji panel with categories, search, and cursor-position insertion.
-16. **Voice Messaging & Waveform (`VoiceRecordingBar.tsx`)**:
+25. **Voice Messaging & Waveform (`VoiceRecordingBar.tsx`)**:
     - Rebuild recording state inside composer with pulsing record dot, timer, real-time waveform bars, cancel, and send.
     - Integrate audio file upload and playback bubble (`ChatAudioBubble.tsx`).
 
 ### Phase P3 — Final Quality & Polish
-17. **Full Navigation & Transition Polish**: Verify smooth horizontal slide navigation across Messages → New Chat → Conversation → Thread.
-18. **Mobile UX Pass**: Test touch target sizes (min 48px), keyboard dismissals, outside-tap sheet closing, and safe-area insets.
-19. **Performance Optimization**: Profile `FlatList` rendering, memoize `MessageRow` items, and prevent redundant re-renders.
-20. **Final MVP Review**: Complete verification of all 21 checklist modules.
+26. **Full Navigation & Transition Polish**: Verify smooth horizontal slide navigation across Messages → New Chat → Conversation → Thread.
+27. **Mobile UX Pass**: Test touch target sizes (min 48px), keyboard dismissals, outside-tap sheet closing, and safe-area insets.
+28. **Performance Optimization**: Profile `FlatList` rendering, memoize `MessageRow` items, and prevent redundant re-renders.
+29. **Final MVP Review**: Complete verification of all AC criteria (AC-1 through AC-47).
 
 ---
 
@@ -489,7 +723,7 @@ Implementation strictly follows the MVP priorities:
 
 ## 9. Definition of Done
 
-- [ ] Every row in the **Acceptance Criteria** table passes (`AC-1` through `AC-30`).
+- [ ] Every row in the **Acceptance Criteria** table passes (`AC-1` through `AC-47`).
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed.
 - [ ] Messages landing screen features modern corporate header, `⋮ More` action, search, and conversation list.
 - [ ] Latest message preview strictly outputs `Text`, `Sent a photo`, `Sent a video`, `Sent a voice message`, `Sent a file`, or `No messages yet`.
@@ -498,9 +732,16 @@ Implementation strictly follows the MVP priorities:
 - [ ] Message Component System is modular and reusable (`MessageRow`, `MessageHeader`, `MessageContent`, etc.).
 - [ ] Modern composer supports dynamic height expansion, dual-color mentions (`@self` vs `@others`), emoji picker, and voice recording with waveform.
 - [ ] Threads feature root message pinning, reply stream, and dedicated composer.
+- [ ] **General Default Channel — System channel is seeded** (`is_system = true`, `created_by = null`, `is_private = false`).
+- [ ] **`GeneralAccessAction` guards every write/read endpoint** — inactive accounts receive `403 { code: 'ACCOUNT_INACTIVE' }` on all General operations.
+- [ ] **Inactive-state UI is implemented** — `ConversationScreen` shows the activation banner instead of messages/composer for inactive users in General.
+- [ ] **Member management is suppressed for General** — no Add, Remove, Invite, or Leave actions visible when `is_system = true`.
+- [ ] **`SearchMentionsQuery` filters active employees only** — inactive accounts do not appear in mention picker.
+- [ ] **`getConversationMembers` returns system-channel placeholder** for General — not a full member list.
 - [ ] Verified on both iOS/Android mobile devices and desktop web viewports (`maxWidth: 640`).
 - [ ] No open findings from adversarial verification (`verify.md`).
 - [ ] No open `CRITICAL` or `HIGH` findings from diff review (`code-review.md`).
 
 <!-- Changelog -->
+- v2 — 2026-09-12 — Full MVP redesign of entire mobile messaging module: Messages landing, Conversation list & preview, More menu actions, New Chat, Create Group, Message Requests, Slack-inspired Conversation, Message Component System, Composer, Mentions, Emoji, Message Actions, Threads, and Voice recording.
 - v1 — 2026-09-08 — initial fullscreen stack transition spec.
