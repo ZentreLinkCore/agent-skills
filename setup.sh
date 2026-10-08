@@ -107,6 +107,9 @@ fi
 # (each one resolves which codebase it is in at runtime), so this is safe to share.
 # Rules are NOT shared this way: they describe these specific codebases and would be
 # wrong in an unrelated project.
+# Caveat: the skills read `.agents/rules/` and `.agents/template/` from the project they
+# run in. A project without its own `.agents/` clone has neither, so the skills cannot
+# resolve the project or fill their templates there — run this script in each project.
 if [ "$GLOBAL" = "1" ]; then
     gdst="$HOME/.claude/skills"
     mkdir -p "$HOME/.claude"
@@ -118,8 +121,10 @@ if [ "$GLOBAL" = "1" ]; then
     else
         ln -s "$ROOT/.agents/skills" "$gdst"
         echo "  ✓ global skills → $ROOT/.agents/skills"
-        echo "        /webkit.* now works in EVERY project on this machine."
+        echo "        /webkit-* commands now resolve in EVERY project on this machine."
         echo "        Note: this pins them to THIS clone — keep it pulled, don't delete it."
+        echo "        They still need .agents/rules/ and .agents/template/ in the project they run in:"
+        echo "        run this script in each project that uses them."
     fi
 fi
 
@@ -128,7 +133,7 @@ slim=$(( $(cat .claude/rules/*.md | wc -c) / 4 ))
 full=$(( $(cat .agents/rules/*.md | wc -c) / 4 ))
 echo
 echo "Done."
-echo "  /webkit.* commands: available"
+echo "  /webkit-* commands: available"
 echo "  always-on rules:    ~${slim} tokens/turn  (full library is ~${full}, read on demand)"
 echo
 echo "  Reminder: .agents/ is a git clone — pull it to get skill updates."

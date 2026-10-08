@@ -1,125 +1,235 @@
 ---
 name: webkit-fix
 description: >
-  Applies targeted bug fixes to files based on an investigation report, reproducing steps, or explicit user prompt, maintaining minimal diffs and strictly following project rules.
-  Given a ticket (`/webkit.fix F0135`), it fetches that ticket's branch from GitHub and analyzes the changes
-  on it before fixing anything — the ticket is a branch to examine, not just a folder to open.
-  Triggered by `/webkit.fix <ticket>`, `/webkit.fix <target_path> <prompt>`, or `/webkit.fix <prompt>`.
+  Implements the approved fixes from one existing report — code review, verification, investigation, refactor,
+  or design review — and nothing else. The report is the source of truth: it applies the required findings
+  (CRITICAL / HIGH, BLOCKER / REQUIRED FIX, or the investigation's fix plan) with the smallest safe change,
+  reusing existing code, then checks for regressions. Never re-reviews, never generates new findings, never adds
+  requirements or edits the spec; an unrelated problem found along the way is reported as "Additional issue
+  discovered", not fixed. Works on the ticket's existing branch and ends with a Fix Summary marked FIX COMPLETED
+  or PARTIALLY COMPLETED. Triggered by `/webkit-fix <ticket-number or branch-name>
+  --<code-review|verify|investigation|refactor|design-review>`.
 ---
 
 # Webkit Fix
 
-This skill coordinates the application of bug fixes, logic corrections, and issue resolutions across frontend and backend layers within the workspace. It acts as the **Execution/Implementation Phase** for bugs, typically run after `/webkit.investigate`.
+Acts as a senior software engineer implementing **approved fixes**. It resolves the findings of one report produced by `/webkit-code-review`, `/webkit-verify`, `/webkit-investigate`, `/webkit-refactor`, or `/webkit-design-review`.
+
+This skill **must not** perform another review, generate new findings, or introduce new requirements. It **only implements approved fixes.**
+
+---
+
+## Authority Boundary
+
+This skill owns **only** applying the approved fixes of one report ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
+
+- reviewing, verifying, or investigating (any new finding) → `/webkit-code-review`, `/webkit-verify`, `/webkit-investigate`
+- new behavior or spec changes → `/webkit-specify`
+- cleanup the report did not approve → `/webkit-refactor`
+
+If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
+
+---
+
+## Inputs
+
+```text
+/webkit-fix <ticket-number or branch-name> --<code-review|verify|investigation|refactor|design-review>
+```
+
+| Example | Meaning |
+| --- | --- |
+| `/webkit-fix T00001 --code-review` | Apply the required findings of `T00001`'s `code-review.md`. |
+| `/webkit-fix T00001 --verify` | Apply the required findings of `T00001`'s `verify.md`. |
+| `/webkit-fix T00007 --investigation` | Apply `T00007`'s investigation fix plan. |
+| `/webkit-fix feature/auth --verify` | Apply the verification findings for that branch's work. |
+| `/webkit-fix T00001 --code-review Finding #5` | Also apply a finding that is not required by default, because the user named it. |
+
+**No flag given:** if the ticket folder holds exactly one report, use it and say so; if it holds several, ask which one.
+
+---
+
+## Core Principle: The Report Is the Source of Truth
+
+| Flag | Report | Approved fixes | Ignored unless the user names them |
+| --- | --- | --- | --- |
+| `--code-review` | `code-review.md` | **CRITICAL**, **HIGH** | MEDIUM, LOW, INFO |
+| `--verify` | `verify.md` | **BLOCKER**, **REQUIRED FIX** | IMPROVEMENT, OUT OF SCOPE |
+| `--investigation` | `investigation.md` | **§5 Recommended Solution** and **§7 Fix Plan** | §8 Other Findings (they are separate tickets) |
+| `--refactor` | `refactor.md` | Status **❌ REGRESSION DETECTED**: restore the behavior — the checks failing in **Regression Evidence** and the **Behavior change** it records | Deliberately Not Done |
+| `--design-review` | `design-review.md` | **CRITICAL**, **HIGH** findings (the Fix Plan's CRITICAL / HIGH rows in older reports) | MEDIUM, LOW, INFO, Modern Enhancement Ideas (never applied) |
+
+Never invent additional work. A finding the report does not contain is not a fix.
 
 ---
 
 ## Workflow Integration
 
-When a bug or issue has been investigated and a fix is approved, the developer/agent runs this skill:
-
-```
-  Findings (.agents/specs/<project>/T#####/{investigation,verify,code-review}.md
-            or .agents/reports/*.md) / Approved Plan / Direct Prompt
-                     │
-                     ▼
-                webkit.fix
-                     │
-                     ▼
-           Applied Minimal Diffs
-                     │
-                     ▼
-           Testing & Verification
+```text
+   code-review.md · verify.md · investigation.md · refactor.md · design-review.md
+                                   │
+                                   ▼
+              /webkit-fix <ticket> --<source>          ← you are here
+                                   │
+                                   ▼
+          approved fixes applied on the ticket's branch → Fix Summary
+                                   │
+                                   ▼
+          re-run the source skill to confirm (e.g. /webkit-verify <ticket>)
 ```
 
-A saved report is optional input, not a hard prerequisite — this skill also runs directly from a plain bug description or an explicit user prompt.
+---
+
+## Phase 0 — Gates (BLOCKING)
+
+**Project gate.** Run [Which Project Am I In?](../../rules/project-profile.md), **state the resolved project in your first message**, and read only that project's sections. A fix written to the other project's conventions (database rules, component names, file layout) looks idiomatic and is wrong.
+
+**Branch gate.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**:
+
+- Fixes for a ticket's findings belong **on that ticket's existing branch** (`T#####`): continue there; never open a separate `bugfix/` branch for them.
+- A ticket or branch argument that exists on the remote: fetch and analyze it first ([ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)), then check it out. When several branches match (`F0135`, `F0135-fixed`, `f0135`), **stop and ask**.
+- On `main` / `master`: create and switch to the ticket's branch now (`T#####`, or `bugfix/<domain>-<slug>` / `hotfix/…` for work with no ticket).
+- On a branch for different work, or detached HEAD: **stop and ask**.
+- **Never** `git checkout -B`, `git reset --hard`, or force-push to make a local branch match the remote: that destroys unpushed work.
 
 ---
 
-## Phase 0 — Ticket Argument Gate (BLOCKING)
+## Phase 1 — Load Context
 
-**Only when the prompt is a ticket** — `/webkit.fix F0135`, `/webkit.fix T00004`. Skip to Phase 1 for a path or a plain description.
-
-> [!CAUTION]
-> A ticket is **a branch to fetch and analyze**, not a folder to open. Reading `.agents/specs/<project>/T#####/` and editing the tree you happen to be sitting on produces a fix against the wrong code — it will not apply, and the mismatch is not obvious until someone tries to merge it.
-
-Run [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) in full. In short:
-
-1. `git fetch origin --prune`, then find **every** branch matching the ticket — case variants and suffixes included.
-2. **More than one match → stop and ask.** On this remote `F0135`, `F0135-fixed` and `f0135` are three different branches; `F0149-F0151` is one branch covering three tickets. Only the user knows which is current.
-3. **No match → say so.** Do not fall back to the working tree silently.
-4. **Analyze before touching anything** — `git log $base..origin/$branch --oneline` and `git diff $base...origin/$branch --stat` (three dots). State the branch, base, commit count, and file count.
-5. Check out under the Branch Gate (step 5 below). **Never `checkout -B` or `reset --hard`** to force a local branch to match the remote — that silently destroys unpushed work.
-
-The bug you are fixing usually lives *in* that branch's diff. Read it before forming a theory.
+1. **Resolve the ticket and the report** for the flag:
+   - Ticketed work: `.agents/specs/<project>/T#####/<report>.md`.
+   - Work with no ticket folder (an `F####` ticket or a plain branch): the matching report under `.agents/reports/` (`<scope>-review-<date>.md`, `<scope>-verify-<date>.md`, `<scope>-investigation-<date>.md`). Find it by the branch name it records.
+   - **No report found → stop.** There is nothing approved to fix; suggest running the skill that produces it.
+2. **Read the report completely.** Note its run version and date.
+3. **Check the report still applies**: compare the cited `file:line` locations with the current code. Code moved → re-locate the same construct. Finding already resolved → record it as "Already resolved" and do not touch it. Report much older than the branch's latest changes → say so in the summary.
+4. **Load the surrounding context**: the cited files at the cited lines, the ticket's spec if one exists (a fix must not contradict it), and the project rules for the layers touched ([.agents/rules/](../../rules/)).
+5. **For `--investigation`**: if its Root Cause Status is **❌ ROOT CAUSE NOT FOUND**, stop: there is no approved fix. If it is **⚠ PROBABLE ROOT CAUSE**, apply the plan and note the reduced confidence in the summary.
 
 ---
 
-## Phase 1 — Target & Context Discovery
+## Phase 2 — Extract Approved Fixes
 
-Before writing any code:
-0. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project**, then read only its sections. A fix applied with the other project's conventions in mind — its schema rules, its component names, its file layout — lands looking idiomatic and is wrong, and this skill writes to application code.
-1. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report file, read it directly. Otherwise find the ticket covering this work — the current branch names it outright if it is `T#####`, else `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'` resolves it ([ticket-numbering.md](../../rules/ticket-numbering.md)) — and read whichever of its `investigation.md` (root cause), `verify.md` (spec violations), or `code-review.md` (code defects) exists. `.agents/reports/` holds the pre-ticket archive; check it for older investigations matching the target path or feature described in the prompt. If found, treat its Root Cause Analysis, Evidence, and Recommended Solution sections as the primary source of truth instead of re-deriving them — this skill is commonly invoked in a fresh session with no memory of a `webkit.investigate` run that happened earlier. If no report is referenced or found, proceed directly from the prompt/target path — a report is not required to run this skill.
-2. **Locate Target Files**: Parse the command argument path, the report's "Affected Files" section (if loaded), or search the workspace to identify the exact files needing the fix.
-3. **Review Existing Context**: View the target files at the relevant line ranges (e.g., matching the investigation report's evidence section).
-4. **Verify Constraints**: Review relevant project rules in `.agents/rules/` (e.g., [Laravel Standards](../../rules/laravel-standards.md), [Vue.js Standards](../../rules/vue-standards.md), [HRMS Domain Rules](../../rules/hrms-rules.md)).
-5. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. **If Phase 0 already resolved a ticket branch, that branch is the answer** — check it out and continue there; do not derive a new name. **Fixing findings from a ticket's `verify.md`/`code-review.md` belongs on that ticket's existing branch (`T#####`) — continue there, do not open a `bugfix/` branch for it.** If on `main`/`master`, create and switch now: `T#####` when the work has a ticket, otherwise a `bugfix/` (or `hotfix/`) branch — do not merely confirm one is needed and proceed. Already on the right branch for this issue? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
+Build the list from the report only, using the table in [Core Principle](#core-principle-the-report-is-the-source-of-truth):
+
+| Finding Reference | Location | Required Action |
+| --- | --- | --- |
+| `Finding #2` / `Fix Plan step 3` / … | `path/file.php:42` | the report's fix, verbatim |
+
+- Keep the report's order (it is dependency-first). Findings that share a file and construct are applied as one change.
+- Add a lower-severity item only when the user named it in the command.
+- Do not reword a required action into a different change.
 
 ---
 
-## Fix Playbook
+## Phase 3 — Validate Existing Code
 
-Match the layer of the bug to the right file, using this project's known structure ([Project Profile](../../rules/project-profile.md)):
+Before modifying code, for each fix:
 
-| Symptom is in… | Fix lives in… |
-|---|---|
+- Can existing code be reused?
+- Can existing logic be extended?
+- Will this introduce duplication?
+- Does another implementation already solve this?
+
+If the fix needs a new column, route, model, or table, run the [System Awareness](../../rules/system-awareness.md) scan first. When an existing structure is simply used wrongly, **fix the usage, not the schema**. Never duplicate code ([duplicate-prevention.md](../../rules/duplicate-prevention.md)).
+
+---
+
+## Phase 4 — Apply Fixes
+
+Implement each fix **exactly as the report describes**, one at a time, in order.
+
+Allowed work: bug fixes, validation fixes, security fixes, performance improvements, logic corrections, code cleanup, and refactoring that the report approved. Nothing unrelated.
+
+Where the fix usually lives ([project-profile.md](../../rules/project-profile.md)):
+
+| Problem is in… | Fix lives in… |
+| --- | --- |
 | Wrong data returned / query logic | The `Get<X>Query` in `app/Queries/<Domain>/` (**not** `app/Domain/`, which is retired) |
-| Wrong write / save / calculation | The `Save<X>Handler` in `app/Handlers/<Domain>/` (keep it in `DB::transaction`) |
-| Wrong HTTP status / response shape | The controller method — keep `try/catch` + `response()->json(...)`, no API Resource |
-| 404 / wrong endpoint | `routes/api/<group>.php` — SubHRMS groups by portal (Timekeeping = `timekeeping`, not `tk`), ScaleUP by domain; `php artisan route:list --path=api` to confirm |
-| Wrong value on screen / UI glitch | The module's `pages/` or `components/` file (`.vue` in SubHRMS, `.tsx`/`.jsx` in ScaleUP) |
-| Wrong API call / mock still in use | The module's api layer — confirm the client and path against the profile before editing |
-| Wrong payroll/OT/leave number | Verify the formula against [HRMS Domain Rules](../../rules/hrms-rules.md) before editing |
+| Wrong write, save, or calculation | The `Save<X>Handler` in `app/Handlers/<Domain>/`, kept inside `DB::transaction` |
+| Wrong status code / response shape | The controller method: `try/catch` + `response()->json(...)`; this project uses no API Resources |
+| 404 / wrong endpoint | `routes/api/<group>.php`, grouped by portal or by domain per the profile (mind any namespace-vs-URL-prefix difference it records) |
+| Wrong value on screen / UI behavior | The module's `pages/` or `components/` file |
+| Wrong API call | The module's api layer, using the HTTP client the profile names |
+| Wrong payroll / overtime / leave number | The formula, checked against [hrms-rules.md](../../rules/hrms-rules.md) first |
 
-Then apply the smallest diff that resolves it (Phase 2), verify (Phase 3), close the loop (Phase 4).
+Rules while applying:
 
----
-
-## Phase 2 — Implementation Principles (Strict Safety)
-
-### 1. Minimal Footprint & Incremental Generation
-- Do not overwrite entire files. Generate the smallest possible diff that correctly resolves the bug.
-- Preserve all existing imports, unrelated methods, developer comments, formatting, and business logic.
-- Refer to [.agents/rules/incremental-generation.md](../../rules/incremental-generation.md).
-
-### 2. Duplicate Prevention
-- Never write duplicate functions or logic. Check if a helper, utility, service, or query already exists.
-- If a class can be extended or refactored slightly to support the fix, do so instead of duplicating code.
-- Refer to [.agents/rules/duplicate-prevention.md](../../rules/duplicate-prevention.md).
-
-### 3. Architecture Consistency
-- Strictly adhere to the project's design patterns:
-  - Backend: Domain Query/Handler Pattern, Form Requests, API Resources.
-  - Frontend: Vue Composition API, Tailwind/Vanilla CSS variables.
-- Do not introduce new libraries, packages, or architectural patterns unless explicitly instructed.
-
-### 4. System Awareness (If the Fix Touches Data Structures)
-- If the fix requires adding a column, route, model, or table (not just editing existing logic), run the scan defined in [System Awareness](../../rules/system-awareness.md) first. A bug fix is not exempt from duplicate-prevention — it's easy to "fix" a symptom by fabricating a parallel column or endpoint instead of reusing the one that's already there but misused.
-- If the scan turns up an existing structure that's simply being read/written incorrectly, fix the usage, not the schema.
+- **Smallest diff** that resolves the finding. Preserve imports, unrelated methods, comments, formatting, and business logic ([incremental-generation.md](../../rules/incremental-generation.md)).
+- **Report's fix cannot be applied as written** (the approach would break something, or the code changed shape): apply it only if an equivalent change achieves the same thing in substance. Otherwise skip it and explain why; the status becomes PARTIALLY COMPLETED. Never substitute a different design of your own.
+- **Additional issue discovered** (a problem the report does not contain): do **not** fix it. Record it in the summary as **"Additional issue discovered — requires separate review"**, with its location. If it blocks an approved fix, stop that fix and mark the status PARTIALLY COMPLETED.
 
 ---
 
-## Phase 3 — Verification
+## Phase 5 — Regression Check
 
-Immediately after applying the code changes:
-1. **Lint & Static Analysis Check**: Fix any syntax or lint errors introduced by the edits.
-2. **Execute Tests**:
-   - For backend fixes: Run PHPUnit filter tests (`vendor/bin/phpunit --filter <test_name>`).
-   - For frontend fixes: run the checks the project actually has — **ScaleUP has no Vitest configured**, so use `npm run typecheck` (`tsc --noEmit`) and `npm run build`. Only run a JS test suite where one exists; a command that fails because it was never configured is not a failing test.
-3. **Manual Verification**: Specify step-by-step instructions for the developer/user to verify that the fix resolves the issue without introducing side effects.
+After each fix, verify:
+
+- the original functionality still works,
+- no existing feature was broken,
+- validation still works,
+- authorization still works,
+- API compatibility is maintained (same routes, same response shape),
+- no duplicate logic was introduced.
+
+Run the checks the project actually has:
+
+- PHP: `php -l <file>`, `vendor/bin/phpunit --filter <test>` for the affected area, `php artisan route:list --path=api` after a route change.
+- Frontend: `npm run typecheck` and `npm run build` where defined. Not every project has a JS test runner; never run or report a test command the project does not define.
+- The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result.
+
+A check that fails because of your change is fixed before moving on; a check that was already failing before your change is noted, not fixed.
 
 ---
 
-## Phase 4 — Close the Loop
+## Phase 6 — Completion Validation
 
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so the report reflects current status instead of going stale for whoever reads it next.
-2. **Suggested Next Step**: Point the user to the project's own checks (`vendor/bin/phpunit`; `npm run typecheck`/`npm run build` in ScaleUP) if not already run in Phase 3, and to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `fix(tk): correct late computation grace period`). Do not stage or commit automatically — that decision belongs to the user.
+Before completion, confirm:
+
+- ✓ All approved fixes implemented (or each one not implemented is explained)
+- ✓ No unnecessary code added
+- ✓ No specification modified
+- ✓ No scope expanded
+- ✓ Project conventions maintained
+
+**Close the loop on the report** (`--investigation` only): tick the applied steps in its §7 Fix Plan (`[ ]` → `[x]`) and fill §9 Resolution with what changed, the branch, the date, and the verification result (older reports: tick the "High-Level Implementation Plan" and append a "Resolution" note). The other reports are never edited: confirm them by re-running their skill.
+
+---
+
+## Development Principles
+
+- **Minimal change.** The smallest change necessary; never rewrite large sections.
+- **Reuse first.** Existing services, components, utilities, validation, and architecture. Never duplicate.
+- **Consistency.** The project's architecture, folder structure, coding and naming conventions, and existing patterns.
+- **Safety.** Do not break existing behavior, change public APIs, change business logic, or change the database schema unless the approved fix explicitly requires it.
+
+## Restrictions
+
+Do **not**:
+
+- perform another code review, verification, or investigation,
+- generate new findings,
+- suggest new features or expand scope,
+- update specifications or create specification versions,
+- rewrite the architecture,
+- apply personal preferences,
+- silently fix unrelated problems.
+
+---
+
+## Output — Fix Summary
+
+End by printing the summary in chat, filled from the template [.agents/template/fix-summary.md](../../template/fix-summary.md). Follow its exact structure (Metadata, Applied Fixes, Reused Code, Modified Files, Notes, Completion Status (FIX COMPLETED / PARTIALLY COMPLETED with the reason)) and delete its guide comments. It is not saved as a file.
+
+Do not stage or commit. Suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) (e.g. `fix(tk): correct late computation grace period`).
+
+---
+
+## Follow-up Commands
+
+Re-run the skill that produced the report to confirm the fixes:
+
+- After `--verify`: `/webkit-verify <ticket>`
+- After `--code-review`: `/webkit-code-review <ticket>`
+- After `--design-review`: `/webkit-design-review <ticket>`
+- After `--investigation`: the verification checklist in its §7, then `/webkit-code-review <ticket>`
+- Any "Additional issue discovered": `/webkit-investigate <ticket> <issue>` as a separate ticket

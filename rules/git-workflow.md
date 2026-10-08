@@ -1,27 +1,31 @@
 # Git Workflow Standards
 
 ## Purpose
+
 This document establishes branching models, commit message specifications, and pull request procedures to maintain a clean git history.
 
 ## Scope
+
 Applicable to all branches, commits, staging changes, and merge requests in the workspace.
 
 ## Responsibilities
+
 - **AI Agent**: Formats commit messages according to Conventional Commits and isolates changes inside appropriate branch types.
 - **Developer/User**: Approves and merges branches, manages merge conflicts, and controls releases.
 
 ## Actionable Rules
+
 1. **Branch Naming**: Work that has a ticket is branched on **the ticket number itself** — `T00001`, matching its folder in `.agents/specs/<project>/T00001/` character for character ([ticket-numbering.md](./ticket-numbering.md) §6). The remote also carries the team's own `F####` ticket branches (`F0135`); those are valid ticket branches, not malformed ones — see [§8](./ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch). Work with **no** ticket uses the categorised form, prefixed by implementation focus:
-  - `feature/`: Adding new page templates, modules, or features.
-  - `bugfix/`: Correcting active bugs, exceptions, or visual glitches.
-  - `refactor/`: Performance updates, cleanup tasks, or logic optimization without adding features.
-  - `hotfix/`: Critical production patches.
+   - `feature/`: Adding new page templates, modules, or features.
+   - `bugfix/`: Correcting active bugs, exceptions, or visual glitches.
+   - `refactor/`: Performance updates, cleanup tasks, or logic optimization without adding features.
+   - `hotfix/`: Critical production patches.
 2. **Conventional Commit Standard**: All commits must follow the format `type(scope): description`.
-  - `feat`: User-facing features.
-  - `fix`: Code fixes.
-  - `refactor`: Structural optimizations.
-  - `docs`: Modifying document structures or inline comments.
-  - `test`: Adding or editing tests.
+   - `feat`: User-facing features.
+   - `fix`: Code fixes.
+   - `refactor`: Structural optimizations.
+   - `docs`: Modifying document structures or inline comments.
+   - `test`: Adding or editing tests.
 3. **No Direct Master Commits**: Never commit directly to `main` or `master`. All updates must pass through a feature branch and a merge request.
 
 ## Mandatory Branch Gate (for implementing skills)
@@ -55,7 +59,7 @@ git rev-parse --abbrev-ref HEAD
 **Has a ticket? The branch IS the ticket number.** Nothing else — no prefix, no slug:
 
 ```bash
-# From a spec: .agents/specs/subhrms/T00001/specs.md
+# From a spec: .agents/specs/<project>/T00001/spec.md
 git checkout -b T00001
 ```
 
@@ -94,10 +98,12 @@ Report the branch you are on in your first message after the gate, so the user c
 ---
 
 ## Best Practices
+
 - **Single Responsibility Branches**: Keep branches dedicated to a single ticket, feature card, or bug.
-- **Ticket in the PR title**: `T00001 — Loan amortization schedule`, with the spec path (`.agents/specs/<project>/T00001/specs.md`) in the body. Commit messages stay plain Conventional Commits — the branch already carries the ticket, so no `T00001:` prefix on every commit.
+- **Ticket in the PR title**: `T00001 — Loan amortization schedule`, with the spec path (`.agents/specs/<project>/T00001/spec.md`) in the body. Commit messages stay plain Conventional Commits — the branch already carries the ticket, so no `T00001:` prefix on every commit.
 - **Clean Commit History**: Squash commits to group related work cleanly before merging.
 
 ## AI Behavior Expectations
+
 - **Form-fitting Commits**: The agent must output descriptive messages. Avoid vague texts (e.g. "update code" or "fix styling").
 - **Minimal Staging Diffs**: Verify staging ranges before committing to prevent adding unrelated modifications.

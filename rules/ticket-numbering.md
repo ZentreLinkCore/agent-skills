@@ -4,26 +4,28 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 
 ```text
 .agents/specs/
-├── subhrms/                    ← project
+├── <project-a>/                ← project
 │   ├── T00001/
-│   │   ├── specs.md            ← written by /webkit.spec
-│   │   ├── investigation.md    ← written by /webkit.investigate
-│   │   ├── refactor.md         ← written by /webkit.refactor
-│   │   ├── verify.md           ← written by /webkit.verify
-│   │   ├── code-review.md      ← written by /webkit.code-review
-│   │   └── design-review.md    ← written by /webkit.design-review
+│   │   ├── spec.md             ← written by /webkit-specify
+│   │   ├── investigation.md    ← written by /webkit-investigate
+│   │   ├── refactor.md         ← written by /webkit-refactor
+│   │   ├── verify.md           ← written by /webkit-verify
+│   │   ├── code-review.md      ← written by /webkit-code-review
+│   │   └── design-review.md    ← written by /webkit-design-review
 │   ├── T00002/
 │   │   └── investigation.md    ← a bug ticket: no spec, and that is fine
 │   ├── hr/                     ← legacy path-based specs (still valid, see §7)
 │   └── payroll/
-└── scaleup/                    ← the other project, its own T00001…
+└── <project-b>/                ← another project, its own T00001…
     └── T00001/
-        └── specs.md
+        └── spec.md
 ```
 
 One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, the root-cause investigation, the refactor record, the conformance report, the diff review, the design review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
 
-A ticket does **not** need all six files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no `specs.md`. What is present tells you what has been done.
+A ticket does **not** need all six files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no spec. What is present tells you what has been done.
+
+The spec file is `spec.md`, written from [the feature-specification template](../template/feature-specification.md). Tickets created before `/webkit-specify` hold their spec as **`specs.md`** (plural) — still valid, still the spec. Spec discovery accepts both names, and an update edits whichever exists; never create a `spec.md` beside an existing `specs.md`.
 
 ---
 
@@ -31,10 +33,10 @@ A ticket does **not** need all six files. A feature ticket may never have an `in
 
 - `T00001`, `T00002`, `T00003`, … — capital `T`, **no hyphen**, **five digits, zero-padded**.
 - Match exactly: `^T[0-9]{5}$`. `T1`, `T-00001`, `t00001`, and `T000001` are all wrong.
-- Ticket folders live **one level inside the project folder** — `.agents/specs/subhrms/T00001/`, `.agents/specs/scaleup/T00001/` — as siblings of that project's legacy portal folders. Never at the top of `specs/`, and never nested inside a portal folder.
+- Ticket folders live **one level inside the project folder** — `.agents/specs/<project-a>/T00001/`, `.agents/specs/<project-b>/T00001/` — as siblings of that project's legacy portal folders. Never at the top of `specs/`, and never nested inside a portal folder.
 - **Numbers are scoped per project.** Each project has its own counter and its own `T00001`; the two are unrelated pieces of work. That is deliberate: each project is a separate GitHub repo, so a `T00001` branch is unambiguous in the repo where it is used.
-- Because of that scoping, **a ticket number on its own is only meaningful with its project.** Write it as `subhrms T00001` (or with its path) whenever both projects could be meant.
-- The number carries no meaning beyond identity. Portal and feature name are recorded **inside** `specs.md`'s header, not in the folder name.
+- Because of that scoping, **a ticket number on its own is only meaningful with its project.** Write it as `<project> T00001` (or with its path) whenever both projects could be meant.
+- The number carries no meaning beyond identity. Feature name and scope are recorded **inside** the spec (its Metadata table and §8 Architecture; the header block on older `specs.md` files), not in the folder name.
 
 ## 2. Allocating a number (the increment)
 
@@ -42,17 +44,17 @@ A ticket does **not** need all six files. A feature ticket may never have an `in
 
 | Skill | Allocates a ticket when none exists? |
 | :--- | :--- |
-| `/webkit.spec` | **Yes** — it starts feature work |
-| `/webkit.investigate` | **Yes** — it starts bug / RCA work |
-| `/webkit.refactor` | **Yes**, but only for a *standalone* cleanup. Cleaning up a ticket's own implementation belongs in that ticket. |
-| `/webkit.verify`, `/webkit.code-review`, `/webkit.design-review`, `/webkit.fix`, the implement skills, `/webkit.migrate` | **No** — they continue existing work. They resolve, and if there is no ticket they say so (§4) rather than inventing one. |
+| `/webkit-specify` | **Yes** — it starts feature work |
+| `/webkit-investigate` | **Yes** — it starts bug / RCA work |
+| `/webkit-refactor` | **Yes**, but only for a *standalone* cleanup. Cleaning up a ticket's own implementation belongs in that ticket. |
+| `/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`, `/webkit-fix`, `/webkit-implement`, `/webkit-migrate` | **No** — they continue existing work. They resolve, and if there is no ticket they say so (§4) rather than inventing one. |
 
 **Resolve the project first.** Run the "Which Project Am I In?" resolution in [project-profile.md](./project-profile.md) and state the answer *before* scanning — a ticket allocated into the wrong project's folder is numbered off the wrong counter and collides with real work there.
 
 Then, from the project root:
 
 ```bash
-project=subhrms                     # or scaleup — resolved, never assumed
+project="<project>"                 # the folder name resolved above
 
 # highest ticket number in THIS project (empty if it has none yet)
 max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
@@ -81,54 +83,54 @@ Allocating is the **second** choice. Before creating a new number, check whether
 grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>/dev/null
 ```
 
-- **A ticket already covers this feature** → work in that folder and **update `specs.md` in place** (with the version bump the spec skill defines). Do not allocate a second number for the same feature ([duplicate-prevention.md](./duplicate-prevention.md), [incremental-generation.md](./incremental-generation.md)).
-- **The user named a ticket explicitly** (`/webkit.spec T00007 ...`) → use that folder in the resolved project, even if the number is not the highest. Create it only if it is genuinely absent, and say so.
+- **A ticket already covers this feature** → work in that folder and **update its spec in place** (Minor / Major rules in [webkit.specify](../skills/webkit.specify/SKILL.md#changing-an-existing-spec)). Do not allocate a second number for the same feature ([duplicate-prevention.md](./duplicate-prevention.md), [incremental-generation.md](./incremental-generation.md)).
+- **The user named a ticket explicitly** (`/webkit-specify T00007 ...`) → use that folder in the resolved project, even if the number is not the highest. Create it only if it is genuinely absent, and say so.
 - **Nothing matches** → allocate per §2.
 
 ## 4. Finding a ticket from a feature or a path
 
-`/webkit.verify`, `/webkit.code-review`, `/webkit.design-review`, `/webkit.fix`, and the implement skills are usually invoked in a fresh session with only a target path or a feature name. Resolve the ticket, do not ask the user to remember it:
+`/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`, `/webkit-fix`, and `/webkit-implement` are usually invoked in a fresh session with only a target path or a feature name. Resolve the ticket, do not ask the user to remember it:
 
 1. If the prompt names a ticket (`T00004`, `F0135`) or a path inside one, use it directly — resolving the project the same way, since `T00004` exists in both. **A ticket passed as a command argument also names a branch that must be fetched and analyzed — see §8.**
 2. **The current git branch is often the answer.** `git rev-parse --abbrev-ref HEAD` returning `T00004` (or `T00004-<slug>`) names the ticket outright — see §6.
 3. Otherwise `grep -ril '<feature|route|table|module>' .agents/specs/<project> --include='*.md'` — that one command covers the project's ticket folders and its legacy tree. Read the hits like this:
 
-   - **Several hits inside one `T#####/`** are **one ticket**, not three — `verify.md` and `code-review.md` naturally mention the same feature as their `specs.md`. Collapse to the folder (`… | sed 's#/[^/]*$##' | sort -u` if you want that done for you).
+   - **Several hits inside one `T#####/`** are **one ticket**, not three — `verify.md` and `code-review.md` naturally mention the same feature as its spec. Collapse to the folder (`… | sed 's#/[^/]*$##' | sort -u` if you want that done for you).
    - **A hit in the legacy tree** (`specs/<project>/<portal>/<feature>.md`) is the spec file itself; its folder is a portal holding many specs, so do not treat the folder as a ticket.
-   - Confirm with the `> **Ticket:**` / `> **Portal:**` header of each candidate before committing to one.
-4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit.verify` stops (there is no spec to verify against); `/webkit.code-review`, `/webkit.design-review`, and `/webkit.fix` continue and write to `.agents/reports/` instead (§5).
+   - Confirm with each candidate's Metadata table (Project Name, Ticket Number) — or the `> **Ticket:**` / `> **Portal:**` header on older specs and on reports — before committing to one.
+4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit-verify` stops (there is no spec to verify against); `/webkit-code-review`, `/webkit-design-review`, and `/webkit-fix` continue and write to `.agents/reports/` instead (§5).
 5. Report which ticket you resolved to, and on what evidence, in your first message. A skill that silently verifies against the wrong ticket is worse than one that stops.
 
 ## 5. The file contract
 
 | File | Written by | Overwrite behaviour on re-run |
 | :--- | :--- | :--- |
-| `specs.md` | `/webkit.spec` | Update in place; bump the `> **Version:**` line and append the superseded line to the changelog. |
-| `investigation.md` | `/webkit.investigate` | Update in place; bump `> **Run:**` and append the superseded line to the run history. Its implementation-plan checkboxes are ticked by the skills that act on it. |
-| `refactor.md` | `/webkit.refactor` | Append-or-update; bump `> **Run:**` so successive cleanups on one ticket each leave a line, and append the superseded line to the run history. |
-| `verify.md` | `/webkit.verify` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
-| `code-review.md` | `/webkit.code-review` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
-| `design-review.md` | `/webkit.design-review` | Overwrite with the latest run; bump `> **Run:**` and append the superseded line to the run history. |
+| `spec.md` (`specs.md` on older tickets) | `/webkit-specify` | Update in place. **Minor** change: edit the affected sections and add a Change Log row under the current version. **Major** change: increment the version (`1.0` → `1.1`) and log reason, impact, and changed sections. Review findings never create a version. |
+| `investigation.md` | `/webkit-investigate` | Update in place, filled from [the investigation-report template](../template/investigation-report.md); bump the Metadata **Investigation Run** row and append the superseded run to the run history. Its Fix Plan checkboxes and §9 Resolution are filled by the skill that applies the fix. |
+| `refactor.md` | `/webkit-refactor` | Update in place, filled from [the refactor-report template](../template/refactor-report.md); bump the Metadata **Refactor Run** row so successive cleanups on one ticket each leave a line, and append the superseded run to the run history. |
+| `verify.md` | `/webkit-verify` | Overwrite with the latest run, filled from [the verification-report template](../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. |
+| `code-review.md` | `/webkit-code-review` | Overwrite with the latest run, filled from [the code-review-report template](../template/code-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
+| `design-review.md` | `/webkit-design-review` | Overwrite with the latest run, filled from [the design-review-report template](../template/design-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
 
-- **These six filenames are fixed.** No dates, no feature names, no portal prefixes in the filename — `verify-20260907.md`, `specs-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
-- Every one of the six carries `> **Ticket:** <project> T#####` in its header block, so a document that gets copied or pasted elsewhere still names its own ticket and project.
-- A ticket folder holding only `specs.md` — or only `investigation.md` — is normal. It just means the work has not reached the other steps yet.
+- **These six filenames are fixed.** No dates, no ticket numbers, no feature names, no portal prefixes — `verify-20260907.md`, `T00001-spec.md`, `spec-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
+- Every one of the six names its own ticket and project in its **Metadata table** (each is filled from its template in [`.agents/template/`](../template/)); older `specs.md` files and reports written before the templates carry a `> **Ticket:** <project> T#####` header line instead. Either way, a document copied or pasted elsewhere still says where it belongs.
+- A ticket folder holding only its spec — or only `investigation.md` — is normal. It just means the work has not reached the other steps yet.
 - **One workstream per ticket.** If an investigation turns up a *second, unrelated* defect, that is a second ticket with its own `investigation.md` — not a second investigation file crammed into this folder.
 - **The fixed filenames only work inside a ticket folder.** A legacy spec in a portal folder (§7) shares that folder with other specs, so `verify.md` there would collide between features — reports for legacy specs keep the old dated `.agents/reports/<domain>-<feature>-{verify,review,design-review}-<YYYYMMDD>.md` path until the spec is migrated to a ticket.
-- A diff review for a change with **no spec at all** likewise goes to `.agents/reports/<scope>-review-<YYYYMMDD>.md`. `/webkit.code-review` runs without a spec by design; it never allocates a ticket to have somewhere to write.
+- A diff review for a change with **no spec at all** likewise goes to `.agents/reports/<scope>-review-<YYYYMMDD>.md`. `/webkit-code-review` runs without a spec by design; it never allocates a ticket to have somewhere to write.
 - Nothing outside these six filenames belongs in a ticket folder.
 - [`.agents/reports/`](../reports/) is now only the **fallback and the archive**: investigations written before this convention live there and stay valid, and the two unticketed cases above still land there. New ticketed work does not add to it.
 
 ### Run-history block
 
-`investigation.md`, `refactor.md`, `verify.md`, `code-review.md`, and `design-review.md` all end with:
+`investigation.md`, `refactor.md`, `verify.md`, `code-review.md`, and `design-review.md` each record their current run in a Metadata **… Run** row (`Investigation Run`, `Refactor Run`, `Verification Run`, `Review Run`) and end with:
 
 ```markdown
 <!-- Run history -->
-- v1 — 2026-09-07 — initial verification, 3 findings (2 HIGH)
+- v1 — 2026-09-07 — initial — ❌ FAILED
 ```
 
-Same discipline as spec versioning: increment the run, date it, one line on what changed since the previous run, and append the superseded line rather than deleting it. Overwriting a report while leaving its `> **Run:**` line untouched destroys the only record that an earlier run disagreed.
+On every re-run, **before overwriting**: append the previous run's line (its run value, date, and status or verdict) under the marker. Then bump the Metadata run row and its date, and write one line on what changed since the previous run. Never delete a superseded line — overwriting a report without recording the previous run destroys the only record that an earlier run disagreed. (`spec.md` keeps its history in its §16 Change Log instead; reports written before the templates use a `> **Run:**` header line.)
 
 ## 6. The branch is the ticket
 
@@ -144,7 +146,7 @@ git checkout -b T00001
 - **One ticket, one branch.** The frontend gate, the backend gate, the fixes that follow verification, and the review cleanup are all the same ticket and all belong on the same branch. Do not open `T00001-fe` and `T00001-be`.
 - **`T00001-<short-slug>` only when a second branch is genuinely unavoidable** — e.g. the first is already merged and a follow-up is needed. Say why.
 - **A bug ticket branches the same way.** `investigation.md` in `T00007/` means the fix for it goes on branch `T00007`, not `bugfix/<slug>` — the ticket already identifies the work.
-- **`/webkit.investigate` allocates a ticket but creates no branch.** It writes no application code, so there is nothing to isolate; the branch appears when `/webkit.fix` or an implement skill picks the ticket up.
+- **`/webkit-investigate` allocates a ticket but creates no branch.** It writes no application code, so there is nothing to isolate; the branch appears when `/webkit-fix` or an implement skill picks the ticket up.
 - **Work with genuinely no ticket** keeps the categorised form from [git-workflow.md](./git-workflow.md) Rule 1: `bugfix/<domain>-<feature-kebab>`, `refactor/…`, `hotfix/…`.
 - The ticket number goes in the **PR title** (`T00001 — Loan amortization schedule`) with the spec path in the body. Commit messages keep plain Conventional Commits — the branch already carries the ticket, so `feat(payroll): …` needs no ticket prefix.
 - The [Mandatory Branch Gate](./git-workflow.md#mandatory-branch-gate-for-implementing-skills) is what enforces this, and it is blocking. Creating the branch is compliance, not a decision that needs approval.
@@ -158,12 +160,12 @@ Specs written before this convention live at `.agents/specs/<project>/<portal>/<
 
 - **Read them.** Spec discovery must search the project's ticket folders *and* its legacy portal folders.
 - **Do not bulk-migrate them.** Moving a spec breaks every report, commit message, branch, and chat reference that points at its path.
-- **Migrate one only when you are already editing it,** and only if the user asks: allocate a ticket per §2, move the spec to `<project>/T#####/specs.md`, move its newest reports to `verify.md` / `code-review.md` / `investigation.md`, and note the old path in the changelog line so the trail survives.
+- **Migrate one only when you are already editing it,** and only if the user asks: allocate a ticket per §2, move the spec to `<project>/T#####/spec.md`, move its newest reports to `verify.md` / `code-review.md` / `investigation.md`, and note the old path in the changelog line so the trail survives.
 - New work always gets a ticket folder.
 
 ## 8. Resolving a ticket ARGUMENT to its branch
 
-When a skill is invoked as `/webkit.fix F0135`, `/webkit.frontend-implement T00004`, or `/webkit.code-review F0148`, **the ticket is not just a folder to open.** It names the **branch that holds the work**, and that branch — not the working tree you happen to be sitting on — is what gets analyzed.
+When a skill is invoked as `/webkit-fix F0135`, `/webkit-implement T00004`, or `/webkit-code-review F0148`, **the ticket is not just a folder to open.** It names the **branch that holds the work**, and that branch — not the working tree you happen to be sitting on — is what gets analyzed.
 
 > [!CAUTION]
 > Opening `.agents/specs/<project>/T#####/` and starting to edit, without ever fetching the ticket's branch, is the failure this section exists to stop. The spec says what was *intended*; the branch holds what was actually *built*. A fix written against the wrong tree does not apply.
@@ -173,7 +175,7 @@ When a skill is invoked as `/webkit.fix F0135`, `/webkit.frontend-implement T000
 | Format | Origin | Example | Match |
 | :--- | :--- | :--- | :--- |
 | `F####` | The team's ticket system. **The dominant convention on the GitHub remote** — `F0004` … `F0174` and growing. | `F0135` | `^[Ff][0-9]{4}` |
-| `T#####` | Allocated by `/webkit.spec`, `/webkit.investigate`, `/webkit.refactor` (§2) | `T00004` | `^T[0-9]{5}$` |
+| `T#####` | Allocated by `/webkit-specify`, `/webkit-investigate`, `/webkit-refactor` (§2) | `T00004` | `^T[0-9]{5}$` |
 
 §1's `^T[0-9]{5}$` governs **the folders this repo allocates**. It does **not** govern branches that already exist on the remote: most of those are `F####`, they are not malformed, and they must not be "corrected".
 
@@ -252,9 +254,9 @@ git rev-list --left-right --count "origin/$branch...$branch"   # behind <TAB> ah
 
 ### 8.3 Read-only skills stop at Step 4
 
-`/webkit.code-review`, `/webkit.verify`, `/webkit.design-review`, and `/webkit.document` write no application code, so they **analyze the branch without checking it out** — Steps 1–4 only. Switching the user's working tree to run a review is a side effect nobody asked for.
+`/webkit-code-review`, `/webkit-verify`, `/webkit-design-review`, `/webkit-investigate`, and `/webkit-document` write no application code, so they **analyze the branch without checking it out** — Steps 1–4 only. Switching the user's working tree to run a review is a side effect nobody asked for.
 
-Their report still records which branch was analyzed, in the `> **Scope:**` header line.
+Their report still records which branch was analyzed, in its Metadata **Branch** row (`Branch Analyzed` in `investigation.md`; a `> **Scope:**` header line in reports written before the templates).
 
 ### 8.4 Where the report goes
 
