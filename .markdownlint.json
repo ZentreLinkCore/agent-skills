@@ -9,10 +9,11 @@
   "MD033": false,
   "MD035": { "style": "---" },
 
-  /* Specs and rules use bold labels as sub-structure by design — the webkit.spec
-     template mandates "**Option A — <label> (Recommended)**" above each pros/cons
-     table, and the rule files use "**Applies to:**" callouts. These are deliberate,
-     not headings in disguise. */
+  /* Specs and rules use bold labels as sub-structure by design — the
+     template/feature-specification.md spec format puts "**Endpoints**", "**Entry point:**"
+     and similar labels above its tables, older specs carry "**Option A — <label>
+     (Recommended)**" above pros/cons tables, and the rule files use "**Applies to:**"
+     callouts. These are deliberate, not headings in disguise. */
   "MD036": false,
 
   "MD046": { "style": "fenced" },

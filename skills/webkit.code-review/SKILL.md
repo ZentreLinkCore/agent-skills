@@ -1,321 +1,347 @@
 ---
 name: webkit-code-review
 description: >
-  Reviews the DIFF (uncommitted changes, or a branch against its base) for correctness bugs, security holes,
-  N+1s, duplication, and violations of the project's own rules in `.agents/rules/`. Complements `/webkit.verify`:
-  verify asks "does this match the spec", this asks "is this code any good". Grades every finding
-  CRITICAL/HIGH/MEDIUM/LOW with a suggested fix and a dependency-first Fix Plan. Never edits code;
-  writes `code-review.md` into the ticket folder of the spec the change belongs to
-  (`.agents/specs/<project>/T#####/code-review.md`), or to `.agents/reports/` when the change has no ticket.
-  Triggered by `/webkit.code-review`, `/webkit.code-review <target_path>`, `/webkit.code-review T#####`, or `/webkit.code-review <branch>`.
+  Senior-developer code review of the actual changes (a ticket's branch, a branch against its base, or uncommitted
+  work) before merge. Finds bugs, incorrect implementation, security risks, performance issues with measurable
+  impact, maintainability problems, duplication, bad patterns, and likely future failures, judged against the
+  project's own rules in `.agents/rules/` and its existing architecture. Not a specification review and never a
+  place for new requirements. Grades every finding CRITICAL / HIGH / MEDIUM / LOW / INFO, rates the change
+  APPROVED / APPROVED WITH COMMENTS / CHANGES REQUIRED, and recommends READY TO MERGE or FIX REQUIRED. Never edits
+  code or specs; writes `code-review.md` into the ticket folder from the template
+  `.agents/template/code-review-report.md`, or to `.agents/reports/` when the change has no ticket.
+  Triggered by `/webkit-code-review <ticket-number or branch-name>`, or `/webkit-code-review` alone for the
+  current branch and uncommitted work.
 ---
 
 # Webkit Code Review
 
-This skill reviews code the way a senior engineer reviews a colleague's pull request: **on the diff, against the project's own rules, looking for what will actually break.**
+Acts as a senior developer reviewing a pull request. It reviews the **actual code changes** and identifies bugs, incorrect implementation, security risks, performance issues, maintainability problems, code duplication, bad patterns, and possible future failures. The goal is to improve code quality before merge.
+
+This is **not** a specification review, **not** a feature planning process, and **not** a place to add new requirements.
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application code.** Its only file output is the review report — `code-review.md` in the change's ticket folder, or a dated report under `.agents/reports/` when there is no ticket. Fixing is `/webkit.fix`'s job. A reviewer who fixes as they go cannot report honestly on what they changed, and the report stops matching any commit.
+> **This skill MUST NOT modify application code or any specification.** Its only output is the review report. Fixing is `/webkit-fix`'s job. A reviewer who fixes while reviewing cannot report honestly on what changed.
 
 ---
 
-## How This Differs From `/webkit.verify`
+## Authority Boundary
 
-They are complementary and both are needed. Running only one leaves a whole class of defect unexamined.
+This skill owns **only** reviewing the code quality of a diff, and reporting ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
 
-| | `/webkit.verify` | `/webkit.code-review` (this skill) |
-| :--- | :--- | :--- |
-| Question | Does the code match the spec? | Is the code correct and compliant? |
-| Authority | The spec | [`.agents/rules/`](../../rules/) + correctness |
-| Scope | Every claim in the spec | The diff |
-| Needs a spec? | Yes — stops without one | No |
-| Catches | Absent rules, inverted rules, unspecced behavior | Bugs, security holes, N+1s, duplication, rule violations |
-| Misses | A tenant leak the spec never mentioned | A spec rule that was silently never coded |
+- fixing what it finds → `/webkit-fix`
+- checking spec conformance → `/webkit-verify`
+- an in-depth visual review → `/webkit-design-review`
+- changing requirements → `/webkit-specify` (report **Specification clarification required**)
 
-A change can conform perfectly to its spec and still be bad code. A change can be excellent code and not do what was asked. **Run verify for spec conformance, this for quality.**
+If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
+
+---
+
+## Inputs
+
+| Form | Meaning |
+| --- | --- |
+| `/webkit-code-review T#####` | Review that ticket's branch against its base. |
+| `/webkit-code-review <branch-name>` | Review that branch against its base. |
+| `/webkit-code-review` | Review uncommitted work if any exists, otherwise the current branch against its base. |
+| `/webkit-code-review <target_path>` | Narrow any of the above to the changes under that path. |
+
+---
+
+## How This Differs From `/webkit-verify`
+
+| | `/webkit-verify` | `/webkit-code-review` (this skill) |
+| --- | --- | --- |
+| Question | Does the implementation match the spec? | Is the changed code correct and well built? |
+| Authority | The spec | [.agents/rules/](../../rules/), the existing architecture, and correctness |
+| Scope | Every requirement in the spec | The diff |
+| Needs a spec? | Yes | No |
+
+A change can match its spec and still be bad code; it can be excellent code and not do what was asked. Run both.
 
 ---
 
 ## Workflow Integration
 
 ```text
-   webkit.frontend-implement / backend-implement / fix / refactor
-               │
-      ┌────────┴────────┐
-      ▼                 ▼
- webkit.verify   webkit.code-review     ← you are here
- (spec match)      (code quality)
-      └────────┬────────┘
-               ▼
-   Review Report (.agents/specs/<project>/T#####/code-review.md)
-               │
-               ▼
-          webkit.fix
+        webkit-implement / fix / refactor
+                    │
+          ┌─────────┴──────────┐
+          ▼                    ▼
+    webkit-verify      webkit-code-review     ← you are here
+    (spec match)         (code quality)
+                               │
+                               ▼
+     code-review.md  (.agents/specs/<project>/T#####/code-review.md)
+                               │
+                               ▼
+                         webkit.fix
 ```
 
 ---
 
-## Phase 1 — Establish the Diff
+## Core Rule: No Scope Expansion
 
-Review the **change**, not the repository. Reviewing everything produces a report nobody reads.
+The reviewer MUST NOT:
+
+- suggest new features,
+- suggest unrelated improvements,
+- modify requirements,
+- update specifications or create spec versions,
+- redesign the whole system without evidence.
+
+Only review the existing implementation.
+
+## Review Mindset
+
+Think like a senior developer reviewing a pull request. Ask:
+
+- Is this code correct?
+- Can this break?
+- Is this maintainable?
+- Does this follow existing project patterns?
+- Will this create problems in the future?
+- Is there unnecessary complexity?
+
+Read the body, follow the call, and check the caller actually calls it. Names and comments are not evidence.
+
+---
+
+## Phase 1 — Analyze Changes
+
+### Establish the diff
+
+Review the **change**, not the repository.
 
 ```bash
 git rev-parse --abbrev-ref HEAD          # which branch
 git status --short                       # uncommitted work
-git diff --stat                          # unstaged
-git diff --cached --stat                 # staged
+git diff --stat; git diff --cached --stat
 
-# detect the base — it is `master` in SubHRMS, not `main`
 base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
-git diff "$base"...HEAD --stat           # the branch vs its base
+git diff "$base"...HEAD --stat           # three dots: only what the branch changed
+git diff "$base"...HEAD --name-status    # A / M / D per file
 ```
 
-Pick the scope in this order:
+Scope, in this order:
 
-1. **A ticket argument** (`/webkit.code-review F0135`, `T00004`) — resolve it to its branch and review **that branch's diff**: `git diff "$base"...origin/<branch>`. Follow [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch), and note §8.3 — this skill writes no code, so it **fetches and analyzes without checking out**. Several branches can match one ticket (`F0135`, `F0135-fixed`, `f0135`); when more than one does, stop and ask.
-2. An explicit `<branch>` or `<target_path>` argument
-3. Uncommitted changes, if any exist
-4. The current branch against its base
+1. **Ticket or branch argument** → review that branch's diff (`git diff "$base"...origin/<branch>`). Follow [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch): fetch and analyze **without checking out** (§8.3). When several branches match one ticket (`F0135`, `F0135-fixed`, `f0135`), stop and ask.
+2. Uncommitted changes, if any exist.
+3. The current branch against its base.
 
-**State the scope and the file count before reviewing.** If the diff is empty, say so and stop — do not silently expand to a whole-repo review.
+**State the scope and the file count before reviewing.** If the diff is empty, say so and stop; never expand to a whole-repo review.
 
 > [!WARNING]
-> If the diff exceeds ~40 files, review the highest-risk subset first (migrations, auth, money, anything under a `security`/`auth` path) and **say explicitly what you did not review**. A review that claims to cover 200 files covered none of them properly.
+> Past ~40 files, review the highest-risk subset first (migrations, auth, money, permissions, shared services) and record what you did not review as an INFO "Not reviewed:" entry. A review that claims 200 files covered none of them properly.
 
----
+### Understand the change
 
-## Phase 2 — Load the Applicable Rules
+Group the changes into modified, added, and deleted files, and by area: database, API, frontend, backend, configuration. For each area, understand **what** changed, **why** (commit messages, the ticket's spec if one exists, the PR description), and the **possible impact** on callers and other modules. The spec explains intent here; it is not the yardstick. Spec conformance is `/webkit-verify`'s job.
 
-**Resolve which project you are in before loading a single rule.** Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and state the answer — then read only that project's sections. Reviewing React against Vue standards produces pure noise, and citing the wrong project's DB conventions turns a correct migration into a "finding". The two projects are opposite on foreign keys, relationship-column naming, and soft deletes, so a confidently-cited rule from the wrong half is worse than no citation.
+### Load the project's rules
 
-Then load only the rules the diff actually touches:
+**Resolve the project first** with [Which Project Am I In?](../../rules/project-profile.md) and read only its sections. The projects differ on framework, database conventions, and component libraries; a rule cited from the wrong one turns correct code into a false finding.
+
+Load only the rules the diff touches:
 
 | Diff contains | Load |
-| :--- | :--- |
+| --- | --- |
 | Any code | [coding-standards.md](../../rules/coding-standards.md), [naming-convention.md](../../rules/naming-convention.md) |
-| Migrations, models, queries | [project-profile.md](../../rules/project-profile.md) DB conventions, [laravel-standards.md](../../rules/laravel-standards.md) |
+| Migrations, models, queries | [project-profile.md](../../rules/project-profile.md) database conventions, [laravel-standards.md](../../rules/laravel-standards.md) |
 | Controllers, routes, requests | [laravel-standards.md](../../rules/laravel-standards.md), [security.md](../../rules/security.md) |
 | Vue components | [vue-standards.md](../../rules/vue-standards.md), [ui-design.md](../../rules/ui-design.md) |
-| React components | [project-profile.md](../../rules/project-profile.md) ScaleUP Profile, [ui-design.md](../../rules/ui-design.md) |
+| React components | your project's section of [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md) |
 | Auth, permissions, input handling | [security.md](../../rules/security.md) |
 | Lists, dashboards, loops over queries | [performance.md](../../rules/performance.md) |
 | New files or folders | [project-structure.md](../../rules/project-structure.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md) |
 | Payroll, timekeeping, statutory math | [hrms-rules.md](../../rules/hrms-rules.md) |
 | Tests | [testing.md](../../rules/testing.md) |
 
-A rule violation is a finding **with a citation**. Quote the rule; do not paraphrase your preference as project policy.
+A rule violation is a finding **with a citation**: quote the rule, do not present a preference as project policy. Read the "Known drift" table in [project-profile.md](../../rules/project-profile.md) before calling anything inconsistent.
 
 > [!NOTE]
-> **The visual layer belongs to [`/webkit.design-review`](../webkit.design-review/SKILL.md).** When that skill has run on this
-> change, cite its `design-review.md` for accent, contrast, dark-mode, and component-reuse findings instead of re-listing them.
-> When it has not, keep [ui-design.md](../../rules/ui-design.md) checks here to clear violations only — depth is its job, not this one's.
+> The visual layer belongs to [`/webkit-design-review`](../webkit.design-review/SKILL.md). When it has run on this change, cite its `design-review.md` instead of re-listing accent, contrast, dark-mode, or component-reuse findings. When it has not, report clear [ui-design.md](../../rules/ui-design.md) violations only.
 
 ---
 
-## Phase 3 — Review Dimensions
+## Phase 2 — Code Quality Review
 
-Work these in order. The first three find the defects that matter; the rest find the ones that compound.
+For every finding, report what is wrong, where it happens (`file:line`), why it can fail, and the recommended fix.
 
-### 1. Correctness — will it break?
+### 1. Correctness
 
-- Null / undefined on a path that can produce it; optional chaining missing where the type allows null
-- Off-by-one, `<` vs `<=`, empty collection, single element, zero, negative
-- A guard that is never reached — early `return` above it, wrong boolean operator, or a method nobody calls
-- Multi-step writes with no transaction: a partial failure leaves half-written state
-- Values that come from a database default and are read from an unrefreshed in-memory model
-- `catch` blocks that swallow the error and return mock, seed, or empty data — making a broken dependency look healthy
-- Money and dates: rounding, precision, currency assumed, timezone assumed
+- Logic errors and wrong conditions (`<` vs `<=`, `||` vs `&&`, inverted checks, guards never reached)
+- Missing validations
+- Incorrect assumptions (a value assumed non-null, a database default read from an unrefreshed model, timezone or currency assumed)
+- Incorrect error handling (a `catch` that swallows the error and returns mock or empty data)
+- Unexpected behavior on empty, single, zero, or negative input
 
-### 2. Security
+### 2. Bug prevention
 
-- **Tenant scoping** — does *every* read and write filter by the organization/tenant key, or only the one you looked at? One unscoped query defeats the entire isolation model. Grep the model, not a single call site.
-- Authorization checked on the **server**, not only hidden in the UI
-- Mass assignment: `$request->all()` reaching `create()`/`update()` without a FormRequest or explicit allow-list
-- Raw SQL with interpolated input
-- Secrets, tokens, or PII in logs, in `localStorage`, or in an API response
-- Missing rate limits on auth-adjacent or expensive endpoints
-- A permission granted more broadly than the matrix allows
+- Null / undefined errors
+- Race conditions
+- Duplicate execution (double submit, retried jobs, re-run cycles)
+- Infinite loops
+- Memory leaks (listeners, intervals, subscriptions never cleaned up)
+- Incorrect state handling
+- Data inconsistency (a second source of truth for stored or derived data)
+- Transaction problems (multi-step writes that leave half-written state on failure)
 
-### 3. Rule compliance
+### 3. Performance
 
-Every violation from Phase 2's loaded rules, each with the rule cited. Include the conventions that are easy to get backwards — FK naming, response envelope shape, whether API Resources are used, which HTTP client to import.
+Report **only with measurable impact** (query count, rows loaded, requests per action, render count).
 
-### 4. Reuse and duplication
+- **Database:** N+1 queries, missing indexes on newly filtered or joined columns, unnecessary queries, large data loading, inefficient processing in PHP instead of SQL
+- **Backend:** expensive operations, repeated calculations, bad API patterns (chatty endpoints, unbounded responses)
+- **Frontend:** unnecessary renders, large components, bad state handling, unoptimized requests
 
-- Logic that already exists in a helper, Action, Query, or component ([duplicate-prevention.md](../../rules/duplicate-prevention.md))
-- A second source of truth for something already stored or derived elsewhere
-- A near-copy of a sibling module that should have been extended
+### 4. Security
 
-### 5. Performance
+- Authorization issues and missing permission checks, enforced on the **server**, not only hidden in the UI
+- Tenant / owner scoping on *every* read and write, not only the one you looked at
+- Unsafe input handling (mass assignment from `$request->all()`, unvalidated input)
+- Data exposure and sensitive information leaks (secrets, tokens, PII in responses, logs, or `localStorage`)
+- Injection risks (raw SQL with interpolated input, unescaped output)
 
-- **N+1 queries** — a query inside a loop, or a relation accessed without eager loading. The most common real performance defect.
-- Whole tables loaded to count or sum in PHP
-- Missing index on a column the diff newly filters or joins on
-- Frontend: work in a render path, an effect with a missing or over-broad dependency list, a list without keys
+### 5. Maintainability
 
-### 6. Maintainability
+- Duplicate code, including logic that already exists in a helper, Action, Query, or component ([duplicate-prevention.md](../../rules/duplicate-prevention.md))
+- Poor naming, against [naming-convention.md](../../rules/naming-convention.md)
+- Large functions and complex logic
+- Wrong abstraction
+- Dead code, commented-out blocks, stray debug output, stale comments
+- Inconsistent patterns versus sibling modules
+- Changed business logic without the test [testing.md](../../rules/testing.md) requires
 
-- A function doing several unrelated things where the project's SRP threshold says split
-- Dead code, unreachable branches, commented-out blocks, stray debug output
-- Comments or names that no longer describe the behavior — **stale comments in a source-of-truth file are worse than none**, because they are believed
-- Magic numbers and strings that belong in a constant or config
+### 6. Architecture
 
-### 7. Tests
+Review **only against the existing project architecture**:
 
-Per [testing.md](../../rules/testing.md): does changed calculation or business logic have a corresponding test? A missing test for money math is a finding, not a nice-to-have.
+- Does it follow current patterns?
+- Is responsibility placed correctly (thin controller, Query / Handler / Action, component vs composable)?
+- Is code unnecessarily coupled?
 
----
-
-## Phase 4 — Filter Before Reporting
-
-Every finding must survive all four checks. Findings that fail these are what make reviews get ignored.
-
-1. **Is it real?** Trace the actual code path. A theoretical null on a value that is validated upstream is not a finding.
-2. **Is it in scope?** Pre-existing issues the diff merely sits next to are not this change's fault. Note them once under **Pre-existing** — never mixed into the findings.
-3. **Is it falsifiable?** Concrete inputs or state → the wrong outcome. If you cannot construct one, it is a suspicion; mark it `UNVERIFIED` and say why.
-4. **Is it more than taste?** If no rule requires it and nothing breaks, it is a preference. Drop it.
-
-> [!CAUTION]
-> **Do not report:** formatting a linter already handles, naming you would have chosen differently, "consider extracting this" with no rule behind it, or architecture the project deliberately chose (check the [project-profile.md](../../rules/project-profile.md) drift table before calling anything inconsistent).
+Do **not** recommend changing the architecture unless the current implementation causes a real, demonstrated problem, or the existing pattern cannot support the change.
 
 ---
 
-## Phase 5 — Severity and Suggested Fix
+## Phase 3 — Classify and Filter
 
-Same model as `/webkit.verify`, so the two reports are directly comparable. Grade by **consequence if it ships**, never by how hard the fix is.
+### Severity
 
-| Severity | Applies to | Fix urgency |
-| :--- | :--- | :--- |
-| `CRITICAL` | Cross-tenant leak, auth bypass, data loss, money wrong, secret exposed | Before anything ships |
-| `HIGH` | A bug users will hit, a security weakness, a rule violation with real consequence | Before merge |
-| `MEDIUM` | Contained bug, N+1, duplication, missing test on real logic | Same milestone |
-| `LOW` | Dead code, stale comment, magic number, cosmetic naming | Opportunistic |
+Every finding has exactly one severity, graded by consequence if it ships, never by how hard the fix is.
 
-**Escalate one level** when the defect is *silent* — no error, no log, no failing test. A wrong value that surfaces loudly is safer than one nobody notices.
+| Severity | Meaning | Examples |
+| --- | --- | --- |
+| **CRITICAL** | Must fix before merge. | Security vulnerability, data corruption, application crash, cross-tenant leak, wrong money. |
+| **HIGH** | Should fix before merge. | Major bug, incorrect business logic, performance issue with measurable impact. |
+| **MEDIUM** | Recommended improvement. | Maintainability issue, code duplication, error handling improvement. |
+| **LOW** | Minor suggestion. | Naming, formatting, small cleanup, each backed by a project rule. |
+| **INFO** | Observation only; no action required. | Pre-existing problems next to the diff, files not reviewed, specification clarification required. |
 
-Every finding carries a **concrete suggested fix**: name the file and the construct, not the intent. "Add `->with('role')` to the query at `GetOrganizationMembersQuery.php:24`" is actionable; "avoid N+1" is not.
+Escalate one level when the defect is **silent**: no error, no log, no failing test.
+
+### Filter before reporting
+
+Every finding must pass all four:
+
+1. **Is it real?** Trace the actual code path. A null that is validated upstream is not a finding.
+2. **Is it in this change?** Problems the diff merely sits next to are INFO "Pre-existing:", never findings.
+3. **Is it falsifiable?** CRITICAL and HIGH state concrete inputs or state → the wrong outcome. If you cannot construct one, it is not a finding.
+4. **Is it more than taste?** If no rule requires it and nothing breaks, drop it.
+
+### Do not report
+
+- Personal coding preference
+- Style preference without a project rule (or formatting a linter already handles)
+- Hypothetical problems without evidence
+- Future features or new modules
+- Spec changes
+
+If a code issue can only be resolved by changing a requirement, record **"Specification clarification required"** under INFO with what and why. Do not modify the specification.
 
 ---
 
-## Phase 6 — Report Structure
+## Phase 4 — Overall Code Quality and Recommendation
 
-```markdown
-# Code Review: <scope>
+Derived from the findings, not a judgement call:
 
-> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/code-review.md`. (Or: *no ticket — <why>*.)
-> **Scope:** <branch / uncommitted / path> — <n> files, <+a/-d> lines
-> **Branch:** <branch name>
-> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of what changed since the previous run, or "initial">.
-> **Reviewed:** <YYYY-MM-DD>
-> **Verdict:** APPROVE | APPROVE WITH COMMENTS | REQUEST CHANGES
+| Overall Code Quality | When | Final Recommendation |
+| --- | --- | --- |
+| **CHANGES REQUIRED** | Any CRITICAL or HIGH | **FIX REQUIRED** (list every CRITICAL and HIGH by finding number) |
+| **APPROVED WITH COMMENTS** | Only MEDIUM and / or LOW | **READY TO MERGE** |
+| **APPROVED** | No findings (INFO only) | **READY TO MERGE** |
 
 ---
 
-## 1. Summary
+## Phase 5 — Write the Report
 
-<Two or three sentences: is this mergeable, and what is the single most consequential problem.>
+Fill the template [.agents/template/code-review-report.md](../../template/code-review-report.md). Follow its exact structure: no custom format, and no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Run history -->` marker.
 
-| Severity | Count | Must fix before |
-| :--- | :---: | :--- |
-| CRITICAL | n | anything ships |
-| HIGH | n | merge |
-| MEDIUM | n | end of milestone |
-| LOW | n | — |
+- Number findings in one sequence across CRITICAL, HIGH, MEDIUM, and LOW (`Finding #1`, `#2`, …), so a number always names one issue. Within a severity, order them dependency-first, so `/webkit-fix` can work straight down.
+- Every finding names its file and line, and every CRITICAL and HIGH carries a concrete recommended fix: "add `->with('role')` to the query in `GetOrganizationMembersQuery.php:24`", not "avoid N+1".
+- **Positive Feedback** names specific good decisions in this change, not generic praise.
 
-## 2. Findings
+### Persist the report (MANDATORY)
 
-<Most severe first. Omit the section if there are none.>
+**Step 1 — Resolve the ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §4). This skill needs no spec, but its report belongs with the ticket when there is one:
 
-### F<n> — <one-line title> · `HIGH` · `security`
-
-- **Location:** [`file.php:42`](path#L42)
-- **Problem:** <what is wrong>
-- **Failure scenario:** <specific inputs or state → the wrong outcome>
-- **Rule:** <cited rule, or `correctness` when it is a plain bug>
-- **Suggested fix:** <the concrete change: file, construct, what it becomes>
-- **Effort:** `trivial` | `small` | `large`
-- **Regression risk:** <what the fix could break, or `none`>
-
-## 3. Fix Plan
-
-<Ordered so a developer can work straight down. Dependency-first within a severity band.
-This is the section `/webkit.fix` consumes, so it must stand alone.>
-
-| Order | Finding | Severity | Change | File(s) | Effort |
-| :---: | :--- | :--- | :--- | :--- | :--- |
-| 1 | F2 | CRITICAL | <what to change> | `path/to/file.php` | small |
-
-**Fix together:** <findings sharing a file that should be one change, not three.>
-
-## 4. What Was Verified
-
-<How each dimension was checked — commands run, paths traced. This is what separates a review
-from a skim, and it lets the reader judge how much weight to give the verdict.>
-
-## 5. Pre-existing Issues
-
-<Problems the diff sits next to but did not cause. Kept separate so they never inflate this
-change's finding count. Omit if none.>
-
-## 6. Review Limits
-
-<What was NOT reviewed and why — files skipped, behavior only observable at runtime, no test
-database. Omit nothing here; an unstated gap reads as coverage.>
-```
-
-### Verdict rule
-
-Derive it, do not judge it:
-
-| Verdict | When |
-| :--- | :--- |
-| `REQUEST CHANGES` | Any `CRITICAL` or `HIGH` |
-| `APPROVE WITH COMMENTS` | Only `MEDIUM` / `LOW` |
-| `APPROVE` | No findings |
-
-### Persist the Report (MANDATORY)
-
-**Step 1 — Resolve the ticket the diff belongs to.** This skill needs no spec to run, but its report belongs with the spec when one exists ([ticket-numbering.md](../../rules/ticket-numbering.md) §4):
-
-1. **The branch usually says it outright.** You already read it in Phase 1: `git rev-parse --abbrev-ref HEAD` returning `T00004` (or `T00004-<slug>`) *is* the ticket, because implementing skills branch on the ticket number ([git-workflow.md](../../rules/git-workflow.md#step-3--derive-the-branch-name)).
-2. The prompt names one (`/webkit.code-review T00004`) → use it.
-3. Otherwise match the diff to a ticket by the modules, routes, or tables it touches, inside the resolved project (numbers are per project, so `T00004` exists in both):
+1. The branch usually names it (`T00004`, `T00004-<slug>`).
+2. The argument names it (`/webkit-code-review T00004`).
+3. Otherwise match the diff's modules, routes, or tables against the project's specs:
 
    ```bash
-   grep -ril '<module|route|table from the diff>' ".agents/specs/$project" --include='specs.md' 2>/dev/null
+   grep -ril '<module|route|table from the diff>' ".agents/specs/$project" --include='spec.md' --include='specs.md' 2>/dev/null
    ```
 
-4. Still nothing → the change has **no ticket**. Say so and fall back to `.agents/reports/<scope>-review-<YYYYMMDD>.md` (e.g. `.agents/reports/organization-schema-correction-review-20260812.md`).
+4. Still nothing → the change has **no ticket**: write to `.agents/reports/<scope>-review-<YYYYMMDD>.md` and set the Ticket row to "None — <reason>".
 
-Do **not** allocate a ticket number here — allocating is `/webkit.spec`'s job. State which ticket you resolved to (or that there is none) in your first message.
+Never allocate a ticket here; that is `/webkit-specify`'s job. State the ticket you resolved (or that there is none) in your first message.
 
-**Step 2 — Write the report.**
+**Step 2 — Write the file.**
 
-- Write to **`.agents/specs/<project>/<ticket>/code-review.md`** — that exact filename, no dates or scope names in it ([ticket-numbering.md](../../rules/ticket-numbering.md) §5). Only an unticketed change goes to the dated `.agents/reports/` path.
-- Re-reviewing the same scope **overwrites that file in place** ([duplicate-prevention.md](../../rules/duplicate-prevention.md)) — history lives inside the file: increment the `> **Run:**` `v<N>`, set today's date, write one line on what changed since the previous run, and append the superseded run line verbatim to a `<!-- Run history -->` list at the bottom.
-- Every `file:line` must be real and current. One stale line number makes the whole report untrustworthy.
+- Write to `.agents/specs/<project>/<ticket>/code-review.md`: exactly that filename ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
+- Re-reviewing **overwrites the file in place**. Before overwriting, append the previous run's **Review Run** value with its date and verdict (e.g. `- v1 — 2026-10-08 — initial — CHANGES REQUIRED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Review Run** row, set **Review Date** to today, and write one line on what changed ("Findings #1–#2 fixed; 1 new MEDIUM").
+- Every `file:line` must be real and current.
+
+---
+
+## Rules After Review
+
+The reviewer must not:
+
+- update specs,
+- create spec versions,
+- request new features,
+- restart planning.
+
+If a code issue requires changing requirements, report **"Specification clarification required"** and do not modify the specification.
 
 ---
 
 ## Anti-Patterns
 
 | Anti-pattern | Why it fails |
-| :--- | :--- |
-| Reviewing the whole repo instead of the diff | Buries the change's real problems in unrelated noise |
-| Padding with style nits | Trains the reader to skim, so the `CRITICAL` gets skimmed too |
-| Blaming the diff for pre-existing issues | Makes the author defend code they did not write |
-| "Consider refactoring this" | Not falsifiable, not actionable, not a finding |
-| A finding with no suggested fix | The next session redoes the whole analysis to act on it |
-| Grading severity by effort | An awkward one-line fix to a tenant leak is still `CRITICAL` |
-| Flagging deliberate architecture | Check the [project-profile.md](../../rules/project-profile.md) drift table first |
-| Trusting names and comments | Read the body, follow the call, check the caller |
-| Fixing while reviewing | The report no longer matches any commit |
-| Claiming coverage you did not achieve | State limits in §6 — an unstated gap reads as coverage |
+| --- | --- |
+| Reviewing the whole repo instead of the diff | Buries the change's real problems in unrelated noise. |
+| Padding with style nits | Trains the reader to skim, so the CRITICAL gets skimmed too. |
+| Blaming the diff for pre-existing issues | Makes the author defend code they did not write. Use INFO "Pre-existing:". |
+| "Consider refactoring this" | Not falsifiable, not actionable. |
+| Suggesting features, redesigns, or spec changes | Scope expansion; this review covers the existing implementation only. |
+| A CRITICAL or HIGH with no recommended fix | The next session must redo the analysis to act on it. |
+| Grading severity by effort | An awkward fix to a tenant leak is still CRITICAL. |
+| Trusting names and comments | Read the body, follow the call. |
+| Fixing while reviewing | The report no longer matches any commit. |
+| Claiming coverage you did not achieve | Record skipped files as INFO "Not reviewed:". |
 
 ---
 
 ## Follow-up Commands
 
-- Apply the findings: `/webkit.fix <target_path> using .agents/specs/<project>/<ticket>/code-review.md` — **on the ticket's existing branch**, not a new one
-- Also check spec conformance: `/webkit.verify <ticket>` — writes `verify.md` into the same ticket folder
-- Deeper root-cause on one finding: `/webkit.investigate <target_path> <finding F<n> from .agents/specs/<project>/<ticket>/code-review.md>`
+Always include the saved report path:
+
+- Fix the CRITICAL and HIGH findings, on the ticket's existing branch: `/webkit-fix <ticket> --code-review`. MEDIUM and LOW only if the user names them.
+- Maintainability findings (duplication, large functions, dead code, inconsistent patterns) as a behavior-preserving cleanup: `/webkit-refactor <ticket> --code-review Finding #n`
+- Check spec conformance too: `/webkit-verify <ticket>`
+- Root cause of one finding: `/webkit-investigate <target_path> <Finding #n from .agents/specs/<project>/<ticket>/code-review.md>`
+- After fixes: `/webkit-code-review <ticket>` again (the run history records what changed).

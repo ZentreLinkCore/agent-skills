@@ -1,150 +1,109 @@
 ---
 name: webkit-refactor
 description: >
-  Restructures existing code to improve maintainability, readability, performance, or DRY compliance without changing its external behavior. Follows project architecture and standards.
-  Records what was restructured — and the regression checks that prove behavior held — in `refactor.md` inside the work's ticket folder (`.agents/specs/<project>/T#####/refactor.md`).
-  Triggered when the user runs the command `/webkit.refactor <target_path> <prompt>`, `/webkit.refactor T##### <prompt>`, or `/webkit.refactor <prompt>`.
+  Behavior-preserving restructuring of existing code: removes duplication, moves inline logic into the project's
+  Query / Handler / Action and component patterns, consolidates local copies into the design system, deletes dead
+  code, and improves readability or performance without changing what the code does. Proves it with the project's
+  own checks run before and after, and records the result in `refactor.md` from the template
+  `.agents/template/refactor-report.md` (BEHAVIOR PRESERVED / PRESERVED WITH UNVERIFIED AREAS / REGRESSION DETECTED).
+  Never fixes bugs, adds features, changes APIs or schema, or edits the spec. Triggered by
+  `/webkit-refactor <target_path> <goal>`, `/webkit-refactor T##### <goal>`, or
+  `/webkit-refactor T##### --code-review Finding #n`.
 ---
 
 # Webkit Refactor
 
-This skill coordinates the safe refactoring of existing source code within the workspace. Its primary goal is to improve code cleanliness, maintainability, performance, and compliance with project design patterns without altering external application behavior.
+Acts as a senior software engineer restructuring existing code **without changing its behavior**. The goal is code that is easier to maintain: less duplication, logic in the right layer, shared components instead of local copies, no dead code.
+
+This skill only restructures. It is **not** responsible for:
+
+- fixing bugs (`/webkit-fix`; a bug's root cause is found by `/webkit-investigate`),
+- adding or changing features (`/webkit-specify` → `/webkit-implement`),
+- reviewing code (`/webkit-code-review`) or checking the spec (`/webkit-verify`),
+- changing the specification.
+
+> [!IMPORTANT]
+> **Behavior is the contract.** Routes, request and response shapes, database schema, model events, business results, and visible UI behavior stay exactly as they are. A change to any of them is not a refactor.
+
+---
+
+## Authority Boundary
+
+This skill owns **only** behavior-preserving restructuring toward the stated goal ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
+
+- fixing a bug or changing a business result → `/webkit-investigate`, then `/webkit-fix`
+- new behavior → `/webkit-specify`, then `/webkit-implement`
+- reviewing the code → `/webkit-code-review`
+
+If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
+
+---
+
+## Inputs
+
+| Form | Meaning |
+| --- | --- |
+| `/webkit-refactor <target_path> <goal>` | Restructure that file or module toward the stated goal. |
+| `/webkit-refactor T##### <goal>` | Clean up within that ticket (usually its own implementation), on its branch. |
+| `/webkit-refactor T##### --code-review Finding #n` | Apply named maintainability findings from the ticket's `code-review.md` (duplication, large functions, dead code, inconsistent patterns). |
+
+The goal must be specific ("extract the leave-credit calculation shared by the two controllers"), not "clean up this module".
 
 ---
 
 ## Workflow Integration
 
-When code duplication, architectural drift, or complex logic needs cleanup:
-
-```
-   Target Selection / Investigation Report
-   (.agents/specs/<project>/T#####/investigation.md, optional)
-                 │
-                 ▼
-          webkit.refactor
-                 │
-                 ▼
-       Behavior-Preserving Edits
-                 │
-                 ▼
-       Regression Verification
-                 │
-                 ▼
-   Refactor Record (.agents/specs/<project>/T#####/refactor.md)
+```text
+   user goal · code-review.md (maintainability findings)
+                     │
+                     ▼
+            /webkit-refactor            ← you are here
+                     │
+   baseline checks → small behavior-preserving steps → same checks again
+                     │
+                     ▼
+   refactor.md  (.agents/specs/<project>/T#####/refactor.md)
+                     │
+          ┌──────────┴──────────────┐
+          ▼                         ▼
+   /webkit-code-review       /webkit-fix <ticket> --refactor
+   (review the result)       (only if REGRESSION DETECTED)
 ```
 
-This skill is also the natural follow-up `webkit.investigate` suggests for "Architecture & Code Quality" findings — see that report's "Recommended Solution" and "High-Level Implementation Plan" sections when one exists.
+---
+
+## Core Rules
+
+- **No behavior change.** If a step would change behavior, it is not done here: record it under Deliberately Not Done and point to `/webkit-investigate` or `/webkit-fix`.
+- **No scope expansion.** Only the stated goal. Other drift you notice is recorded, not fixed.
+- **Evidence, not reading.** The project's own checks run **before** (baseline) and **after**; a refactor verified only by reading is verified by nobody.
+- **Reuse first.** Move logic into existing classes, helpers, and design-system components before creating new ones.
+- **Small steps.** One move at a time, checked as you go; never a rewrite-everything diff.
+- **The spec is not edited.** It describes the behavior that must be preserved.
+
+## Refactor Mindset
+
+Ask:
+
+- What exactly is being improved, and which project rule or pattern does the result follow?
+- Does a shared component, helper, Query, or Handler already do this?
+- Does the shared version cover **every** behavior of the local copy?
+- Which callers, payloads, or UI states could notice this change?
+- Which check proves nothing changed?
 
 ---
 
-## Target & Context Discovery
+## Phase 0 — Gates (BLOCKING)
 
-Before restructuring anything:
-1. **Project Gate (BLOCKING)**: Run the **[Which Project Am I In?](../../rules/project-profile.md)** resolution at the top of the profile and **state the resolved project before touching anything**. Then read only that project's sections. Refactoring toward the *other* project's conventions is not a cleanup — it is drift introduced under the banner of removing drift, and it is the hardest kind to spot in review because every line looks idiomatic.
-2. **Locate and Load the Investigation Report (if any)**: If the prompt names or links a report, read it directly. Otherwise look for the ticket covering this module — the current branch names it if it is `T#####`, else `grep -ril '<module|route|table>' .agents/specs/<project> --include='*.md'` ([ticket-numbering.md](../../rules/ticket-numbering.md)) — and read its `investigation.md`, `verify.md`, or `code-review.md`; `.agents/reports/` holds the pre-ticket archive. Their scope, dependency analysis, and risk assessment save re-deriving that context. Since this skill may run in a fresh session, do not assume prior conversation turns are available. A report is optional; proceed directly from the prompt/target path if none exists.
-3. **Locate Target Files**: Parse the command argument path, or the report's "Affected Files" section if one was loaded, or search the workspace for the described duplication/drift.
-4. **Verify Constraints**: Review the rules in `.agents/rules/` that the target actually touches — [Laravel Standards](../../rules/laravel-standards.md) for PHP, your project's frontend standards ([Vue.js Standards](../../rules/vue-standards.md) for SubHRMS; the **ScaleUP Profile** in [project-profile.md](../../rules/project-profile.md) for ScaleUP), and [Duplicate Prevention](../../rules/duplicate-prevention.md).
-4. **Branch Gate (BLOCKING)**: Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**. **Invoked with a ticket?** Fetch and analyze its branch first — [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch) — and work on that branch; when several branches match the ticket, stop and ask. Resolve or allocate the ticket first (Phase 5, Step 1) so the branch and the ticket folder carry the same number, then: if on `main`/`master`, **create and switch to `T#####` now** — do not merely confirm one is needed and proceed. Cleaning up a ticket's own implementation? Stay on that ticket's branch, do not open a second one. Already on the right branch? Continue there. On a branch for different work, or detached HEAD? Stop and ask. State the branch before you edit.
+**Project gate.** Run [Which Project Am I In?](../../rules/project-profile.md), **state the resolved project in your first message**, and read only that project's sections. Refactoring toward the other project's conventions introduces drift under the banner of removing it, and every line looks idiomatic.
 
----
+**Ticket.** Resolve or allocate it before the branch, so both carry the same number ([ticket-numbering.md](../../rules/ticket-numbering.md) §2, §4):
 
-## Principles of Safe Refactoring
-
-### 1. Behavior Preservation
-- **Contract Integrity**: Do not change public API endpoints, return payloads, database column structures, model event behavior, or visible UI features unless explicitly instructed.
-- **Side-Effects Check**: Ensure that changes do not affect state reactivity (Vue refs/computed, or React state identity and hook dependency arrays) or database transactions (Laravel).
-
-### 2. Incremental Steps
-- Refactor in small, independent commits or diffs. Avoid large "rewrite all" changes that complicate regression tracking.
-- Test continuously at each minor step.
-
-### 3. Maintain Comments & Documentation
-- Preserve developer annotations, copyright markers, and business reasoning comments.
-- Update PHPDoc/JSDoc types and schemas to reflect signature adjustments.
-
----
-
-## Common Refactoring Scenarios
-
-### 1. Extracting Reusable Logic (DRY compliance)
-- If similar validation, computation, or query patterns are repeated in multiple controllers or pages, extract them:
-  - Backend: Extract to custom Traits, Query classes, or Helpers.
-  - Frontend: Extract to the shared hooks/composables or utility location your project uses.
-
-### 2. Moving Inline Controller Logic to Queries/Handlers
-- In accordance with [.agents/rules/laravel-standards.md](../../rules/laravel-standards.md), migrate heavy inline controller logic into modular Query/Handler classes under **`app/Queries/<Domain>/`** and **`app/Handlers/<Domain>/`**.
-
-> [!CAUTION]
-> **`app/Domain/` is retired in both projects and does not exist on disk.** Do not move code into it, and do not conclude "there is no existing Query for this" because a search of `app/Domain/` came back empty — search `app/Queries/` and `app/Handlers/`. A few legacy files still carry a stale `App\Domain\...` namespace mid-migration; the target is `App\Queries` / `App\Handlers`, and correcting one you touch is a legitimate part of the refactor.
-
-### 3. Component Extraction
-- Extract oversized template/JSX blocks (nested modals, forms) into standalone reusable components inside the module's `components/` subfolder, following your project's component conventions ([vue-standards.md](../../rules/vue-standards.md) for SubHRMS; the **ScaleUP Profile** for React).
-
-### 4. Consolidating Duplicates Into the Design System
-- Duplication that was *created* — a locally hand-rolled button, modal, select, table, or formatting helper that the design system or shared utils already provide — is prime refactor material. Replace the local copy with the shared component and delete it.
-- **Check the shared component's props actually cover the local behavior before deleting.** A "duplicate" that quietly supports an extra state is a feature, not a copy, and collapsing it is a behavior change — which this skill is not allowed to make silently.
-- Where the local copy is genuinely more capable, the correct refactor is usually to fold its capability into the shared component, not to keep two.
-
----
-
-## Phase 3 — Regression Testing & Verification
-
-Refactoring is only successful if no functionality is broken:
-1. **Pre-Check**: Establish a baseline **with the checks the project actually has** before modifying anything — confirm them in the profile rather than assuming. PHPUnit (`vendor/bin/phpunit`) exists in both projects. A JS test runner does **not** exist everywhere: ScaleUP has **no Vitest configured**, so `npm run test` will fail — its equivalents are `npm run typecheck` (`tsc --noEmit`) and `npm run build`. Inventing a test command wastes a turn and, worse, an unrun test suite reported as passing is a false baseline.
-2. **Post-Check**: Execute the same checks after applying changes. Ensure a 100% pass rate, and say which checks you ran — a refactor verified only by reading is a refactor verified by nobody.
-3. **Compare Response Payloads**: If API structures were refactored, verify that the before-and-after JSON shapes are identical.
-
----
-
-## Phase 4 — Close the Loop
-
-1. **Update the Report (if one was loaded)**: Check off the corresponding item(s) in the report's "High-Level Implementation Plan" checklist (`[ ]` → `[x]`) and append a short "Resolution" note (what changed, and the date) so `investigation.md` stays current for whoever reads it next.
-2. **Write the Refactor Record (MANDATORY)**: see below. A behavior-preserving change with no record is indistinguishable from an accidental one six months later.
-3. **Suggested Next Step**: Point the user to [Git Workflow Standards](../../rules/git-workflow.md) for a Conventional Commit message (e.g. `refactor(hr): extract shared leave-credit calculation`). Do not stage or commit automatically.
-
----
-
-## Phase 5 — Refactor Record
-
-A refactor's whole claim is *"behavior did not change."* That claim is only checkable if what moved, and what proved it, is written down.
-
-```markdown
-# Refactor Record: <scope>
-
-> **Ticket:** `T#####` (<project>) — this file is `.agents/specs/<project>/T#####/refactor.md`.
-> **Run:** v<N> — <YYYY-MM-DD> — <one-line summary of this cleanup, or "initial">.
-> **Branch:** <branch name — normally `T#####`>
-> **Behavior change:** NONE (if anything did change, it is a finding, not a refactor — say so here explicitly)
-
-## 1. Scope
-<what was restructured — files, classes, components — and what was deliberately left alone>
-
-## 2. What Moved Where
-
-| Before | After | Why |
-| :--- | :--- | :--- |
-| `File.php:120-180` inline logic | `app/Queries/<Domain>/<Name>.php` | thin-controller rule |
-
-## 3. Duplication Removed
-<local copies replaced by shared components/helpers, and the props/behaviour check that proved the shared one covers the old one — or "none">
-
-## 4. Regression Evidence
-<the checks you actually RAN, with their real output — the project's own commands, not invented ones.
-State the before baseline and the after result. An unrun check reported as passing is a false baseline.>
-
-## 5. Deliberately Not Done
-<drift you found and left alone, and why — out of scope, needs a spec decision, would change behavior>
-```
-
-### Persist the Record (MANDATORY)
-
-**Step 1 — Resolve the project**, then **resolve or allocate the ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §2, §4), in this order:
-
-1. **On a `T#####` branch, or the prompt names a ticket, or you loaded an `investigation.md`** → that is the ticket. Cleaning up a ticket's own implementation belongs **in that ticket**; write `refactor.md` beside its other documents and do not allocate a new number.
+1. **On a `T#####` branch, or the input names a ticket** → that ticket. Cleaning up a ticket's own implementation belongs in that ticket.
 2. **A standalone cleanup with no ticket** → this skill starts that workstream, so allocate the next number in the project:
 
    ```bash
-   project=subhrms   # or scaleup — resolved, never assumed
+   project="<project>"   # the folder name resolved in the project gate
 
    max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
          | sed 's#.*/T##' | sort -n | tail -1)
@@ -153,6 +112,130 @@ State the before baseline and the after result. An unrun check reported as passi
    echo "$project/$next"
    ```
 
-   Always `max + 1`, never the first free gap. Do this **at the branch gate**, before editing code, so the branch and the folder carry the same number.
+   Always `max + 1`, never the first free gap.
 
-**Step 2 — Write it** to `.agents/specs/<project>/<ticket>/refactor.md` — that exact filename. A second cleanup on the same ticket **updates the file in place**: increment `> **Run:**` `v<N>`, set today's date, one line on what this pass changed, and append the superseded run line to a `<!-- Run history -->` list at the bottom. Never overwrite a record while leaving its `> **Run:**` line untouched.
+**Branch gate.** Run the [Mandatory Branch Gate](../../rules/git-workflow.md#mandatory-branch-gate-for-implementing-skills) **before editing any file**:
+
+- A ticket argument that exists on the remote: fetch and analyze its branch first ([ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)); when several branches match, **stop and ask**.
+- On `main` / `master`: create and switch to `T#####` now.
+- Cleaning up a ticket's own implementation: stay on that ticket's branch; never open a second one.
+- On a branch for different work, or detached HEAD: **stop and ask**.
+
+---
+
+## Phase 1 — Load Context
+
+1. **The goal and the target**: the path, the stated goal, or the named code-review findings (read `code-review.md` for their location and recommendation).
+2. **The ticket's documents**: its spec (the behavior to preserve), and any `investigation.md`, `verify.md`, or `code-review.md` for context. A report is optional.
+3. **The rules the target touches**: [laravel-standards.md](../../rules/laravel-standards.md) for PHP; your project's frontend standards ([vue-standards.md](../../rules/vue-standards.md) for Vue, your project's section of [project-profile.md](../../rules/project-profile.md) for React); [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+4. **The callers**: every place that uses what you are about to move (grep the class, method, component, and route), so nothing is left pointing at the old location.
+
+---
+
+## Phase 2 — Baseline
+
+Before changing anything, run the checks the project actually has and record the results:
+
+- PHP: `php -l <file>` for files you will touch; `vendor/bin/phpunit --filter <area>` (PHPUnit exists in both projects).
+- Frontend: `npm run typecheck`, `npm run build` where defined. **Not every project has a JS test runner**: never run or report one the project does not define.
+- **API payloads**: for every endpoint whose code you will touch, capture the response shape now (e.g. `php artisan tinker --execute="..."` against a read-only call, or the existing test's assertion).
+
+A check that already fails at baseline is recorded as failing; it is not this refactor's job to fix it.
+
+---
+
+## Phase 3 — Plan the Restructure
+
+List each move: what goes from where to where, and which rule the result follows.
+
+| Scenario | Target |
+| --- | --- |
+| Repeated validation, computation, or query logic | One shared Query, Handler, Action, trait, or helper; on the frontend, the shared composable / hook or util your project uses |
+| Heavy inline controller logic | `app/Queries/<Domain>/` (reads) and `app/Handlers/<Domain>/` (writes), per [laravel-standards.md](../../rules/laravel-standards.md); the controller stays thin |
+| Oversized page or template | Components in the module's `components/` folder, following the project's component conventions |
+| Hand-rolled button, modal, select, table, or formatter | The design-system component or shared util that already provides it |
+| Dead code, unreachable branches, commented-out blocks, stray debug output | Deleted |
+| Performance without behavior change (N+1, repeated calculation) | Eager loading, memoized values; same results, fewer queries |
+
+> [!CAUTION]
+> **`app/Domain/` is retired and does not exist on disk.** Do not move code into it, and do not conclude "no existing Query" from an empty search of it: search `app/Queries/` and `app/Handlers/`. Correcting a stale `App\Domain\...` namespace in a file you touch is part of the refactor.
+
+**Before consolidating a duplicate**, confirm the shared version covers **every** behavior of the local copy (props, states, edge cases). A "duplicate" with an extra behavior is a feature: collapsing it changes behavior. Either fold that capability into the shared component, or leave the copy and record why.
+
+---
+
+## Phase 4 — Apply in Small Steps
+
+- One move at a time; run the relevant check after each.
+- Update every caller found in Phase 1; leave no reference to the old location.
+- Preserve developer comments, business reasoning, and copyright markers; update PHPDoc / JSDoc to match changed signatures.
+- Keep state reactivity intact (Vue refs / computed; React state identity and hook dependency arrays) and database transactions intact (`DB::transaction` stays around the same writes).
+- Never introduce a new library, pattern, or folder hierarchy the project does not already use.
+
+---
+
+## Phase 5 — Regression Check
+
+Run the **same** checks as the baseline and compare:
+
+- every check that passed before still passes,
+- API payloads are identical for every touched endpoint,
+- no visible UI behavior changed,
+- no caller still references a moved or deleted symbol.
+
+If a check fails because of this refactor, **restore the behavior** (adjust the step, or revert it). Never leave a behavior change in place silently.
+
+**Refactor Status:**
+
+| Status | When |
+| --- | --- |
+| **✅ BEHAVIOR PRESERVED** | Every check passed before and after; payloads identical. |
+| **⚠ PRESERVED WITH UNVERIFIED AREAS** | Every check run passed, but some area could not be checked (named in the record). |
+| **❌ REGRESSION DETECTED** | A check still fails after the refactor and could not be restored. Hand it to `/webkit-fix <ticket> --refactor`, or revert. |
+
+---
+
+## Phase 6 — Write the Record
+
+Fill the template [.agents/template/refactor-report.md](../../template/refactor-report.md). Follow its exact structure: no custom format, no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Run history -->` marker.
+
+### Persist the record (MANDATORY)
+
+- Write to `.agents/specs/<project>/<ticket>/refactor.md`: exactly that filename ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
+- A second cleanup on the same ticket **updates the file in place**. Before overwriting, append the previous run's **Refactor Run** value with its date and status (e.g. `- v1 — 2026-10-08 — extracted leave-credit Query — ✅ BEHAVIOR PRESERVED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Refactor Run** row and set **Refactor Date** to today.
+- End your message with the status, the ticket, and the record path. Do not stage or commit; suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) (e.g. `refactor(hr): extract shared leave-credit calculation`).
+
+---
+
+## Restrictions
+
+Do **not**:
+
+- fix bugs or change business results, even ones you notice (record them under Deliberately Not Done),
+- add features or expand scope beyond the stated goal,
+- change routes, request / response shapes, database schema, model events, or visible UI behavior,
+- edit the specification,
+- introduce a different architecture, library, or folder structure,
+- report a check as passing that was not run.
+
+---
+
+## Anti-Patterns
+
+| Anti-pattern | Why it fails |
+| --- | --- |
+| No baseline before editing | Nothing proves behavior held; a failure afterwards may have been there all along. |
+| Fixing a bug "while I'm here" | The behavior change hides inside a refactor and skips review. Use `/webkit-fix`. |
+| Collapsing a "duplicate" that had an extra behavior | A silent feature removal. Check coverage first. |
+| One huge rewrite diff | Regressions cannot be traced to a step. |
+| Moving code into `app/Domain/` | A retired, dead namespace. |
+| Leaving callers on the old location | The refactor compiles in one place and breaks in another. |
+| Reporting unrun checks as passing | A false baseline; the record becomes untrustworthy. |
+
+---
+
+## Follow-up Commands
+
+- Review the result: `/webkit-code-review <ticket>`
+- Status ❌ REGRESSION DETECTED: `/webkit-fix <ticket> --refactor`, or revert the step
+- A bug noticed during the refactor: `/webkit-investigate <ticket> <issue>`

@@ -8,14 +8,16 @@ This is the **gate only**. The full profile — both projects' stack, folder lay
 
 This workspace holds **two different codebases** sharing one rule set. They share a backend pattern, but their frontends, database conventions, and domain vocabulary are **incompatible**. Applying the wrong half produces code that looks plausible and is wrong.
 
+Each project is named by its **source path in your system setup** (e.g. `src/<repo>`). `<source-path>` below stands for that path; the stack in parentheses — (Vue) or (React) — tells the two projects apart.
+
 **Detect it in one step — check `package.json` dependencies:**
 
 | If you see | Project | Frontend | Then read |
 | :--- | :--- | :--- | :--- |
-| `vue`, `pinia`, `vue-router` | **SubHRMS** | Vue 3 | the `SubHRMS —` sections of `.agents/rules/project-profile.md` |
-| `react`, `react-dom`, `react-router-dom` | **ScaleUP** | React 19 | the **ScaleUP Profile** section of `.agents/rules/project-profile.md` |
+| `vue`, `pinia`, `vue-router` | **`<source-path>` (Vue)** | Vue 3 | the "`<source-path>` (Vue) —" sections of `.agents/rules/project-profile.md` |
+| `react`, `react-dom`, `react-router-dom` | **`<source-path>` (React)** | React 19 | the **`<source-path>` (React) Profile** section of `.agents/rules/project-profile.md` |
 
-Secondary tells: ScaleUP has `.agents/blueprint/scaleup/` and `app/Models/Organization.php`; SubHRMS has payroll/timekeeping domain content and `app/Models/Employee.php`.
+Secondary tells: `<source-path>` (React) has `.agents/blueprint/scaleup/` and `app/Models/Organization.php`; `<source-path>` (Vue) has payroll/timekeeping domain content and `app/Models/Employee.php`.
 
 **State the resolved project before generating anything.** Then read only that project's section of the canonical profile — never both.
 
@@ -25,7 +27,7 @@ Secondary tells: ScaleUP has `.agents/blueprint/scaleup/` and `app/Models/Organi
 
 Enough to stop a wrong assumption; the details are in the canonical file.
 
-| | SubHRMS | ScaleUP |
+| | `<source-path>` (Vue) | `<source-path>` (React) |
 | :--- | :--- | :--- |
 | Frontend | Vue 3 `<script setup>`, composables, Pinia | React 19 + hooks/Context — **no Pinia/Redux/Zustand** |
 | Module layout | `module/<portal>/<feature>/` | `module/<domain>/` — **no portals at all** |

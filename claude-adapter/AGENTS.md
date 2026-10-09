@@ -1,4 +1,4 @@
-# Agent Rules — ScaleUP / SubHRMS
+# Agent Rules
 
 Portable entry point for **any** coding agent (Claude Code, Antigravity/Gemini, Cursor, Copilot). Deliberately small: everything below is always true, and everything else is linked and read **only when the task touches it**. Loading the full rule library on every turn costs ~1,000 lines and is mostly content for the project you are not in.
 
@@ -8,20 +8,22 @@ Portable entry point for **any** coding agent (Claude Code, Antigravity/Gemini, 
 
 One rule set, **two codebases**. They share a backend pattern; their frontends and **database conventions are incompatible**. Applying the wrong half produces code that looks plausible and is wrong.
 
+Each project is named by its **source path in your system setup** (e.g. `src/<repo>`). `<source-path>` below stands for that path; the stack in parentheses — (Vue) or (React) — tells the two projects apart.
+
 Check `package.json`:
 
 | Dependencies | Project | Frontend |
 | :--- | :--- | :--- |
-| `vue`, `pinia`, `vue-router` | **SubHRMS** | Vue 3 + Composition API |
-| `react`, `react-dom`, `react-router-dom` | **ScaleUP** | React 19 + hooks/Context |
+| `vue`, `pinia`, `vue-router` | **`<source-path>` (Vue)** | Vue 3 + Composition API |
+| `react`, `react-dom`, `react-router-dom` | **`<source-path>` (React)** | React 19 + hooks/Context |
 
-Secondary tells: ScaleUP has `app/Models/Organization.php` and `.agents/blueprint/scaleup/`; SubHRMS has `app/Models/Employee.php` and payroll/timekeeping domain content.
+Secondary tells: `<source-path>` (React) has `app/Models/Organization.php` and `.agents/blueprint/scaleup/`; `<source-path>` (Vue) has `app/Models/Employee.php` and payroll/timekeeping domain content.
 
 **State the resolved project before generating anything.**
 
 ## 2. The differences that bite
 
-| | SubHRMS | ScaleUP |
+| | `<source-path>` (Vue) | `<source-path>` (React) |
 | :--- | :--- | :--- |
 | Foreign keys | **Never** `->foreign()` — index only, integrity in Query/Handler | **Real** FKs: `foreignId()->constrained()` |
 | Relationship column | `id`-prefixed: `idacct`, `idpayperiod` | `<parent>_id`: `organization_id` |
@@ -51,8 +53,8 @@ Full rules live in [`.agents/rules/`](./.agents/rules/). Do not preload them.
 | :--- | :--- |
 | Migrations, models, controllers, routes, Query/Handler | `laravel-standards.md`, `system-awareness.md` |
 | Full architecture detail for either project | `project-profile.md` |
-| Vue components (SubHRMS only) | `vue-standards.md` |
-| Styling, portals, statutory ID columns (SubHRMS) | `ui-design.md` |
+| Vue components (Vue projects only) | `vue-standards.md` |
+| Styling, portals, statutory ID columns (projects with portals) | `ui-design.md` |
 | Payroll, timekeeping, leave, statutory math | `hrms-rules.md` |
 | Auth, permissions, input handling, uploads | `security.md` |
 | Lists, dashboards, N+1 risk, debounce, pagination | `performance.md` |
@@ -61,13 +63,13 @@ Full rules live in [`.agents/rules/`](./.agents/rules/). Do not preload them.
 | Editing an existing file (minimal diffs) | `incremental-generation.md` |
 | Writing tests | `testing.md` |
 
-Always-on essentials — read if unsure: `anti-hallucination.md`, `duplicate-prevention.md`, `context-loading.md`, `execution-strategy.md`, `coding-standards.md`, `naming-convention.md`.
+Always-on essentials — read if unsure: `authority-boundary.md` (each `/webkit-*` skill owns only its own stage: stop and report anything else), `anti-hallucination.md`, `duplicate-prevention.md`, `context-loading.md`, `execution-strategy.md`, `coding-standards.md`, `naming-convention.md`.
 
 ## 5. Specs, blueprint, workflows
 
-- **[`.agents/specs/`](./.agents/specs/)** — feature designs, one **ticket folder** per feature inside its project: `specs/subhrms/T00001/`, `specs/scaleup/T00001/`, … each holding up to five fixed-name documents: `specs.md` (the spec), `investigation.md` (root cause), `refactor.md` (what was restructured), `verify.md` (spec conformance), `code-review.md` (diff review). A ticket needs only the ones its work produced. Numbers are allocated `max + 1` **per project** by `/webkit.spec`, `/webkit.investigate`, or `/webkit.refactor` — the three entry points; every other skill resolves an existing ticket. The work is branched as bare `T00001`. Older specs still sit in portal folders beside them and are still valid — **search both**, and grep ticket folders' *contents*, since their names carry no feature name. Convention: [`.agents/rules/ticket-numbering.md`](./.agents/rules/ticket-numbering.md). **When a spec exists for what you are building, it is the primary source of truth** and supersedes ad-hoc design. Only a rule overrides it; flag genuine conflicts.
-- **[`.agents/blueprint/scaleup/`](./.agents/blueprint/scaleup/)** — ScaleUP's product blueprint; governs *behavior* (the rules govern *how to express it in code*). Start at `docs/README.md`.
-- **[`.agents/skills/`](./.agents/skills/)** — end-to-end workflows: spec → implement (frontend, then backend) → verify → fix, plus investigate, refactor, code-review, migrate. In Claude Code these are `/webkit.*` commands. **In other agents, read the `SKILL.md` directly** and follow it — the content is tool-neutral.
+- **[`.agents/specs/`](./.agents/specs/)** — feature designs, one **ticket folder** per feature inside its project: `specs/<project>/T00001/`, … each holding up to six fixed-name documents: `spec.md` (the spec, from [`.agents/template/feature-specification.md`](./.agents/template/feature-specification.md); `specs.md` on tickets created before `/webkit-specify`), `investigation.md` (root cause), `refactor.md` (what was restructured), `verify.md` (spec conformance), `code-review.md` (diff review), `design-review.md` (visual review). A ticket needs only the ones its work produced. Numbers are allocated `max + 1` **per project** by `/webkit-specify`, `/webkit-investigate`, or `/webkit-refactor` — the three entry points; every other skill resolves an existing ticket. The work is branched as bare `T00001`. Older specs still sit in portal folders beside them and are still valid — **search both**, and grep ticket folders' *contents*, since their names carry no feature name. Convention: [`.agents/rules/ticket-numbering.md`](./.agents/rules/ticket-numbering.md). **When a spec exists for what you are building, it is the primary source of truth** and supersedes ad-hoc design. Only a rule overrides it; flag genuine conflicts.
+- **[`.agents/blueprint/`](./.agents/blueprint/)** — product blueprints, one folder per project; governs *behavior* (the rules govern *how to express it in code*). Start at `docs/README.md`.
+- **[`.agents/skills/`](./.agents/skills/)** — end-to-end workflows: specify → implement (backend first, then frontend integration) → verify → fix, plus investigate, refactor, code-review, migrate. In Claude Code these are `/webkit-*` commands. **In other agents, read the `SKILL.md` directly** and follow it — the content is tool-neutral.
 
 ## 6. Before you write
 
