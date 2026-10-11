@@ -15,7 +15,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 6. Keep the layers apart:
    - Requirements (WHAT): §1–7, §10, §11, §13
    - Technical design (HOW): §8
-   - Plan (IN WHAT ORDER): §9
+   - Plan (IN WHAT ORDER): plan.md in this ticket folder, from implementation-plan.md; §9 only points to it
    - Decisions (WHY): §15
 7. This file is the single source of truth. Implementation follows it and review checks against it. Minor
    corrections are edited in place; only a major change creates a new version (see §16).
@@ -234,35 +234,10 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 
 ## 9. Implementation Plan
 
-<!-- Dependency order. Each task names the FR/AC it delivers. A phase is done when its Expected Output exists. -->
+<!-- The plan is a separate file so /webkit-implement can execute and tick it without touching the spec. Keep this
+     section to the line below; never copy tasks into the spec. -->
 
-### Phase 1 — Preparation
-
-- **Goal:** {{goal}}
-- **Tasks:**
-  - [ ] {{task}} ({{FR-xx}})
-- **Expected Output:** {{artifact or verifiable state}}
-
-### Phase 2 — Backend Implementation
-
-- **Goal:** {{goal}}
-- **Tasks:**
-  - [ ] {{task}} ({{FR-xx}})
-- **Expected Output:** {{artifact or verifiable state}}
-
-### Phase 3 — Frontend Implementation
-
-- **Goal:** {{goal}}
-- **Tasks:**
-  - [ ] {{task}} ({{FR-xx}})
-- **Expected Output:** {{artifact or verifiable state}}
-
-### Phase 4 — Testing
-
-- **Goal:** All AC in §10 pass.
-- **Tasks:**
-  - [ ] {{task}} ({{AC-xx}})
-- **Expected Output:** {{test results / sign-off}}
+Defined in [`plan.md`](./plan.md) in this ticket folder: the file-by-file task list (Preparation → Backend → Frontend → Validation) that `/webkit-implement` executes. The plan cites this spec's IDs and adds no requirement; where the two disagree, this spec wins.
 
 ---
 

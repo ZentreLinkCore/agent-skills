@@ -19,6 +19,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 | Ticket | {{T#####}} |
 | Branch | {{branch}} |
 | Specification | `.agents/specs/{{project}}/{{T#####}}/spec.md` — version {{x.y}} |
+| Plan | `.agents/specs/{{project}}/{{T#####}}/plan.md` — revision {{n}}, {{ticked}}/{{total}} tasks ticked (or "N/A — no plan.md; built from spec §9") |
 
 ---
 
@@ -55,9 +56,26 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 
 ---
 
+## Version
+
+<!-- From Phase 7 (.agents/rules/versioning.md §7). One row per target; "Versioning: off" when the mode is off.
+     Status: applied (auto) | recommended | recommended — <why auto was not applied> | none. -->
+
+| Target | Level | Version | Build Numbers | Status | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| {{target}} | {{MAJOR / MINOR / PATCH / NONE}} | {{1.0.0 → 1.1.0, or "—"}} | {{versionCode 1 → 2, or "—"}} | {{status}} | {{spec IDs; changed files}} |
+
+**CHANGELOG:** {{`<path>` — `## [x.y.z]` entry added / updated, or "None"}}
+
+**Before release:** {{every `warnings` and `after_release` line of each bumped target, or "None"}}
+
+---
+
 ## Notes
 
-<!-- Only when necessary: migrations the user must run, acceptance criteria that could not be exercised and why,
-     a spec-vs-rule conflict, or "Specification clarification required" items. Otherwise "None". -->
+<!-- Only when necessary: migrations the user must run (plan §9), acceptance criteria that could not be exercised
+     and why, plan tasks left unticked and why, plan drift (where the plan could not be followed as written, and
+     what was done instead — for /webkit-specify to correct), a spec-vs-rule conflict, or "Specification
+     clarification required" items. Otherwise "None". -->
 
 {{notes, or "None"}}

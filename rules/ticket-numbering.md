@@ -7,6 +7,7 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 ├── <project-a>/                ← project
 │   ├── T00001/
 │   │   ├── spec.md             ← written by /webkit-specify
+│   │   ├── plan.md             ← written by /webkit-specify, ticked by /webkit-implement
 │   │   ├── investigation.md    ← written by /webkit-investigate
 │   │   ├── refactor.md         ← written by /webkit-refactor
 │   │   ├── verify.md           ← written by /webkit-verify
@@ -18,14 +19,17 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 │   └── payroll/
 └── <project-b>/                ← another project, its own T00001…
     └── T00001/
-        └── spec.md
+        ├── spec.md
+        └── plan.md
 ```
 
-One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, the root-cause investigation, the refactor record, the conformance report, the diff review, the design review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
+One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, its implementation plan, the root-cause investigation, the refactor record, the conformance report, the diff review, the design review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
 
-A ticket does **not** need all six files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no spec. What is present tells you what has been done.
+A ticket does **not** need all seven files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no spec and no plan. What is present tells you what has been done.
 
 The spec file is `spec.md`, written from [the feature-specification template](../template/feature-specification.md). Tickets created before `/webkit-specify` hold their spec as **`specs.md`** (plural) — still valid, still the spec. Spec discovery accepts both names, and an update edits whichever exists; never create a `spec.md` beside an existing `specs.md`.
+
+The plan file is `plan.md`, written by `/webkit-specify` with the spec, from [the implementation-plan template](../template/implementation-plan.md). The spec says **what** and is what reviews check against; the plan says **how and in what order**, file by file, and is what `/webkit-implement` executes. A plan never exists without a spec. Tickets specified before plans existed have none; `/webkit-specify T##### --plan` adds one.
 
 ---
 
@@ -106,19 +110,20 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 | File | Written by | Overwrite behaviour on re-run |
 | :--- | :--- | :--- |
 | `spec.md` (`specs.md` on older tickets) | `/webkit-specify` | Update in place. **Minor** change: edit the affected sections and add a Change Log row under the current version. **Major** change: increment the version (`1.0` → `1.1`) and log reason, impact, and changed sections. Review findings never create a version. |
+| `plan.md` | `/webkit-specify` (tasks ticked by `/webkit-implement`) | Update in place, filled from [the implementation-plan template](../template/implementation-plan.md), whenever the spec changes in a way that affects it or the plan itself was wrong: bump the Metadata **Plan Revision** and add a Plan Change Log row; a spec Major change also updates **Based on Spec Version**. Ticked tasks are never edited or unticked: changed work is a new task. `/webkit-implement` edits only the task checkboxes and Plan Status. |
 | `investigation.md` | `/webkit-investigate` | Update in place, filled from [the investigation-report template](../template/investigation-report.md); bump the Metadata **Investigation Run** row and append the superseded run to the run history. Its Fix Plan checkboxes and §9 Resolution are filled by the skill that applies the fix. |
 | `refactor.md` | `/webkit-refactor` | Update in place, filled from [the refactor-report template](../template/refactor-report.md); bump the Metadata **Refactor Run** row so successive cleanups on one ticket each leave a line, and append the superseded run to the run history. |
 | `verify.md` | `/webkit-verify` | Overwrite with the latest run, filled from [the verification-report template](../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. |
 | `code-review.md` | `/webkit-code-review` | Overwrite with the latest run, filled from [the code-review-report template](../template/code-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
 | `design-review.md` | `/webkit-design-review` | Overwrite with the latest run, filled from [the design-review-report template](../template/design-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
 
-- **These six filenames are fixed.** No dates, no ticket numbers, no feature names, no portal prefixes — `verify-20260907.md`, `T00001-spec.md`, `spec-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
-- Every one of the six names its own ticket and project in its **Metadata table** (each is filled from its template in [`.agents/template/`](../template/)); older `specs.md` files and reports written before the templates carry a `> **Ticket:** <project> T#####` header line instead. Either way, a document copied or pasted elsewhere still says where it belongs.
+- **These seven filenames are fixed.** No dates, no ticket numbers, no feature names, no portal prefixes — `verify-20260907.md`, `T00001-spec.md`, `spec-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
+- Every one of the seven names its own ticket and project in its **Metadata table** (each is filled from its template in [`.agents/template/`](../template/)); older `specs.md` files and reports written before the templates carry a `> **Ticket:** <project> T#####` header line instead. Either way, a document copied or pasted elsewhere still says where it belongs.
 - A ticket folder holding only its spec — or only `investigation.md` — is normal. It just means the work has not reached the other steps yet.
 - **One workstream per ticket.** If an investigation turns up a *second, unrelated* defect, that is a second ticket with its own `investigation.md` — not a second investigation file crammed into this folder.
 - **The fixed filenames only work inside a ticket folder.** A legacy spec in a portal folder (§7) shares that folder with other specs, so `verify.md` there would collide between features — reports for legacy specs keep the old dated `.agents/reports/<domain>-<feature>-{verify,review,design-review}-<YYYYMMDD>.md` path until the spec is migrated to a ticket.
 - A diff review for a change with **no spec at all** likewise goes to `.agents/reports/<scope>-review-<YYYYMMDD>.md`. `/webkit-code-review` runs without a spec by design; it never allocates a ticket to have somewhere to write.
-- Nothing outside these six filenames belongs in a ticket folder.
+- Nothing outside these seven filenames belongs in a ticket folder.
 - [`.agents/reports/`](../reports/) is now only the **fallback and the archive**: investigations written before this convention live there and stay valid, and the two unticketed cases above still land there. New ticketed work does not add to it.
 
 ### Run-history block
@@ -130,7 +135,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 - v1 — 2026-09-07 — initial — ❌ FAILED
 ```
 
-On every re-run, **before overwriting**: append the previous run's line (its run value, date, and status or verdict) under the marker. Then bump the Metadata run row and its date, and write one line on what changed since the previous run. Never delete a superseded line — overwriting a report without recording the previous run destroys the only record that an earlier run disagreed. (`spec.md` keeps its history in its §16 Change Log instead; reports written before the templates use a `> **Run:**` header line.)
+On every re-run, **before overwriting**: append the previous run's line (its run value, date, and status or verdict) under the marker. Then bump the Metadata run row and its date, and write one line on what changed since the previous run. Never delete a superseded line — overwriting a report without recording the previous run destroys the only record that an earlier run disagreed. (`spec.md` keeps its history in its §16 Change Log instead, and `plan.md` in its §10 Plan Change Log; reports written before the templates use a `> **Run:**` header line.)
 
 ## 6. The branch is the ticket
 
