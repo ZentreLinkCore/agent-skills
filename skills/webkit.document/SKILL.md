@@ -68,7 +68,7 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 | Scope | One ticket | One feature, across every ticket that touches it |
 | Lifetime | Finished with the ticket | Updated in place for as long as the feature exists |
 
-A guide never goes in a ticket folder. [ticket-numbering.md](../../rules/ticket-numbering.md) §5 fixes the six filenames allowed there, and a guide inside `T00004/` is invisible to anyone looking for how the feature works. A ticket is one piece of work and finishes; a feature is touched by many tickets and must still have exactly one guide. The tickets that shaped it are recorded in the guide's Metadata, not in its path.
+A guide never goes in a ticket folder. [ticket-numbering.md](../../rules/ticket-numbering.md) §5 fixes the seven filenames allowed there, and a guide inside `T00004/` is invisible to anyone looking for how the feature works. A ticket is one piece of work and finishes; a feature is touched by many tickets and must still have exactly one guide. The tickets that shaped it are recorded in the guide's Metadata, not in its path.
 
 ---
 

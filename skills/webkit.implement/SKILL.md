@@ -1,12 +1,16 @@
 ---
 name: webkit-implement
 description: >
-  Implements an approved specification (`.agents/specs/<project>/T#####/spec.md`) as production-ready code,
-  backend first and then frontend integration, exactly as specified. Follows the existing project architecture
+  Implements an approved specification (`.agents/specs/<project>/T#####/spec.md`) as production-ready code by
+  executing its implementation plan (`plan.md` in the same folder) task by task, backend first and then frontend
+  integration, exactly as specified, ticking each task as it is done. Follows the existing project architecture
   and reuses existing components, services, queries, actions, models, APIs, and utilities before creating
   anything new; every new file must be justified by a recorded search. Never creates features, modifies
-  requirements, expands scope, or edits the spec; stops with "Specification clarification required" when the
-  spec is incomplete. Ends with an implementation summary (reused components, new files, updated files).
+  requirements, expands scope, or edits the spec (and edits the plan only to tick tasks); stops with
+  "Specification clarification required" when the spec is incomplete or the plan is stale. After validation it
+  detects the SemVer change per app (breaking → MAJOR, feature → MINOR, fix → PATCH, refactor/docs → none) and,
+  per `versioning.mode` in `.agents/config/<project>.yml` (`auto` / `recommend` / `off`), bumps the version files
+  and build numbers and writes the CHANGELOG entry, or only recommends them. Ends with an implementation summary (reused components, new files, updated files).
   Triggered by `/webkit-implement <ticket-number or branch-name>`, or `/webkit-implement` alone on the
   ticket's branch.
 ---
@@ -45,11 +49,13 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 ## Workflow Integration
 
 ```text
-   webkit-specify  →  spec.md  (.agents/specs/<project>/T#####/spec.md)
+   webkit-specify  →  spec.md  (WHAT — .agents/specs/<project>/T#####/spec.md)
+                   →  plan.md  (HOW / ORDER — same folder)
                           │
                           ▼
                   webkit-implement          ← you are here
-            backend first → frontend integration
+       executes plan.md: backend first → frontend integration
+                    → version detection (SemVer bump + CHANGELOG)
                           │
                ┌──────────┴──────────┐
                ▼                     ▼
@@ -125,8 +131,12 @@ Committing remains the user's call.
    - **No spec** → stop. This skill implements an approved specification; suggest `/webkit-specify`.
    - **Status is not `Approved`** → say so, and ask the user to confirm the spec is ready before writing code.
    - **Open Questions (§15) block something you must build** → stop with **Specification clarification required** (see [below](#if-the-specification-is-incomplete)).
-2. **The ticket's other documents.** Read `investigation.md`, `verify.md`, and `code-review.md` in the ticket folder if they exist; they are context, not new requirements.
-3. **The existing project.** From the profile and the closest sibling module, establish: framework and file extensions, folder structure, existing modules, APIs and route files, services / Query / Handler / Action classes, components and the design system, state solution, HTTP client, and database design.
+2. **The implementation plan.** `.agents/specs/<project>/T#####/plan.md`, written by `/webkit-specify` from [the implementation-plan template](../../template/implementation-plan.md). **Read it in full.**
+   - **Stale plan**: its **Based on Spec Version** differs from the spec's **Specification Version** → stop with **Specification clarification required**: `plan.md is based on spec v<x>, the spec is v<y>; update it with /webkit-specify <ticket> --plan`. A stale plan omits the work the new version added.
+   - **No plan** (tickets specified before plans existed, legacy portal specs): continue, and plan from the spec's §9 (older specs: Build Order) and §8 as in [Phase 3](#phase-3--follow-the-plan). Say so in the first message and suggest `/webkit-specify <ticket> --plan` for next time.
+   - **Some tasks already ticked `[x]`**: a previous session got that far. Resume at the first unticked task, after spot-checking that the files the ticked tasks name exist.
+3. **The ticket's other documents.** Read `investigation.md`, `verify.md`, and `code-review.md` in the ticket folder if they exist; they are context, not new requirements.
+4. **The existing project.** Start from the plan's §1 Technical Context, then confirm it against the profile and the reference implementation it names: framework and file extensions, folder structure, existing modules, APIs and route files, services / Query / Handler / Action classes, components and the design system, state solution, HTTP client, and database design. Where §1 and the code disagree, the code wins; record it as plan drift.
 
 What the spec binds:
 
@@ -137,10 +147,19 @@ What the spec binds:
 | §8 Technical Design | Components, classes, routes, tables, columns, and the exact request / response / error contracts. |
 | §7, §11, §13 Non-functional, Edge Cases, Security | Build obligations, not background: authorization and its rejection response, validation per field, double-submit and retry guards, error shapes, performance limits. |
 | §10 Acceptance Criteria | The literal values, status codes, and messages `/webkit-verify` will check. Build to the rows, not a paraphrase. |
-| §9 Implementation Plan | Task order and the Expected Output of each phase. |
 | §15 Technical Decisions | Binding choices. |
 
-Older specs use other section names (Business Rules, Permissions, Non-Functional & Failure-Mode Checklist, Build Order, Definition of Done); map them to the rows above.
+What the plan binds (it **derives** from the spec and adds no requirement; where the two disagree, the spec wins):
+
+| Plan section | Binds |
+| --- | --- |
+| §2 Reuse Map | The starting rows of your Reuse Ledger (Phase 2). |
+| §3 File Change Map | The files to create or modify. A file outside it needs a Reuse Ledger row and a plan-drift note. |
+| §4–§7 Phases and tasks | Task order, each task's files and exact change, and its Done When. |
+| §8 Acceptance Walk | How each AC is exercised in Phase 6. |
+| §9 Commands for the User | What you list for the user and never run yourself (migrations, seeders, installs, env keys). |
+
+Older specs use other section names (Business Rules, Permissions, Non-Functional & Failure-Mode Checklist, Build Order, Definition of Done); map them to the rows above. A spec whose §9 still holds a task list (written before plans existed) and has no `plan.md`: that §9 is the plan. Once a `plan.md` exists, it supersedes that list.
 
 ---
 
@@ -166,7 +185,7 @@ Search for reusable code before implementing. Review services, components, model
 
 ### Reuse Ledger (MANDATORY)
 
-A new file is a claim that nothing reusable exists, and that claim needs evidence. Before creating **any** controller, Query, Handler, Action, model, migration, request, component, page, composable / hook, util, type, or api file, record:
+A new file is a claim that nothing reusable exists, and that claim needs evidence. **Start from the plan's §2 Reuse Map** and re-confirm each row against the current code (the plan may be days old): a `Found` file that no longer exists, or a match the plan missed, overrides the plan and is recorded as plan drift. Before creating **any** controller, Query, Handler, Action, model, migration, request, component, page, composable / hook, util, type, or api file, record:
 
 | Artifact | Searched | Found | Decision |
 | --- | --- | --- | --- |
@@ -178,14 +197,17 @@ A new file is a claim that nothing reusable exists, and that claim needs evidenc
 
 ---
 
-## Phase 3 — Implementation Planning
+## Phase 3 — Follow the Plan
 
-Build an internal plan from the spec's §9 and §8:
+Execute `plan.md` task by task, in its order: the plan's Preparation tasks, then its Backend tasks (built per this skill's Phase 4), its Frontend Integration tasks (Phase 5), and its Validation tasks (Phase 6). **The backend is always completed before frontend integration.**
 
-- backend tasks, frontend tasks, shared tasks,
-- dependency order and implementation order (migration → model → Query / Handler → controller and route → frontend api layer → state → pages and components).
+- **One task at a time.** Make the task's change in the files it names, check its **Done when**, then tick it in `plan.md` (`- [ ]` → `- [x]`). Set **Plan Status** to `In Progress` when you tick the first task and to `Done` when the last one is ticked. Ticking is the **only** edit you make to the plan: it is how the next session knows where to resume.
+- **Never tick a task whose Done When you could not confirm.** Leave it unticked and name it, with the reason, in the summary's Notes.
+- **Do not reorder** unless a dependency the plan missed forces it; record the reorder as plan drift.
+- **Plan drift** is any place the plan cannot be followed as written: a path that does not exist, a Reuse Map row the code contradicts, a missing step a spec FR / AC needs, a wrong order. Follow the **spec** (it binds; the plan only derives from it), make the smallest deviation that satisfies it, and list every drift in the summary's Notes so `/webkit-specify` corrects the plan. Do not rewrite the plan yourself.
+- **A task the spec does not justify** is not built: report it as **Specification clarification required**.
 
-**The backend is always completed before frontend integration.** Do not expose the plan unless the user asks for it.
+**No `plan.md`** (older tickets): build an internal plan from the spec's §9 (or Build Order) and §8 instead: backend tasks, frontend tasks, shared tasks, in dependency order (migration → model → Query / Handler → controller and route → frontend api layer → state → pages and components). Do not expose it unless the user asks, and do not save it; writing `plan.md` belongs to `/webkit-specify`.
 
 ---
 
@@ -253,7 +275,22 @@ Before finishing, verify:
 - Loading, error, and empty states exist.
 - Permission handling works for every role in the spec, including the roles that must be rejected.
 - Edited PHP files parse (`php -l <file>`); the frontend typechecks / builds where the project has those scripts.
-- Walk the §10 Acceptance Criteria: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
+- Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
+- Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.
+
+---
+
+## Phase 7 — Version Detection
+
+Runs once Phase 6 passes, and only then: a version bump describes finished work. Follow [versioning.md](../../rules/versioning.md) exactly; in short:
+
+1. **Read the mode** from `.agents/config/<project>.yml` → `versioning.mode`. No file or no key → `recommend`. `off` → skip this phase.
+2. **Per target** (each independently versioned app the config lists): find what changed since the branch's base in that app's own repo. Nothing under its paths → `NONE`, no bump.
+3. **Classify** from the spec's intent and the diff's reach: breaking → **MAJOR**, new capability → **MINOR**, fix → **PATCH**, refactor / docs / tests only → **NONE**. Cite the spec IDs and files that decided it.
+4. **Compute** the next version from the **base** version, never the working tree, so a re-run on the same branch never bumps twice.
+5. **`auto`**: write the version files, raise the build numbers, and add the CHANGELOG entry. **`recommend`**: change nothing; report the version and the exact edits. Either way, an ambiguous result, or a MAJOR the spec does not declare, is reported as `recommend` only.
+
+The version files and the CHANGELOG are the only files this phase touches. They are not plan tasks and are never plan drift. It never commits, tags, builds, publishes, or changes a server-side minimum version.
 
 ---
 
@@ -273,6 +310,7 @@ Do **not**:
 
 - create new requirements,
 - modify the specification,
+- modify the plan beyond ticking tasks and setting Plan Status,
 - expand scope or invent missing features,
 - rewrite the architecture,
 - duplicate existing code,
@@ -286,6 +324,8 @@ If implementation cannot continue because the specification is incomplete, ambig
 1. **Stop.**
 2. Report **Specification clarification required**, naming the spec section and exactly what is missing.
 3. Do not invent behavior and do not guess business logic. The spec owner resolves it with `/webkit-specify`.
+
+A problem in the **plan** alone (the spec is clear) is not a stop: follow the spec and record it as plan drift ([Phase 3](#phase-3--follow-the-plan)). Only a stale plan stops the run.
 
 Where the spec and a rule in [.agents/rules/](../../rules/) genuinely conflict, follow the rule and report the conflict in the summary's Notes.
 
@@ -304,15 +344,17 @@ Before implementation is complete, confirm:
 - ✓ Error handling implemented
 - ✓ Empty states implemented
 - ✓ Project conventions followed
+- ✓ Every `plan.md` task ticked, or listed in Notes with its reason
+- ✓ Version detected per target: bumped (`auto`), recommended, `NONE`, or `off`
 - ✓ Specification satisfied
 
 ---
 
 ## Output — Implementation Summary
 
-End by printing the summary in chat, filled from the template [.agents/template/implementation-summary.md](../../template/implementation-summary.md). Follow its exact structure (Metadata, Implementation Summary, Reused Components, New Files (each with its Reuse Ledger CREATE reason), Updated Files, Notes) and delete its guide comments. It is not saved as a file.
+End by printing the summary in chat, filled from the template [.agents/template/implementation-summary.md](../../template/implementation-summary.md). Follow its exact structure (Metadata, Implementation Summary, Reused Components, New Files (each with its Reuse Ledger CREATE reason), Updated Files, Version, Notes, including every plan drift) and delete its guide comments. It is not saved as a file.
 
-Do not stage or commit. Suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) (e.g. `feat(payroll): add payroll processing`).
+Do not stage or commit. Suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) whose type matches the Phase 7 level (e.g. `feat(payroll): add payroll processing` for MINOR; `feat(<scope>)!:` with a `BREAKING CHANGE:` footer for MAJOR).
 
 ---
 

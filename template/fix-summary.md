@@ -49,6 +49,22 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 
 ---
 
+## Version
+
+<!-- From Phase 7 (.agents/rules/versioning.md §7). One row per target; "Versioning: off" when the mode is off.
+     Shipped: "Yes" (defect in the base → PATCH), "No — unreleased work on this branch" (no bump of its own),
+     or "—" for a target the fix did not touch. -->
+
+| Target | Defect Shipped | Level | Version | Status | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| {{target}} | {{Yes / No — unreleased work on this branch / —}} | {{PATCH / branch level kept / NONE}} | {{1.1.0 → 1.1.1, or "unchanged (1.1.0)"}} | {{applied (auto) / recommended / none}} | {{finding refs; base check}} |
+
+**CHANGELOG:** {{`<path>` — Fixed line added under `## [x.y.z]`, or "None — <reason>"}}
+
+**Before release:** {{every `warnings` and `after_release` line of each bumped target, or "None"}}
+
+---
+
 ## Notes
 
 <!-- Only implementation decisions directly related to the approved fixes, plus: findings already resolved, fixes

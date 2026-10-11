@@ -6,8 +6,10 @@ description: >
   (CRITICAL / HIGH, BLOCKER / REQUIRED FIX, or the investigation's fix plan) with the smallest safe change,
   reusing existing code, then checks for regressions. Never re-reviews, never generates new findings, never adds
   requirements or edits the spec; an unrelated problem found along the way is reported as "Additional issue
-  discovered", not fixed. Works on the ticket's existing branch and ends with a Fix Summary marked FIX COMPLETED
-  or PARTIALLY COMPLETED. Triggered by `/webkit-fix <ticket-number or branch-name>
+  discovered", not fixed. Works on the ticket's existing branch. After the regression check it runs SemVer
+  detection per app (`versioning.mode` in `.agents/config/<project>.yml`): a fix to a defect that shipped is a
+  PATCH with a CHANGELOG "Fixed" line; a fix to unreleased work on the same branch adds no bump. Ends with a Fix
+  Summary marked FIX COMPLETED or PARTIALLY COMPLETED. Triggered by `/webkit-fix <ticket-number or branch-name>
   --<code-review|verify|investigation|refactor|design-review>`.
 ---
 
@@ -72,7 +74,7 @@ Never invent additional work. A finding the report does not contain is not a fix
               /webkit-fix <ticket> --<source>          ← you are here
                                    │
                                    ▼
-          approved fixes applied on the ticket's branch → Fix Summary
+          approved fixes applied on the ticket's branch → version detection → Fix Summary
                                    │
                                    ▼
           re-run the source skill to confirm (e.g. /webkit-verify <ticket>)
@@ -195,6 +197,22 @@ Before completion, confirm:
 
 ---
 
+## Phase 7 — Version Detection
+
+Runs after Phase 6, once per run, and only if at least one fix was applied. Follow [versioning.md](../../rules/versioning.md) exactly; in short:
+
+1. **Read the mode** from `.agents/config/<project>.yml` → `versioning.mode`. No file or no key → `recommend`. `off` → skip this phase.
+2. **Per target**, list everything changed on the branch since its base, in that app's own repo. Nothing under its paths → `NONE`.
+3. **Did the defect ship?** For each fixed file, check whether the fixed lines exist in the base ([versioning.md §2 Step 4](../../rules/versioning.md)):
+   - **Shipped** (the bug is in a released version: an investigation ticket, a `bugfix/` or `hotfix/` branch) → **PATCH**, plus a CHANGELOG **Fixed** line written from the report's symptom.
+   - **Never shipped** (a review finding on work added on this same branch) → no level of its own. The branch keeps the level `/webkit-implement` already gave it: the same version, with no new CHANGELOG line.
+4. **Compute from the base**, never from the working tree. A ticket branch that `/webkit-implement` already bumped is re-checked, never bumped again. A PATCH on top of an unreleased MINOR is still the MINOR.
+5. **`auto`**: write the version files, build numbers, and the Fixed line. **`recommend`**: change nothing; report the edits.
+
+These version files and the CHANGELOG are the only edits beyond the report's findings. They are not an "Additional issue", and no review treats them as scope expansion. This phase never commits, tags, builds, or changes a server-side minimum version.
+
+---
+
 ## Development Principles
 
 - **Minimal change.** The smallest change necessary; never rewrite large sections.
@@ -218,7 +236,7 @@ Do **not**:
 
 ## Output — Fix Summary
 
-End by printing the summary in chat, filled from the template [.agents/template/fix-summary.md](../../template/fix-summary.md). Follow its exact structure (Metadata, Applied Fixes, Reused Code, Modified Files, Notes, Completion Status (FIX COMPLETED / PARTIALLY COMPLETED with the reason)) and delete its guide comments. It is not saved as a file.
+End by printing the summary in chat, filled from the template [.agents/template/fix-summary.md](../../template/fix-summary.md). Follow its exact structure (Metadata, Applied Fixes, Reused Code, Modified Files, Version, Notes, Completion Status (FIX COMPLETED / PARTIALLY COMPLETED with the reason)) and delete its guide comments. It is not saved as a file.
 
 Do not stage or commit. Suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) (e.g. `fix(tk): correct late computation grace period`).
 

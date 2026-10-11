@@ -34,13 +34,13 @@ The stop applies to the out-of-authority task only. Work that belongs to the cur
 
 | Skill | Owns | Hands off |
 | --- | --- | --- |
-| `/webkit-specify` | Writing and maintaining the feature specification (`spec.md`) | Code → `/webkit-implement`; reviews → `/webkit-verify`, `/webkit-code-review`; bugs → `/webkit-investigate` |
-| `/webkit-implement` | Turning an approved specification into code | Spec changes → `/webkit-specify`; reviews → `/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`; review findings → `/webkit-fix` |
+| `/webkit-specify` | Writing and maintaining the feature specification (`spec.md`) and its implementation plan (`plan.md`) | Code → `/webkit-implement`; reviews → `/webkit-verify`, `/webkit-code-review`; bugs → `/webkit-investigate` |
+| `/webkit-implement` | Turning an approved specification into code by executing its plan (ticking `plan.md` tasks is its only edit there), then the version bump and CHANGELOG entry per [versioning.md](./versioning.md) | Spec changes → `/webkit-specify`; reviews → `/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`; review findings → `/webkit-fix` |
 | `/webkit-verify` | Checking the implementation against its specification, and reporting | Fixes → `/webkit-fix`; spec changes → `/webkit-specify`; code quality → `/webkit-code-review` |
 | `/webkit-code-review` | Reviewing the code quality of a diff, and reporting | Fixes → `/webkit-fix`; spec conformance → `/webkit-verify`; visual depth → `/webkit-design-review` |
 | `/webkit-design-review` | Reviewing the visual layer, and reporting | Fixes → `/webkit-fix`; code correctness → `/webkit-code-review`; spec conformance → `/webkit-verify` |
 | `/webkit-investigate` | Finding and proving a root cause, and recommending the fix | Applying the fix → `/webkit-fix`; new behavior → `/webkit-specify`; cleanup → `/webkit-refactor` |
-| `/webkit-fix` | Applying the approved fixes of one report | New findings → the review skills or `/webkit-investigate`; new behavior or spec changes → `/webkit-specify`; unapproved cleanup → `/webkit-refactor` |
+| `/webkit-fix` | Applying the approved fixes of one report, then the version bump and CHANGELOG entry per [versioning.md](./versioning.md) | New findings → the review skills or `/webkit-investigate`; new behavior or spec changes → `/webkit-specify`; unapproved cleanup → `/webkit-refactor` |
 | `/webkit-refactor` | Behavior-preserving restructuring toward a stated goal | Bugs → `/webkit-investigate`, then `/webkit-fix`; new behavior → `/webkit-specify`, then `/webkit-implement` |
 | `/webkit-document` | Writing the feature guide from the code that shipped | Code changes → `/webkit-fix` or `/webkit-implement`; root causes → `/webkit-investigate`; specs → `/webkit-specify` |
 | `/webkit-migrate` | Moving an existing feature into the named target project with identical flow | New behavior → `/webkit-specify` in the target; source bugs → `/webkit-investigate` in the source; reviews → `/webkit-verify`, `/webkit-code-review` in the target |
