@@ -277,13 +277,13 @@ This specification establishes a **full MVP redesign of the Mobile App Messaging
 | AC-64 | A member's position is 120 | `POST /conversations/{id}/read` with `{ message_id: 100 }` | `200`, `last_read_id: 120` (unchanged); no `MessagesRead` event is broadcast. |
 | AC-65 | A member's position is 100; messages up to id 130 exist | `POST /conversations/{id}/read` with `{ message_id: 120 }`, sent twice | First: `200`, `last_read_id: 120`, exactly one `MessagesRead` broadcast with `{ reader_id, last_read_id: 120, thread_root_id: null }`. Second: `200`, `last_read_id: 120`, no broadcast. |
 | AC-66 | `message_id` omitted | `POST /conversations/{id}/read` | The position becomes the newest message id of the conversation; response `{ success: true, message: "Conversation read position updated", last_read_id, remaining_unread: 0 }`. |
-| AC-67 | Caller is not a member of a public channel, an announcement or General | `POST /conversations/{id}/read` | A `conversation_members` row is inserted with `last_read_message_id` set; `200`. For a private channel the caller is not in: `404 { success: false, message: "Conversation not found" }` and no row is inserted. |
+| AC-67 | Caller is not a member of a public channel, an announcement or General | `POST /conversations/{id}/read` | Reading never makes the caller a member, because membership is how a channel's join rule and admin approval are enforced (AC-84, AC-87). Public channel or announcement: `200 { success: true, unread_count: 0, read_id: 0, last_read_id: 0, remaining_unread: 0 }`, no `conversation_members` row is stored and nothing is broadcast. General (`is_system`), active account: a row is inserted with `last_read_message_id` set to the target message and the normal §4.5 body is returned (an inactive account is rejected first, AC-75). A private channel the caller is not in: `404 { success: false, message: "Conversation not found" }` and no row is inserted. |
 | AC-68 | Thread root 50 has replies 60 and 70 | `POST /conversations/{id}/messages/50/read` with `{ reply_id: 60 }`, then with `{ reply_id: 55 }` | First: `200`, `last_read_id: 60`, one `MessagesRead` with `thread_root_id: 50`. Second: `200`, `last_read_id: 60` (id 55 is outside the thread; the target falls back to the root, which is behind 60), no broadcast. |
 | AC-69 | Message 999 does not belong to the conversation; or the conversation is not visible | `POST /conversations/{id}/messages/999/read`; same call on a private channel the caller is not in | `404 { success: false, message: "Thread not found" }`; `404 { success: false, message: "Conversation not found" }`. |
 | AC-70 | Caller posts reply 80 in thread 50 | `POST /conversations/{id}/messages` with `reply_to_id: 50`, then `GET …/messages/50/replies` | `data.user_last_read_id` is `80`. |
 | AC-71 | Thread 50 exists | `GET /conversations/{id}/messages/50/replies` | `200 { success: true, data: { root, replies, user_last_read_id, read_receipts } }`; `read_receipts` hold thread positions, with `seen_at: null` and `seen_time: null`. An unknown root returns `404 { success: false, message: "Thread not found" }`. |
 | AC-72 | A sent newest message 130; B's position is 130, C's is 90 | A calls `GET /conversations/{id}/messages/130/seen` | `200 { success: true, message_id: 130, seen_by: [B], seen_count: 1 }`; each entry has `id, name, avatar, last_read_message_id, seen_at, seen_time, job_title, department`. The sender is never listed; the list is most-recently-seen first. An unknown message id returns `404 { success: false, message: "Message not found" }`. |
-| AC-73 | Caller has unread messages in several conversations | `POST /mark-all-read` | Every conversation in the caller's visible set has its position set to its newest message id; `UnreadCountUpdated` is broadcast on `user.{id}` with `conversation_id: 0`, `unread_count: 0`; response `{ success: true, message: "All conversations marked as read" }`. |
+| AC-73 | Caller has unread messages in several conversations | `POST /mark-all-read` | Only conversations the caller already belongs to, plus `is_system` conversations when `accounts.status = 1`, have their position set to their newest message id; a public channel or announcement the caller can see but has not joined is left untouched and gets no member row. `UnreadCountUpdated` is broadcast on `user.{id}` with `conversation_id: 0`, `unread_count: 0`; response `{ success: true, message: "All conversations marked as read" }`. |
 | AC-74 | Private channel "Execs"; a non-member and a member each subscribe to `private-conversation.{id}` | Broadcast channel authorisation | The non-member is rejected; the member is accepted with `{ id, name }`. The rule is `Conversation::isVisibleTo`, identical to REST. |
 | AC-75 | Caller's `accounts.status = 0` | `POST …/messages/{rootId}/read` or `GET …/messages/{id}/seen` on General | `403 { success: false, message: "Your account is inactive. Please contact HR to restore access.", code: "ACCOUNT_INACTIVE" }` (rule §4.3; gap G-1). |
 | **v4 — Thread Participants, Attachment Dimensions** | | | |
@@ -317,7 +317,7 @@ This specification establishes a **full MVP redesign of the Mobile App Messaging
 | **v4 — Mobile: Seen Avatars, Thread Preview, Realtime** | | | |
 | AC-99 | A conversation page with `read_receipts` for readers B and C | Message list renders | B's avatar sits under the newest loaded message whose id is `<=` B's position; C's likewise. Nothing is placed for a pending, failed or system-event message. A position older than every loaded message places nothing. |
 | AC-100 | The newest message at or below B's position was sent by B | Message list renders | No avatar is shown for B on that message. |
-| AC-101 | Up to 4 readers sit on one message; 5 or more | Message renders | Up to 4 avatars of 15 px are shown, then a `+N` badge for the rest. Tapping shows `Seen by <first name> • <seen_time>` and hides it after 3.2 s. Long-press opens the message action sheet whose "Seen by" list is loaded from `GET …/seen` (`thread_root_id` sent when inside a thread). |
+| AC-101 | Up to 4 readers sit on one message; 5 or more | Message renders | Up to 4 avatars of 15 px are shown, then a `+N` badge for the rest. Tapping shows `Seen by <first name> • <seen_time>` for a main-list position, and `Seen by <first name>` for a thread position (thread positions carry no `seen_time`, AC-71); it hides after 3.2 s. Long-press opens the message action sheet whose "Seen by" list is loaded from `GET …/seen` (`thread_root_id` sent when inside a thread). |
 | AC-102 | B reads the conversation while A is viewing it | `MessagesRead` arrives on `conversation.{id}` | B's avatar moves forward to the newest message at or below `last_read_id` without a reload; an event with an older id than B's current position is ignored; an event from the viewer is ignored. An event with `thread_root_id` moves B only in that thread's list. When B sends a message, B's position is also moved to that message. |
 | AC-103 | A thread is open | `ThreadModal` renders root and replies | Seen avatars use that thread's own positions (`read_receipts` of `…/replies` and `MessagesRead` events carrying `thread_root_id`). |
 | AC-104 | A root message with 2 distinct repliers; with 6 distinct repliers | Message row renders `MessageThreadPreview` | 2 repliers: 2 avatars. 6 repliers: 4 avatars plus an overflow badge showing the number of repliers not shown (`2+`), displayed as `9+` from 9 upward (gap G-6). Label: `N reply` / `N replies • Last reply <time>`. |
@@ -402,7 +402,7 @@ DB::table('conversations')->where('type', 'channel')
 
 This is the canonical flag the backend uses to identify system/default channels. Using `created_by IS NULL` alone is fragile because a future admin tool could set `created_by` on General. `is_system = true` is explicit, indexed, and immutable via normal user operations. `Conversation::$casts` carries `'is_system' => 'boolean'`.
 
-**No `conversation_members` rows are created for General membership.** Rows appear only when an employee first reads General (`markConversationAsRead` inserts on first read of a public or system channel).
+**No `conversation_members` rows are created for General membership.** A row appears only when an active employee first reads General (`markConversationAsRead` inserts on first read of an `is_system` channel and nowhere else, AC-67).
 
 ### 3.3 Cache-held read state (no table)
 
@@ -436,7 +436,7 @@ All endpoints live in `routes/api/employee.php` under `Route::prefix('messages')
 | POST | `/conversations/{id}/messages` | `sendMessage` | Body: `text`, `reply_to_id` (alias `reply_to`), `is_thread_broadcast` (alias `isThreadBroadcast`), `attachments[]` (`name`, `size`, `type`, `path`, `width?`, `height?`), `linked_ticket` (alias `linkedTicket`), `mentions[]`. Returns `{ success, data: MessageItem }`. Rules in §4.6 | v4 |
 | POST | `/conversations/{id}/typing` | `sendTypingEvent` | Broadcasts `UserTyping`; `404 "Conversation not found"` when not visible; guarded | Baseline |
 | POST | `/conversations/{id}/read` | `markConversationAsRead` | Body `message_id?`. Forward-only (§4.5). Returns `{ success, message, last_read_id, remaining_unread }` | v4 |
-| POST | `/mark-all-read` | `markAllAsRead` | Marks every visible conversation read to its latest message; returns `{ success, message: "All conversations marked as read" }` | v4 |
+| POST | `/mark-all-read` | `markAllAsRead` | Marks read to its latest message every conversation the caller belongs to, plus system channels for an active account (AC-73); returns `{ success, message: "All conversations marked as read" }` | v4 |
 | GET | `/recipients` | `getRecipients` | Eligible colleagues for New Direct Message and Create Channel | Baseline |
 | GET | `/mentions/search` | `searchMentions` | `{ success, data, meta }`; people limited to `accounts.status = 1` (§4.8) | Baseline (v3 rule) |
 | GET | `/search` | `searchMessages` | Contract in §4.4 | v4 |
@@ -598,7 +598,7 @@ Endpoints deliberately outside the guard:
 `POST /conversations/{id}/read` (`markConversationAsRead`) — body `{ message_id? }`:
 1. `404 { success:false, message:"Conversation not found" }` when the conversation does not exist or `Conversation::isVisibleTo` is false (a private channel the caller is not in).
 2. Guard §4.3.
-3. A member advances with **one conditional UPDATE** (`last_read_message_id IS NULL OR < target`); an overlapping, repeated or out-of-order request cannot move it back. A non-member of a public channel, announcement or system channel gets a row inserted on first read (`updateOrInsert`).
+3. A member advances with **one conditional UPDATE** (`last_read_message_id IS NULL OR < target`); an overlapping, repeated or out-of-order request cannot move it back. A non-member never gets a row from a read, except in an `is_system` channel (General) for an active account, where the first read inserts it (race-safe, AC-110). For a non-member of any other channel the call stores nothing and returns `200 { success:true, unread_count:0, read_id:0, last_read_id:0, remaining_unread:0 }` without broadcasting (AC-67).
 4. The target is the newest message of the conversation with `id <= message_id`, or the newest message when `message_id` is absent or matches none.
 5. `remaining_unread` counts messages from other senders after the position that are main-list messages (`reply_to_id IS NULL` or `is_thread_broadcast = 1`) and not deleted.
 6. `UnreadCountUpdated` is broadcast to `user.{id}` always; `MessagesRead` (below) **only when the position advanced**.
@@ -629,7 +629,7 @@ Included: members of the conversation, **active accounts only** (`accounts.statu
 
 **Channel authorisation** (`routes/channels.php`): `conversation.{conversationId}` is accepted only when `Conversation::isVisibleTo($conversationId, $user)`; it returns `{ id, name }` for presence. This is the same rule as the REST API, so a private channel's live feed (messages and read positions) is members-only. `user.{userId}` is accepted only for the same account. Both are registered on the `pusher` and `reverb` connections.
 
-**`markAllAsRead`:** for every conversation in `Conversation::visibleTo($user)`, sets the position to the conversation's newest message id (insert-or-update, cache mirrored), then broadcasts `UnreadCountUpdated` with `conversation_id = 0`, `unread_count = 0`. It does not broadcast `MessagesRead` and does not touch thread positions.
+**`markAllAsRead`:** for every conversation in `Conversation::visibleTo($user)` that the caller already belongs to, plus every `is_system` conversation when `accounts.status = 1`, sets the position to the conversation's newest message id (insert-or-update, cache mirrored); public channels and announcements the caller can see but has not joined are not touched (AC-73). Then broadcasts `UnreadCountUpdated` with `conversation_id = 0`, `unread_count = 0`. It does not broadcast `MessagesRead` and does not touch thread positions.
 
 ### 4.6 Sending Messages and Attachments
 
@@ -846,6 +846,7 @@ HTTP client: `src/app/axios/http.ts` (`http.get(url, params)` accepts either `{ 
 |---|---|
 | Employee account deactivated mid-session (token still valid) | Next API call to a General endpoint returns `403 ACCOUNT_INACTIVE`. Frontend handles 403 and shows the activation banner. |
 | Active employee has no `conversation_members` row for General | `markConversationAsRead` inserts the row on first read, no error. |
+| Employee opens a public channel or announcement they have not joined and it is marked read (verify v2) | No row is stored (AC-67), so the caller stays a non-member and the join rule applies. The conversation list already shows no unread badge for a conversation the caller is not a member of (`GetConversationsQuery`: `unreadCount = 0` for non-members), so there is nothing to clear; the badge starts counting only after the caller joins. Whether a preview should clear an unread count the product later shows for non-members is a product decision, not specified here. |
 | Inactive employee's General messages | Remain in DB; not purged. Other active employees continue to see the messages. |
 | `@all` sent to General with 500+ active employees | Backend resolves audience server-side. Mobile app does not load all 500 accounts. |
 | Two simultaneous `markConversationAsRead` calls from the same user, no row yet | Both may insert: **no unique index exists** on `(conversation_id, account_id)` (gap G-9). With a row, the conditional UPDATE keeps it idempotent. |
@@ -1040,6 +1041,9 @@ These are **not** relaxations. Each is delivered by a task in `plan.md`.
 | AC-27 | Notice `Only HR administrators can broadcast to this channel` | As built text; roles pending Q-2 | Q-2 |
 | AC-28 | Inline retry indicator | Failure icon plus `Retry Sending` in the action sheet | A-2 |
 | AC-29 | Max width 640 px above 1024 px | 640 px conversation, 680 px landing and More | A-2 |
+| AC-67 | A non-member's read inserts a `conversation_members` row in a public channel, an announcement or General | The row is inserted only in an `is_system` channel; any other non-member read stores nothing | Specification error (verify v2): it contradicted AC-84 / AC-87, since posting is checked against that table and a read would defeat the join rule |
+| AC-73 | Every visible conversation is set to its newest message id | Only conversations the caller belongs to, plus system channels for an active account | Same contradiction as AC-67 |
+| AC-101 | The tap always shows `Seen by <first name> • <seen_time>` | The time is shown only where the position carries one (main list); thread taps show `Seen by <first name>` | Specification error (verify v2): it contradicted AC-71, which gives thread positions no `seen_time` |
 | AC-42, AC-43 | `@all` / `@here` target active employees (an audience list) | `is_targeted` for every reader; audience never expanded; inactive accounts cannot read General | Observable behavior; the v3 wording had no consumer (G-8 retired) |
 | §6.2 | "10 MB, `image/*` …" | Q-1 | Code differs since 2026-09-10 |
 | §6.2 | "unique constraint on `(conversation_id, account_id)`" | None exists (G-9) | Spec misstated the schema |
@@ -1090,7 +1094,7 @@ The backend has PHPUnit (`composer.json`: `phpunit/phpunit ^12.0`; `tests/Unit`,
 | ID | Steps | Covers |
 | --- | --- | --- |
 | MT-1 | In a channel, type `#general from:maria has:file during:30d invoice` into search; confirm the pill, the results, then Backspace removes the pill | AC-95 – AC-98 |
-| MT-2 | With two devices in one DM: send from A, open on B; confirm A sees B's avatar under the message, then send from B and confirm B's avatar is hidden under B's own message | AC-99 – AC-102 |
+| MT-2 | With two devices in one DM: send from A, open on B; confirm A sees B's avatar under the message, then send from B and confirm B's avatar is hidden under B's own message; tap A's avatar in the main list (`Seen by <name> • <time>`) and the thread avatar in a thread (`Seen by <name>`) | AC-99 – AC-102 |
 | MT-3 | Open a thread on B, read it; confirm A's thread view shows B's thread avatar and A's main list does not move | AC-103 |
 | MT-4 | Root with 2 and with 6 distinct repliers; confirm avatar counts and the overflow badge | AC-104 |
 | MT-5 | In a thread, tick `Also send to #channel`, send twice; confirm the box resets and the channel row shows `View thread` | AC-105 |
@@ -1102,6 +1106,7 @@ The backend has PHPUnit (`composer.json`: `phpunit/phpunit ^12.0`; `tests/Unit`,
 
 
 <!-- Changelog -->
+- v4 — 2026-10-13 — **Minor.** Corrected three specification errors found by `/webkit-verify` (verify.md run v2, Case 1): AC-67 and AC-73 (reading or marking all read no longer creates a member row outside system channels, matching AC-84 / AC-87), AC-101 (thread taps carry no time, matching AC-71); §3.2, §4.5, §6.4 (previewed-channel unread decision) and MT-2 follow. Version unchanged.
 - v4 — 2026-10-13 — **Major.** Brought level with the built system: message search (§4.4), read positions and seen avatars (§4.5), thread participants, channel edit rules, attachment dimensions (§4.6–§4.7), pinned messages and system events (§4.9), full endpoint inventory (§4.1), corrected data model (§3) and frontend file map (§5.2), new AC-48 – AC-110, Decisions 6 – 11, Assumptions A-1 – A-8, Known Gaps G-1 – G-17 (G-8 retired), Open Questions Q-1 – Q-7, testing strategy (§11). Major because it adds API contracts (search, seen, thread read, send validation), user flows (search, seen avatars) and cache-held read state. Impact: `plan.md` created for this version. Amended v3 rows are listed in §10.4. Changed sections: header, §1, §2, §2.5, §3, §4, §5, §6, §7, §8, §9, new §10 and §11.
 - v2 — 2026-09-12 — Full MVP redesign of entire mobile messaging module: Messages landing, Conversation list & preview, More menu actions, New Chat, Create Group, Message Requests, Slack-inspired Conversation, Message Component System, Composer, Mentions, Emoji, Message Actions, Threads, and Voice recording.
 - v1 — 2026-09-08 — initial fullscreen stack transition spec.

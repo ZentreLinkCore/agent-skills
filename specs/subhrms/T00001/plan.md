@@ -9,7 +9,7 @@
 | Feature Name | Mobile App Messaging Full MVP Redesign (Slack-Inspired Workplace Communication) |
 | Specification | `.agents/specs/subhrms/T00001/specs.md` |
 | Based on Spec Version | v4 |
-| Plan Revision | 1 |
+| Plan Revision | 2 |
 | Created Date | 2026-10-13 |
 | Plan Status | Draft |
 
@@ -165,8 +165,8 @@
 
 - [ ] **TASK-10 — Race-safe member-row writes**
   - **Files:** `app/Http/Controllers/employee/MessagesController.php` (Modify)
-  - **Change:** Add `private function upsertReadPosition(int $conversationId, int $accountId, int $messageId): void` — `DB::table('conversation_members')->updateOrInsert(['conversation_id' => …, 'account_id' => …], ['last_read_message_id' => $messageId, 'updated_at' => now()])` inside `try`; on `Illuminate\Database\QueryException` whose `$e->errorInfo[1] === 1062` run the matching `->update(…)` instead; rethrow anything else. Add `private function insertMemberRow(array $row): void` — `DB::table('conversation_members')->insert($row)` swallowing only error 1062. Use `upsertReadPosition` in `markConversationAsRead` (first-read insert) and in `markAllAsRead`; use `insertMemberRow` in `joinChannel`, `approveJoinRequest` and `addConversationMembers`. Response bodies and messages are unchanged.
-  - **Covers:** AC-110, G-9
+  - **Change:** Add `private function upsertReadPosition(int $conversationId, int $accountId, int $messageId): void` — `DB::table('conversation_members')->updateOrInsert(['conversation_id' => …, 'account_id' => …], ['last_read_message_id' => $messageId, 'updated_at' => now()])` inside `try`; on `Illuminate\Database\QueryException` whose `$e->errorInfo[1] === 1062` run the matching `->update(…)` instead; rethrow anything else. Add `private function insertMemberRow(array $row): void` — `DB::table('conversation_members')->insert($row)` swallowing only error 1062. In `markConversationAsRead`, after the visibility and General guards, return `200 { success: true, unread_count: 0, read_id: 0, last_read_id: 0, remaining_unread: 0 }` before any write when the caller has no `conversation_members` row and the conversation is not `is_system` (AC-67); use `upsertReadPosition` only for the first read of an `is_system` channel. In `markAllAsRead`, restrict the conversations to those the caller already belongs to plus `is_system` ones when `$user->status` is 1, then use `upsertReadPosition` for each (AC-73). Use `insertMemberRow` in `joinChannel`, `approveJoinRequest` and `addConversationMembers`. Response bodies and messages are unchanged.
+  - **Covers:** AC-67, AC-73, AC-110, G-9
   - **Depends on:** TASK-09
   - **Done when:** `grep -n "updateOrInsert\|conversation_members')->insert" app/Http/Controllers/employee/MessagesController.php` shows only the two helpers; `php -l app/Http/Controllers/employee/MessagesController.php` passes.
 
@@ -242,7 +242,7 @@
 
 - [ ] **TASK-21 — Feature tests: read positions, threads, seen receipts**
   - **Files:** `tests/Feature/Messages/ReadPositionTest.php`, `ThreadReadTest.php`, `SeenReceiptsTest.php` (Create)
-  - **Change:** Use `Event::fake([\App\Events\Messages\MessagesRead::class, \App\Events\Messages\UnreadCountUpdated::class])`. `ReadPositionTest`: AC-63 (`read_receipts` lists only B), AC-64 (lower id leaves 120), AC-65 (one `MessagesRead` for two identical calls), AC-66 (default target, `remaining_unread` 0), AC-67 (public non-member row inserted; private non-member `404` and no row), AC-73 (`mark-all-read`), AC-110 (two sequential first reads leave one row; with the unique index present the second does not return 5xx). `ThreadReadTest`: AC-68 (60 then 55), AC-69 (`Thread not found` / `Conversation not found`), AC-70 (sender's own reply sets `user_last_read_id` 80), AC-71 (`replies` payload shape, `seen_at` null). `SeenReceiptsTest`: AC-72 (`seen_by` only B, `seen_count` 1, sender excluded, `404 Message not found`).
+  - **Change:** Use `Event::fake([\App\Events\Messages\MessagesRead::class, \App\Events\Messages\UnreadCountUpdated::class])`. `ReadPositionTest`: AC-63 (`read_receipts` lists only B), AC-64 (lower id leaves 120), AC-65 (one `MessagesRead` for two identical calls), AC-66 (default target, `remaining_unread` 0), AC-67 (public non-member: `200` with `last_read_id: 0` and no row; General for an active account: row inserted; private non-member `404` and no row), AC-73 (`mark-all-read` moves only member conversations and system channels for an active account; a joinable public channel the caller has not joined gets no row), AC-110 (two sequential first reads leave one row; with the unique index present the second does not return 5xx). `ThreadReadTest`: AC-68 (60 then 55), AC-69 (`Thread not found` / `Conversation not found`), AC-70 (sender's own reply sets `user_last_read_id` 80), AC-71 (`replies` payload shape, `seen_at` null). `SeenReceiptsTest`: AC-72 (`seen_by` only B, `seen_count` 1, sender excluded, `404 Message not found`).
   - **Covers:** AC-63 – AC-73, AC-110
   - **Depends on:** TASK-02, TASK-10
   - **Done when:** `php artisan test --filter="ReadPositionTest|ThreadReadTest|SeenReceiptsTest"` passes.
@@ -493,4 +493,5 @@
 
 | Plan Revision | Date | Spec Version | Change | Changed Tasks |
 | --- | --- | --- | --- | --- |
+| 2 | 2026-10-13 | v4 (Minor corrections) | Spec Minor change from verify run v2 (Case 1): AC-67 and AC-73 no longer create a member row outside system channels, AC-101 thread taps carry no time. TASK-10 now also delivers that read / mark-all behavior; TASK-21 asserts the corrected AC-67 and AC-73. AC-101 needs no task (shipped as the corrected text; walked by MT-2 in TASK-34). Plan stays Draft while Q-1 – Q-7 are open. | TASK-10, TASK-21 |
 | 1 | 2026-10-13 | v4 | Created plan. Spec v3 held a product-level build order only (its §7); this plan refines it to file level for v4 and supersedes it for execution. | All |
