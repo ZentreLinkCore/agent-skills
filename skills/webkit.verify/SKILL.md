@@ -1,15 +1,9 @@
 ---
 name: webkit-verify
-description: >
-  Adversarial review of a completed implementation against its approved specification
-  (`.agents/specs/<project>/T#####/spec.md`). Checks whether the implementation followed the spec, whether every
-  requirement is complete, and whether hidden functional, edge-case, security, performance, or maintainability
-  problems exist. Every claim needs `file:line` evidence. Classifies each finding BLOCKER / REQUIRED FIX /
-  IMPROVEMENT / OUT OF SCOPE, gives an overall result of PASS / PASS WITH FIXES / FAILED, a spec-impact verdict,
-  and a READY FOR MERGE / FIX REQUIRED BEFORE MERGE recommendation. Not a planning or redesign command: it never
-  adds requirements, never edits code or the spec, and writes only `verify.md` into the ticket folder, filled from
-  the template `.agents/template/verification-report.md`.
-  Triggered by `/webkit-verify <ticket-number or branch-name>`, or `/webkit-verify` alone for the current branch.
+description: |
+  Adversarial check of a finished implementation against its ticket's spec.md, every claim backed by file:line evidence; grades BLOCKER / REQUIRED FIX / IMPROVEMENT / OUT OF SCOPE and writes `verify.md`. Read-only: never edits code or the spec. Code quality without a spec is /webkit-code-review.
+  Trigger: "/webkit-verify", "verify against the spec", "does it match the spec", "spec compliance", "are all requirements done"
+  Use when: implementation is finished and the question is whether it does what the spec says.
 ---
 
 # Webkit Verify
@@ -143,7 +137,7 @@ Older specs use other section names (Business Rules, Permissions, Non-Functional
 - side effects the spec requires (notifications, audit entries) that nothing emits,
 - permission rules with no check that reads them.
 
-**Reverse direction.** Code the spec never authorized is a deviation too: endpoints, columns, or response fields with no spec counterpart; items listed in Not Included; `TODO`, stubbed returns, or hard-coded values where real logic is specified; a `try/catch` that hides a failure by returning mock data.
+**Reverse direction.** Code the spec never authorized is a deviation too: endpoints, columns, or response fields with no spec counterpart; items listed in Not Included; `TODO`, stubbed returns, or hard-coded values where real logic is specified; a `try/catch` that hides a failure by returning mock data. Version files, build numbers, and the CHANGELOG entry written by the versioning phase ([versioning.md](../../rules/versioning.md)) are expected, not a deviation.
 
 ---
 

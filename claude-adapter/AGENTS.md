@@ -1,6 +1,6 @@
 # Agent Rules
 
-Portable entry point for **any** coding agent (Claude Code, Antigravity/Gemini, Cursor, Copilot). Deliberately small: everything below is always true, and everything else is linked and read **only when the task touches it**. Loading the full rule library on every turn costs ~1,000 lines and is mostly content for the project you are not in.
+Portable entry point for **any** coding agent (Claude Code, Antigravity/Gemini, Cursor, Copilot). Deliberately small: everything below is always true, and everything else is linked and read **only when the task touches it**. Loading the full rule library on every turn costs ~1,650 lines and is mostly content for the project you are not in.
 
 ---
 
@@ -70,7 +70,7 @@ Always-on essentials — read if unsure: `authority-boundary.md` (each `/webkit-
 
 - **[`.agents/specs/`](./.agents/specs/)** — feature designs, one **ticket folder** per feature inside its project: `specs/<project>/T00001/`, … each holding up to seven fixed-name documents: `spec.md` (the spec, from [`.agents/template/feature-specification.md`](./.agents/template/feature-specification.md); `specs.md` on tickets created before `/webkit-specify`), `plan.md` (the implementation plan `/webkit-implement` executes, from [`.agents/template/implementation-plan.md`](./.agents/template/implementation-plan.md)), `investigation.md` (root cause), `refactor.md` (what was restructured), `verify.md` (spec conformance), `code-review.md` (diff review), `design-review.md` (visual review). A ticket needs only the ones its work produced. Numbers are allocated `max + 1` **per project** by `/webkit-specify`, `/webkit-investigate`, or `/webkit-refactor` — the three entry points; every other skill resolves an existing ticket. The work is branched as bare `T00001`. Older specs still sit in portal folders beside them and are still valid — **search both**, and grep ticket folders' *contents*, since their names carry no feature name. Convention: [`.agents/rules/ticket-numbering.md`](./.agents/rules/ticket-numbering.md). **When a spec exists for what you are building, it is the primary source of truth** and supersedes ad-hoc design. Only a rule overrides it; flag genuine conflicts.
 - **[`.agents/blueprint/`](./.agents/blueprint/)** — product blueprints, one folder per project; governs *behavior* (the rules govern *how to express it in code*). Start at `docs/README.md`.
-- **[`.agents/skills/`](./.agents/skills/)** — end-to-end workflows: specify → implement (backend first, then frontend integration) → verify → fix, plus investigate, refactor, code-review, migrate. In Claude Code these are `/webkit-*` commands. **In other agents, read the `SKILL.md` directly** and follow it — the content is tool-neutral.
+- **[`.agents/skills/`](./.agents/skills/)** — end-to-end workflows: specify → implement (backend first, then frontend integration) → verify → fix, plus investigate, refactor, code-review, design-review, document, migrate. In Claude Code these are `/webkit-*` commands. **In other agents, read the `SKILL.md` directly** and follow it — the content is tool-neutral.
 
 ## 6. Before you write
 

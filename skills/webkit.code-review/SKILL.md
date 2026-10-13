@@ -1,16 +1,9 @@
 ---
 name: webkit-code-review
-description: >
-  Senior-developer code review of the actual changes (a ticket's branch, a branch against its base, or uncommitted
-  work) before merge. Finds bugs, incorrect implementation, security risks, performance issues with measurable
-  impact, maintainability problems, duplication, bad patterns, and likely future failures, judged against the
-  project's own rules in `.agents/rules/` and its existing architecture. Not a specification review and never a
-  place for new requirements. Grades every finding CRITICAL / HIGH / MEDIUM / LOW / INFO, rates the change
-  APPROVED / APPROVED WITH COMMENTS / CHANGES REQUIRED, and recommends READY TO MERGE or FIX REQUIRED. Never edits
-  code or specs; writes `code-review.md` into the ticket folder from the template
-  `.agents/template/code-review-report.md`, or to `.agents/reports/` when the change has no ticket.
-  Triggered by `/webkit-code-review <ticket-number or branch-name>`, or `/webkit-code-review` alone for the
-  current branch and uncommitted work.
+description: |
+  Senior-developer review of a diff (a ticket's branch, a branch against its base, or uncommitted work) for bugs, security, performance, duplication and breaks from `.agents/rules/`; grades CRITICAL to INFO and writes `code-review.md`. Read-only, and needs no spec. Visual detail is /webkit-design-review.
+  Trigger: "/webkit-code-review", "code review", "review my changes", "review this PR", "review the diff", "ready to merge"
+  Use when: changed code needs a correctness and quality pass before it merges.
 ---
 
 # Webkit Code Review
@@ -257,6 +250,7 @@ Every finding must pass all four:
 - Hypothetical problems without evidence
 - Future features or new modules
 - Spec changes
+- Version files, build numbers, and CHANGELOG entries written by the versioning phase ([versioning.md](../../rules/versioning.md)): expected, not scope expansion
 
 If a code issue can only be resolved by changing a requirement, record **"Specification clarification required"** under INFO with what and why. Do not modify the specification.
 
@@ -291,8 +285,10 @@ Fill the template [.agents/template/code-review-report.md](../../template/code-r
 3. Otherwise match the diff's modules, routes, or tables against the project's specs:
 
    ```bash
-   grep -ril '<module|route|table from the diff>' ".agents/specs/$project" --include='spec.md' --include='specs.md' 2>/dev/null
+   grep -ril '<module|route|table from the diff>' ".agents/specs/$project" --include='*.md' 2>/dev/null
    ```
+
+   Read the hits per [ticket-numbering.md](../../rules/ticket-numbering.md) §4. A hit in a **legacy portal spec** (`specs/<project>/<portal>/<feature>.md`) has no ticket folder: write to `.agents/reports/<domain>-<feature>-review-<YYYYMMDD>.md` (§5).
 
 4. Still nothing → the change has **no ticket**: write to `.agents/reports/<scope>-review-<YYYYMMDD>.md` and set the Ticket row to "None — <reason>".
 

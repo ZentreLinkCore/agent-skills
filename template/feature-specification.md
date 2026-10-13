@@ -206,7 +206,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 
 | Table | Status | Purpose |
 | --- | --- | --- |
-| `{{table}}` | {{Reused / Altered / New}} | {{purpose}} |
+| `{{table}}` | {{Reused / Extended / New}} | {{purpose}} |
 
 **Fields**
 
@@ -313,6 +313,12 @@ Defined in [`plan.md`](./plan.md) in this ticket folder: the file-by-file task l
 - **Sensitive fields:** {{fields, or "N/A — <reason>"}}
 - **Exposure rules:** {{never returned / masked / excluded from logs}}
 - **Write protection:** {{mass-assignment guard, ownership check}}
+
+### API Security
+
+- **Object access (IDOR):** {{how each record ID in a request is checked against the caller, or "N/A — <reason>"}}
+- **Mass assignment:** {{fillable / validated-only fields, or "N/A — <reason>"}}
+- **Rate limits:** {{throttle per route, or "N/A — <reason>"}}
 
 ---
 

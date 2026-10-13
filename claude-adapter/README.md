@@ -11,7 +11,7 @@ bash .agents/setup.sh --global   # + one skills copy for EVERY project on this m
 
 ## Why the split
 
-Claude Code auto-loads **every `.md` in `.claude/rules/` into every single turn**, whether the task needs it or not. The full library in [`../rules/`](../rules/) is ~1,000 lines (~19,900 tokens), and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals.
+Claude Code auto-loads **every `.md` in `.claude/rules/` into every single turn**, whether the task needs it or not. The full library in [`../rules/`](../rules/) is ~1,650 lines (~30,500 tokens), and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals.
 
 That is expensive twice over. It costs tokens on every request, and wrong-project content sitting in context is what makes an agent search for a component library that isn't there and then build a duplicate of one that is.
 
@@ -19,7 +19,7 @@ So:
 
 | | Lives in | Loaded |
 | :--- | :--- | :--- |
-| **Slim set** — the project gate, the working discipline, and 18 pointer stubs | `claude-adapter/rules/` → installed to `.claude/rules/` | every turn (~2,700 tokens) |
+| **Slim set** — the project gate, the working discipline, and 21 pointer stubs | `claude-adapter/rules/` → installed to `.claude/rules/` | every turn (~3,200 tokens) |
 | **Full canonical rules** | `../rules/` | on demand, when a task touches that rule |
 | **`AGENTS.md`** — portable entry point | `claude-adapter/AGENTS.md` → installed to the project root | by non-Claude agents (Antigravity, Cursor, Copilot) |
 
@@ -27,7 +27,7 @@ So:
 
 **Edit the canonical rule in [`../rules/`](../rules/).** Then, if the change belongs in the always-on set, mirror the *rule* — not the exposition — into `claude-adapter/rules/project-profile.md`, which carries the gate and the working-discipline summary.
 
-Never blanket-copy `../rules/*.md` over `claude-adapter/rules/`. That restores all ~19,900 tokens per turn and silently undoes the point of this folder.
+Never blanket-copy `../rules/*.md` over `claude-adapter/rules/`. That restores all ~30,500 tokens per turn and silently undoes the point of this folder.
 
 ## The stubs
 

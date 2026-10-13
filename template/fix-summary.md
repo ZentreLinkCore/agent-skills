@@ -55,9 +55,9 @@ Fill rules. Delete this comment and every other guide comment from the printed s
      Shipped: "Yes" (defect in the base → PATCH), "No — unreleased work on this branch" (no bump of its own),
      or "—" for a target the fix did not touch. -->
 
-| Target | Defect Shipped | Level | Version | Status | Evidence |
-| --- | --- | --- | --- | --- | --- |
-| {{target}} | {{Yes / No — unreleased work on this branch / —}} | {{PATCH / branch level kept / NONE}} | {{1.1.0 → 1.1.1, or "unchanged (1.1.0)"}} | {{applied (auto) / recommended / none}} | {{finding refs; base check}} |
+| Target | Defect Shipped | Level | Version | Build Numbers | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| {{target}} | {{Yes / No — unreleased work on this branch / —}} | {{PATCH / branch level kept / NONE}} | {{1.1.0 → 1.1.1, or "unchanged (1.1.0)"}} | {{versionCode 2 → 3, or "—"}} | {{applied (auto) / recommended / none}} | {{finding refs; base check}} |
 
 **CHANGELOG:** {{`<path>` — Fixed line added under `## [x.y.z]`, or "None — <reason>"}}
 

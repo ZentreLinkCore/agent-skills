@@ -28,8 +28,10 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 
 ## Metadata
 
-<!-- Based on Spec Version must equal the spec's Specification Version. When they differ the plan is stale and
-     /webkit-implement stops. Plan Status: Draft | Ready | In Progress | Done. -->
+<!-- Based on Spec Version must equal the spec's Specification Version (an older spec's `> **Version:** v<N>`
+     header counts as v<N>). When they differ the plan is stale and /webkit-implement stops.
+     Specification: the spec's real file name, spec.md or specs.md on older tickets.
+     Plan Status: Draft | Ready | In Progress | Done. -->
 
 | Field | Value |
 | --- | --- |

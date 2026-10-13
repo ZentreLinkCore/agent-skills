@@ -46,7 +46,8 @@ Per target, independently.
 
 ```bash
 repo="<target.repo>"
-base=$(git -C "$repo" merge-base HEAD origin/main 2>/dev/null || git -C "$repo" merge-base HEAD main)
+default=$(git -C "$repo" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
+base=$(git -C "$repo" merge-base HEAD "$default" 2>/dev/null || git -C "$repo" merge-base HEAD main)
 ```
 
 On `main` itself the merge base is `HEAD`, so only uncommitted work counts — which is correct.
@@ -163,11 +164,11 @@ Then add the version section directly below the header, newest first:
 
 ## 7. Report
 
-The phase ends with one line per target in the implementation summary's **Version** section:
+The phase ends with one line per target in the implementation or fix summary's **Version** section:
 
 ```text
 mobapp   MINOR   1.0.0 → 1.1.0 · versionCode 1 → 2   applied (auto)   evidence: FR-01–FR-09 new capability; 14 files under mobapp/
-backend  NONE    —                                    no version target
+backend  NONE    —                                    none             evidence: no version target
 ```
 
 Then every `warnings` and `after_release` line of each bumped target, and any recommend-only reason from §2 or §3.

@@ -1,16 +1,9 @@
 ---
 name: webkit-design-review
-description: >
-  Senior-designer review of the VISUAL layer — components, theme tokens, Tailwind class strings — before merge.
-  Answers two questions that are always reported separately: does this fit the design system the project already
-  has (Fit Review: tokens, accents, contrast, dark-mode parity, component reuse, layout, motion — graded
-  CRITICAL / HIGH / MEDIUM / LOW / INFO against `ui-design.md` and the real tokens), and how would a strong designer
-  evolve it (Modern Enhancement Ideas: optional, grounded, additive). Rates the change APPROVED / APPROVED WITH
-  COMMENTS / CHANGES REQUIRED and recommends READY TO MERGE or FIX REQUIRED. Never edits code, theme files, or
-  specs; writes `design-review.md` into the ticket folder from the template
-  `.agents/template/design-review-report.md`, or to `.agents/reports/` when the change has no ticket.
-  Triggered by `/webkit-design-review <ticket-number or branch-name>`, `/webkit-design-review <target_path>`, or
-  `/webkit-design-review` alone for the current branch and uncommitted work.
+description: |
+  Senior-designer review of the visual layer (components, theme tokens, Tailwind class strings) reported as two separate sections: Fit Review against `ui-design.md` and the real tokens, and optional Modern Enhancement Ideas. Writes `design-review.md`; never edits code or theme files.
+  Trigger: "/webkit-design-review", "design review", "UI review", "does this look right", "theme tokens", "dark mode", "contrast", "Tailwind"
+  Use when: a screen, component or styling change needs checking against the design system, changed or not.
 ---
 
 # Webkit Design Review
@@ -284,7 +277,7 @@ Every finding passes all four:
 4. **Is it more than taste?** No rule, no token, no visible defect → drop it, or move it to Modern Enhancement Ideas.
 
 > [!CAUTION]
-> **Do not report:** a color you would have chosen differently; "this feels dated" with no rule behind it; spacing that is on the scale but not the value you would pick; or the pre-existing framework mixing, accent set, or legacy modules the project deliberately lives with (check the [project-profile.md](../../rules/project-profile.md) drift table first).
+> **Do not report:** a color you would have chosen differently; "this feels dated" with no rule behind it; spacing that is on the scale but not the value you would pick; or the pre-existing framework mixing, accent set, or legacy modules the project deliberately lives with. Known token drift (the **Known drift** note in Phase 2) is reported once under **Design-System Drift**, never as a component finding.
 
 Every CRITICAL and HIGH carries a **concrete fix** in the file's own syntax: `class="bg-[#CB793A] text-white"` → `class="badge-employee"`, not "use the design token".
 
@@ -342,8 +335,10 @@ Fill the template [.agents/template/design-review-report.md](../../template/desi
 **Step 1 — Resolve the ticket** ([ticket-numbering.md](../../rules/ticket-numbering.md) §4): the branch usually names it (`T00004`), or the argument does, or grep the project's specs for the module:
 
 ```bash
-grep -ril '<module|route|component>' ".agents/specs/$project" --include='spec.md' --include='specs.md' 2>/dev/null
+grep -ril '<module|route|component>' ".agents/specs/$project" --include='*.md' 2>/dev/null
 ```
+
+Read the hits per [ticket-numbering.md](../../rules/ticket-numbering.md) §4. A hit in a **legacy portal spec** has no ticket folder: write to `.agents/reports/<domain>-<feature>-design-review-<YYYYMMDD>.md` (§5).
 
 No ticket → write to `.agents/reports/<scope>-design-review-<YYYYMMDD>.md` and set the Ticket row to "None — <reason>". Never allocate a ticket; this skill does not start work.
 

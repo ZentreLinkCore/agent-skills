@@ -1,18 +1,9 @@
 ---
 name: webkit-implement
-description: >
-  Implements an approved specification (`.agents/specs/<project>/T#####/spec.md`) as production-ready code by
-  executing its implementation plan (`plan.md` in the same folder) task by task, backend first and then frontend
-  integration, exactly as specified, ticking each task as it is done. Follows the existing project architecture
-  and reuses existing components, services, queries, actions, models, APIs, and utilities before creating
-  anything new; every new file must be justified by a recorded search. Never creates features, modifies
-  requirements, expands scope, or edits the spec (and edits the plan only to tick tasks); stops with
-  "Specification clarification required" when the spec is incomplete or the plan is stale. After validation it
-  detects the SemVer change per app (breaking → MAJOR, feature → MINOR, fix → PATCH, refactor/docs → none) and,
-  per `versioning.mode` in `.agents/config/<project>.yml` (`auto` / `recommend` / `off`), bumps the version files
-  and build numbers and writes the CHANGELOG entry, or only recommends them. Ends with an implementation summary (reused components, new files, updated files).
-  Triggered by `/webkit-implement <ticket-number or branch-name>`, or `/webkit-implement` alone on the
-  ticket's branch.
+description: |
+  Builds an approved ticket by executing its `plan.md` task by task (backend first, then frontend), reusing existing code before creating any, then applies the SemVer step from `.agents/config/<project>.yml`. Never changes the spec or the scope; stops with "Specification clarification required" when the spec falls short.
+  Trigger: "/webkit-implement", "implement the ticket", "build the spec", "execute the plan", "start coding T#####"
+  Use when: a ticket already has spec.md and plan.md and the code should now be written on its branch.
 ---
 
 # Webkit Implement
@@ -201,7 +192,7 @@ A new file is a claim that nothing reusable exists, and that claim needs evidenc
 
 Execute `plan.md` task by task, in its order: the plan's Preparation tasks, then its Backend tasks (built per this skill's Phase 4), its Frontend Integration tasks (Phase 5), and its Validation tasks (Phase 6). **The backend is always completed before frontend integration.**
 
-- **One task at a time.** Make the task's change in the files it names, check its **Done when**, then tick it in `plan.md` (`- [ ]` → `- [x]`). Set **Plan Status** to `In Progress` when you tick the first task and to `Done` when the last one is ticked. Ticking is the **only** edit you make to the plan: it is how the next session knows where to resume.
+- **One task at a time.** Make the task's change in the files it names, check its **Done when**, then tick it in `plan.md` (`- [ ]` → `- [x]`). Set **Plan Status** to `In Progress` when you tick the first task and to `Done` when the last one is ticked. Ticking and Plan Status are the **only** edits you make to the plan: they are how the next session knows where to resume.
 - **Never tick a task whose Done When you could not confirm.** Leave it unticked and name it, with the reason, in the summary's Notes.
 - **Do not reorder** unless a dependency the plan missed forces it; record the reorder as plan drift.
 - **Plan drift** is any place the plan cannot be followed as written: a path that does not exist, a Reuse Map row the code contradicts, a missing step a spec FR / AC needs, a wrong order. Follow the **spec** (it binds; the plan only derives from it), make the smallest deviation that satisfies it, and list every drift in the summary's Notes so `/webkit-specify` corrects the plan. Do not rewrite the plan yourself.

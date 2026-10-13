@@ -18,6 +18,9 @@ UI behavior, or edit the specification.
 
 ## Metadata
 
+<!-- Ticket: an F#### ticket with no ticket folder records "F#### (project)" (the report then lives in .agents/reports/);
+     one with a matching T##### folder records both. -->
+
 | Field | Value |
 | --- | --- |
 | Ticket | {{T#####}} ({{project}}) |

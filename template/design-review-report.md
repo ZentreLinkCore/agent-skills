@@ -54,7 +54,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 
 ---
 
-## Findings
+## Fit Review
 
 <!-- Within each severity, list in fix order (dependency-first; findings in one file that should be one edit
      are listed next to each other). -->
@@ -98,6 +98,8 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **File:** [`{{path/to/Component.vue}}`]({{path/to/Component.vue}}#L{{42}})
 - **Line:** {{42}}
 - **Issue:** {{what is wrong, citing the token or rule}}
+- **What the User Sees:** {{the visible symptom}}
+- **Authority:** {{authority}}
 - **Recommendation:** `{{exact before}}` → `{{exact after}}`
 
 ### LOW
@@ -109,6 +111,8 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **Finding:** {{dimension — one-line title}}
 - **File:** [`{{path/to/Component.vue}}`]({{path/to/Component.vue}}#L{{42}})
 - **Line:** {{42}}
+- **What the User Sees:** {{the visible symptom}}
+- **Authority:** {{authority}}
 - **Suggestion:** {{the change}}
 
 ### INFO

@@ -1,15 +1,9 @@
 ---
 name: webkit-document
-description: >
-  Writes the feature guide for a page or module that has already been built. The top half is plain language anyone
-  can follow: what it does, where to find it, a mermaid diagram of the journey, numbered steps of what a user
-  actually sees and clicks, the rules that decide what appears, and what to do when something looks wrong. The
-  "Under the Hood" half gives a developer the data sources, route table, frontend structure, architecture diagram,
-  and file links. Every label, route, rule, and diagram box is verified against the code, so the guide describes
-  what shipped, not what was specced, and it always carries a Known Issues section. Never edits application code,
-  specs, or data, and never fixes the bugs it documents. Writes `.agents/docs/<feature>.md` from the template
-  `.agents/template/feature-guide.md`: one guide per feature, updated in place, never a file in a ticket folder.
-  Triggered by `/webkit-document <target_path>`, `/webkit-document T#####`, or `/webkit-document <feature name>`.
+description: |
+  Writes the guide for a feature that already shipped: a plain-language half (what it does, journey diagram, steps, rules, what to do when it looks wrong) and an Under the Hood half for developers, every claim checked against the code. One guide per feature at `.agents/docs/<feature>.md`, updated in place. Never edits code.
+  Trigger: "/webkit-document", "document this feature", "feature guide", "user guide", "how does this page work", "write the docs"
+  Use when: an existing page or module needs a guide people can follow, not a spec and not code comments.
 ---
 
 # Webkit Document
@@ -432,7 +426,7 @@ Fill the template [.agents/template/feature-guide.md](../../template/feature-gui
 - **New guide:** Guide Version `v1 — initial`, Last Updated today, nothing yet under `<!-- Update history -->`.
 - **Updating a guide** overwrites it in place. Before overwriting, append the previous **Guide Version** value with its **Last Updated** date (e.g. `- v1 — 2026-09-15 — initial, verified against T00012`) to the list under `<!-- Update history -->`. Then increment Guide Version with one line on what changed (`v2 — added the bulk-approve steps from T00031`), set Last Updated to today, refresh Verified Against, and add the new ticket to Ticket(s). Never delete a superseded line.
 - Verified Against vouches for **every** claim in the guide, so re-verify the sections you did not change too, or the row lies.
-- **A guide written before this template** (a `> **Project:**` header block and a `<!-- Changelog -->` list) is converted to the template on its first update: its changelog lines move under `<!-- Update history -->` unchanged, and its content is re-verified section by section.
+- **A guide written before this template** (no Metadata table; e.g. [duty-roster.md](../../docs/duty-roster.md) opens straight at `## What is it`) is converted to the template on its first update and its content is re-verified section by section. Any changelog or history lines it has move under `<!-- Update history -->` unchanged; with none, that list starts empty and Guide Version is `v1 — converted from pre-template guide`.
 - Links are relative from `.agents/docs/`: `../../app/...`, `../../resources/views/web/...`, `../specs/<project>/T#####/...`.
 - Create no branch, and do not stage or commit.
 

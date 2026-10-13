@@ -1,14 +1,9 @@
 ---
 name: webkit-refactor
-description: >
-  Behavior-preserving restructuring of existing code: removes duplication, moves inline logic into the project's
-  Query / Handler / Action and component patterns, consolidates local copies into the design system, deletes dead
-  code, and improves readability or performance without changing what the code does. Proves it with the project's
-  own checks run before and after, and records the result in `refactor.md` from the template
-  `.agents/template/refactor-report.md` (BEHAVIOR PRESERVED / PRESERVED WITH UNVERIFIED AREAS / REGRESSION DETECTED).
-  Never fixes bugs, adds features, changes APIs or schema, or edits the spec. Triggered by
-  `/webkit-refactor <target_path> <goal>`, `/webkit-refactor T##### <goal>`, or
-  `/webkit-refactor T##### --code-review Finding #n`.
+description: |
+  Behavior-preserving restructuring toward a stated goal: remove duplication, move logic into the project's Query / Handler / Action and component patterns, use the design system, delete dead code. Proved by the project's own checks before and after; writes `refactor.md`. Never fixes bugs or changes routes, APIs or schema.
+  Trigger: "/webkit-refactor", "refactor", "clean up", "remove duplication", "dead code", "consolidate"
+  Use when: the code works but should be restructured without changing what it does.
 ---
 
 # Webkit Refactor
@@ -100,7 +95,13 @@ Ask:
 **Ticket.** Resolve or allocate it before the branch, so both carry the same number ([ticket-numbering.md](../../rules/ticket-numbering.md) §2, §4):
 
 1. **On a `T#####` branch, or the input names a ticket** → that ticket. Cleaning up a ticket's own implementation belongs in that ticket.
-2. **A standalone cleanup with no ticket** → this skill starts that workstream, so allocate the next number in the project:
+2. **An existing ticket already covers this code** → use it ([ticket-numbering.md](../../rules/ticket-numbering.md) §3):
+
+   ```bash
+   grep -ril '<module|route|table|class>' ".agents/specs/$project" --include='*.md' 2>/dev/null
+   ```
+
+3. **A standalone cleanup with no ticket** → this skill starts that workstream, so allocate the next number in the project:
 
    ```bash
    project="<project>"   # the folder name resolved in the project gate
@@ -202,6 +203,7 @@ Fill the template [.agents/template/refactor-report.md](../../template/refactor-
 ### Persist the record (MANDATORY)
 
 - Write to `.agents/specs/<project>/<ticket>/refactor.md`: exactly that filename ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
+- An `F####` ticket with no ticket folder ([ticket-numbering.md §8.4](../../rules/ticket-numbering.md#84-where-the-report-goes)): write to `.agents/reports/<scope>-refactor-<YYYYMMDD>.md` and name the branch in the Metadata.
 - A second cleanup on the same ticket **updates the file in place**. Before overwriting, append the previous run's **Refactor Run** value with its date and status (e.g. `- v1 — 2026-10-08 — extracted leave-credit Query — ✅ BEHAVIOR PRESERVED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Refactor Run** row and set **Refactor Date** to today.
 - End your message with the status, the ticket, and the record path. Do not stage or commit; suggest a Conventional Commit message per [git-workflow.md](../../rules/git-workflow.md) (e.g. `refactor(hr): extract shared leave-credit calculation`).
 

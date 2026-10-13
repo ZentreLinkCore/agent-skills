@@ -28,7 +28,9 @@ The verifier must:
 
 ## Metadata
 
-<!-- Link the spec by its real file name: spec.md, or specs.md on tickets created before /webkit-specify. -->
+<!-- Link the spec by its real file name: spec.md, or specs.md on tickets created before /webkit-specify.
+     A legacy portal spec (report in .agents/reports/): link it as ../specs/<project>/<portal>/<feature>.md,
+     with its v<N> header as the version, and set Ticket to "None — legacy portal spec". -->
 
 | Field | Value |
 | --- | --- |
@@ -39,6 +41,8 @@ The verifier must:
 | Verification Run | v{{N}} — {{what changed since the previous run, or "initial"}} |
 
 **Implementation Scope**
+
+<!-- API routes and request/response changes go under Backend; configuration, environment, and tests under Other. -->
 
 - **Frontend:** {{changed pages / components / stores, or "None"}}
 - **Backend:** {{changed controllers / classes / routes, or "None"}}
@@ -52,7 +56,8 @@ The verifier must:
 ### Overall Status
 
 <!-- Choose one, derived from §3:
-     any BLOCKER → ❌ FAILED · REQUIRED FIX but no BLOCKER → ⚠ PASS WITH FIXES · neither → ✅ PASS.
+     any BLOCKER → ❌ FAILED · REQUIRED FIX but no BLOCKER → ⚠ PASS WITH FIXES · neither, and every AC MET
+     (or UNVERIFIED with its manual check in §6) → ✅ PASS.
      If an AC could only be verified by hand (§6), write "✅ PASS (n AC pending manual check)". -->
 
 {{✅ PASS | ⚠ PASS WITH FIXES | ❌ FAILED}}
@@ -73,6 +78,8 @@ The verifier must:
 | --- | --- | --- |
 | Scope | {{PASS / FAIL}} | {{explanation}} |
 | User Flow | {{PASS / FAIL}} | {{explanation}} |
+| Functional Requirements | {{PASS / FAIL}} | {{explanation}} |
+| Non-functional Requirements | {{PASS / FAIL}} | {{explanation}} |
 | Technical Design | {{PASS / FAIL}} | {{explanation}} |
 | Acceptance Criteria | {{PASS / FAIL}} | {{n}}/{{total}} met. {{Not met: AC-xx (Finding #n). Manual: AC-xx (§6).}} |
 | Edge Cases | {{PASS / FAIL}} | {{explanation}} |
@@ -116,7 +123,7 @@ The verifier must:
 - **Actual:** {{what the implementation does, with evidence}}
 - **Required Action:** {{exact fix: file, construct, and what it becomes}}
 
-### IMPROVEMENTS
+### IMPROVEMENT
 
 <!-- Optional suggestions. They do not block merge and do not require a spec update. -->
 

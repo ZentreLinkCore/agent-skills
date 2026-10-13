@@ -1,18 +1,9 @@
 ---
 name: webkit-specify
-description: >
-  Specification phase (Spec Kit style). Turns a feature request into an implementation-ready blueprint
-  before any code is written, as TWO files: the specification (overview, scope, user flow, functional and
-  non-functional requirements, technical design, Given/When/Then acceptance criteria, edge cases, testing,
-  security) from `.agents/template/feature-specification.md`, and the implementation plan (technical context,
-  reuse map, file change map, file-by-file tasks in build order, acceptance walk) from
-  `.agents/template/implementation-plan.md`. Grounded in the actual project. Allocates (or reuses) the ticket
-  folder and writes `.agents/specs/<project>/T#####/spec.md` and `plan.md`; never touches application code.
-  The spec is the locked source of truth for `/webkit-implement`, `/webkit-verify`, and `/webkit-code-review`;
-  the plan is what `/webkit-implement` executes. Minor corrections update them in place, and only a major
-  change creates a new version. Triggered by `/webkit-specify <request>`, `/webkit-specify <target_path>
-  <request>`, `/webkit-specify T##### <request>` to work on an existing ticket, or
-  `/webkit-specify T##### --plan` to (re)generate only the plan from an existing spec.
+description: |
+  Writes a feature's spec and implementation plan before any code exists: `.agents/specs/<project>/T#####/spec.md` (what, with Given/When/Then acceptance criteria) and `plan.md` (files and tasks in build order). Never touches application code. Bugs go to /webkit-investigate; writing the code is /webkit-implement.
+  Trigger: "/webkit-specify", "write a spec", "specify this feature", "new feature request", "acceptance criteria", "implementation plan"
+  Use when: a new feature, or a change to a ticket's intended behavior, must be pinned down before anyone builds it.
 ---
 
 # Webkit Specify
@@ -139,7 +130,7 @@ What each section must hold:
 | Metadata | Project, ticket, feature, today's date, version `1.0`, status `Draft`. |
 | §1–3 Overview, Objective, Background | One line each for what / why / problem; measurable success criteria (`SC-xx`). |
 | §4 Scope | **Not Included** lists anything a developer could assume is in scope, with a reason. |
-| §5 User Flow | Every flow as User → Action → Validation → Processing → Result, plus its failure paths. |
+| §5 User Flow | Every flow as numbered steps (User Action → System Behavior → Expected Result), plus its failure paths. |
 | §6 Functional Requirements | One `FR-xx` block per behavior, each verified by at least one AC. |
 | §7 Non Functional Requirements | All five categories. **Performance** covers database optimization, query impact (N+1, indexes), caching, and large data handling (pagination, chunking). |
 | §8 Technical Design | The existing pattern found in Phase 2. Every component, class, and table marked Reused / Extended / New. Exact request / response / error contracts. |

@@ -22,7 +22,9 @@ The investigator must NOT:
 ## Metadata
 
 <!-- Investigation Type: Bug | Regression | Performance | Security | Data Integrity | Integration | Environment / Build.
-     Severity (impact if left unfixed): CRITICAL | HIGH | MEDIUM | LOW — the same scale as code-review.md. -->
+     Severity (impact if left unfixed): CRITICAL | HIGH | MEDIUM | LOW — the same scale as code-review.md.
+     Ticket: an F#### ticket with no ticket folder records "F#### (project)" (the report then lives in .agents/reports/);
+     one with a matching T##### folder records both. -->
 
 | Field | Value |
 | --- | --- |

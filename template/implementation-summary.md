@@ -13,6 +13,10 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 
 ## Metadata
 
+<!-- Specification: the real path (spec.md, specs.md on older tickets, or a legacy portal spec
+     .agents/specs/<project>/<portal>/<feature>.md, whose Ticket is "None — legacy portal spec") and its version
+     (Specification Version, or v<N> on older specs). -->
+
 | Field | Value |
 | --- | --- |
 | Project | {{project}} |

@@ -102,7 +102,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
    - **Several hits inside one `T#####/`** are **one ticket**, not three — `verify.md` and `code-review.md` naturally mention the same feature as its spec. Collapse to the folder (`… | sed 's#/[^/]*$##' | sort -u` if you want that done for you).
    - **A hit in the legacy tree** (`specs/<project>/<portal>/<feature>.md`) is the spec file itself; its folder is a portal holding many specs, so do not treat the folder as a ticket.
    - Confirm with each candidate's Metadata table (Project Name, Ticket Number) — or the `> **Ticket:**` / `> **Portal:**` header on older specs and on reports — before committing to one.
-4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit-verify` stops (there is no spec to verify against); `/webkit-code-review`, `/webkit-design-review`, and `/webkit-fix` continue and write to `.agents/reports/` instead (§5).
+4. Still nothing → **this work has no ticket yet.** Say so plainly. If you are an allocating skill (§2), allocate one now. If you are not, do **not** invent a ticket to have somewhere to write: `/webkit-verify` stops (there is no spec to verify against); `/webkit-code-review` and `/webkit-design-review` continue and write to `.agents/reports/` instead (§5); `/webkit-fix` works from the report it finds there.
 5. Report which ticket you resolved to, and on what evidence, in your first message. A skill that silently verifies against the wrong ticket is worse than one that stops.
 
 ## 5. The file contract
@@ -261,7 +261,7 @@ git rev-list --left-right --count "origin/$branch...$branch"   # behind <TAB> ah
 
 `/webkit-code-review`, `/webkit-verify`, `/webkit-design-review`, `/webkit-investigate`, and `/webkit-document` write no application code, so they **analyze the branch without checking it out** — Steps 1–4 only. Switching the user's working tree to run a review is a side effect nobody asked for.
 
-Their report still records which branch was analyzed, in its Metadata **Branch** row (`Branch Analyzed` in `investigation.md`; a `> **Scope:**` header line in reports written before the templates).
+Their report still records which branch was analyzed, in its Metadata **Branch** row (`Branch Analyzed` in `investigation.md`, `Verified Against` in a feature guide; a `> **Scope:**` header line in reports written before the templates).
 
 ### 8.4 Where the report goes
 

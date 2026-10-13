@@ -1,16 +1,9 @@
 ---
 name: webkit-fix
-description: >
-  Implements the approved fixes from one existing report — code review, verification, investigation, refactor,
-  or design review — and nothing else. The report is the source of truth: it applies the required findings
-  (CRITICAL / HIGH, BLOCKER / REQUIRED FIX, or the investigation's fix plan) with the smallest safe change,
-  reusing existing code, then checks for regressions. Never re-reviews, never generates new findings, never adds
-  requirements or edits the spec; an unrelated problem found along the way is reported as "Additional issue
-  discovered", not fixed. Works on the ticket's existing branch. After the regression check it runs SemVer
-  detection per app (`versioning.mode` in `.agents/config/<project>.yml`): a fix to a defect that shipped is a
-  PATCH with a CHANGELOG "Fixed" line; a fix to unreleased work on the same branch adds no bump. Ends with a Fix
-  Summary marked FIX COMPLETED or PARTIALLY COMPLETED. Triggered by `/webkit-fix <ticket-number or branch-name>
-  --<code-review|verify|investigation|refactor|design-review>`.
+description: |
+  Applies the approved findings of one existing report (code-review, verify, investigation, refactor or design-review) with the smallest safe change, then runs a regression check and the SemVer step and ends with a Fix Summary. Never re-reviews, adds findings, or edits the spec.
+  Trigger: "/webkit-fix", "apply the fixes", "fix the findings", "fix what the review found", "apply the fix plan"
+  Use when: a report in the ticket folder lists required fixes and they should now go into the code.
 ---
 
 # Webkit Fix
@@ -100,7 +93,7 @@ Never invent additional work. A finding the report does not contain is not a fix
 
 1. **Resolve the ticket and the report** for the flag:
    - Ticketed work: `.agents/specs/<project>/T#####/<report>.md`.
-   - Work with no ticket folder (an `F####` ticket or a plain branch): the matching report under `.agents/reports/` (`<scope>-review-<date>.md`, `<scope>-verify-<date>.md`, `<scope>-investigation-<date>.md`). Find it by the branch name it records.
+   - Work with no ticket folder (an `F####` ticket or a plain branch): the matching report under `.agents/reports/` (`<scope>-review-<date>.md`, `<scope>-verify-<date>.md`, `<scope>-investigation-<date>.md`, `<scope>-refactor-<date>.md`, `<scope>-design-review-<date>.md`; `--code-review` means `-review-` only, never `-design-review-`). Find it by the branch name it records.
    - **No report found → stop.** There is nothing approved to fix; suggest running the skill that produces it.
 2. **Read the report completely.** Note its run version and date.
 3. **Check the report still applies**: compare the cited `file:line` locations with the current code. Code moved → re-locate the same construct. Finding already resolved → record it as "Already resolved" and do not touch it. Report much older than the branch's latest changes → say so in the summary.

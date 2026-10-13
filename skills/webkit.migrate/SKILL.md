@@ -1,17 +1,9 @@
 ---
 name: webkit-migrate
-description: >
-  Migrates a feature FROM the repo it is invoked in INTO a sibling target project on a different stack, and
-  implements it there in the target's own conventions. Flow is the invariant: business rules, data contract, API
-  contract, state machine, validation, and UI behavior come out identical. The stack is the variable: framework,
-  state layer, HTTP client, design system, routing, and backend architecture follow the target. Extracts the
-  contract read-only from the source (spec first, then code), scans BOTH sides so it never duplicates a model,
-  table, or route the target already has, and checks parity against the contract. Never edits the source feature,
-  never picks a target the user did not name, never runs migrations, and never commits. Writes the contract to
-  `.agents/migrations/<portal-or-domain>-<feature>-<YYYYMMDD>.md` from the template
-  `.agents/template/migration-contract.md`, and the implementation into the target repo, on a target branch.
-  Triggered by `/webkit-migrate <source_path> <target_path>`, or `/webkit-migrate <source_path>` to be asked for
-  the target.
+description: |
+  Moves a feature from the repo it runs in into a named sibling project on a different stack and implements it there: business rules, contracts, states and validation stay identical; framework, state layer, HTTP client and design system follow the target. Writes the contract to `.agents/migrations/`. Never edits the source, runs migrations or commits.
+  Trigger: "/webkit-migrate", "migrate this feature", "port this to", "move this feature into", "rebuild it in the new project"
+  Use when: an existing feature must exist in another project, built in that project's own conventions.
 ---
 
 # Webkit Migrate
@@ -277,7 +269,7 @@ Record the gotchas on both sides: a source controller namespace that differs fro
 
 ## Phase 5 — Write the Contract
 
-Fill the template [.agents/template/migration-contract.md](../../template/migration-contract.md). Follow its exact structure: no custom format, no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Run history -->` marker. §12 Parity Checklist starts as **NOT CHECKED YET**; Phase 7 fills it.
+Fill the template [.agents/template/migration-contract.md](../../template/migration-contract.md). Follow its exact structure: no custom format, no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Run history -->` marker. §12 Parity Checklist starts as **NOT CHECKED YET**; Phase 7 fills it. §14 Source Reference lists the source files read in the Phase 1 code walk.
 
 ### Persist the contract (MANDATORY)
 
@@ -344,7 +336,7 @@ Do **not**:
 
 End by printing the summary in chat, filled from the template [.agents/template/migration-summary.md](../../template/migration-summary.md). Follow its exact structure (Metadata, Implemented in the Target, Reused Target Components, New Files, Updated Files, Parity, Notes, Completion Status) and delete its guide comments. It is not saved as a file; the contract is the saved record.
 
-**MIGRATION COMPLETED** requires PARITY CONFIRMED. Migrations still waiting for the user to run them go in Notes; they do not make the migration partial.
+**MIGRATION COMPLETED** requires PARITY CONFIRMED; otherwise **PARTIALLY COMPLETED**, naming each contract item not migrated or not at parity, and why. Migrations still waiting for the user to run them go in Notes; they do not make the migration partial.
 
 Do not stage or commit in either repo: they are separate git repos, so branches and commits are per project. Suggest a Conventional Commit message for the target per [git-workflow.md](../../rules/git-workflow.md) (e.g. `feat(payroll): migrate payslip view`).
 

@@ -35,7 +35,7 @@ The stop applies to the out-of-authority task only. Work that belongs to the cur
 | Skill | Owns | Hands off |
 | --- | --- | --- |
 | `/webkit-specify` | Writing and maintaining the feature specification (`spec.md`) and its implementation plan (`plan.md`) | Code → `/webkit-implement`; reviews → `/webkit-verify`, `/webkit-code-review`; bugs → `/webkit-investigate` |
-| `/webkit-implement` | Turning an approved specification into code by executing its plan (ticking `plan.md` tasks is its only edit there), then the version bump and CHANGELOG entry per [versioning.md](./versioning.md) | Spec changes → `/webkit-specify`; reviews → `/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`; review findings → `/webkit-fix` |
+| `/webkit-implement` | Turning an approved specification into code by executing its plan (ticking `plan.md` tasks and setting its Plan Status are its only edits there), then the version bump and CHANGELOG entry per [versioning.md](./versioning.md) | Spec changes → `/webkit-specify`; reviews → `/webkit-verify`, `/webkit-code-review`, `/webkit-design-review`; review findings → `/webkit-fix` |
 | `/webkit-verify` | Checking the implementation against its specification, and reporting | Fixes → `/webkit-fix`; spec changes → `/webkit-specify`; code quality → `/webkit-code-review` |
 | `/webkit-code-review` | Reviewing the code quality of a diff, and reporting | Fixes → `/webkit-fix`; spec conformance → `/webkit-verify`; visual depth → `/webkit-design-review` |
 | `/webkit-design-review` | Reviewing the visual layer, and reporting | Fixes → `/webkit-fix`; code correctness → `/webkit-code-review`; spec conformance → `/webkit-verify` |

@@ -1,14 +1,9 @@
 ---
 name: webkit-investigate
-description: >
-  Investigates bugs and other problems whose cause must be found before anything is fixed: regressions,
-  performance problems, security issues, wrong or inconsistent data, failing integrations, and environment or
-  build failures. Reproduces the issue where possible, traces it to a single root cause with file:line evidence,
-  records every hypothesis checked, measures the impact (files, data, endpoints, users), and recommends the
-  minimal safe fix with a fix plan. Never modifies code or data and never plans features. Allocates (or reuses)
-  the ticket and writes `investigation.md` from the template `.agents/template/investigation-report.md` for
-  `/webkit-fix` to apply. Triggered by `/webkit-investigate <issue description>`,
-  `/webkit-investigate <target_path> <issue description>`, or `/webkit-investigate T##### <issue description>`.
+description: |
+  Finds and proves the root cause of a bug, regression, slowdown, security hole, bad data, failing integration or broken build (file:line evidence, measured impact, minimal fix plan) and writes `investigation.md` for /webkit-fix. Never changes code or data; database access is read-only. A new feature is /webkit-specify.
+  Trigger: "/webkit-investigate", "investigate", "root cause", "why is this broken", "regression", "stack trace", "error log", "slow page", "N+1", "wrong data"
+  Use when: something is broken or wrong and the cause must be found before anything changes.
 ---
 
 # Webkit Investigate

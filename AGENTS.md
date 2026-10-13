@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **Start at the repo-root [`AGENTS.md`](../AGENTS.md), not here.** That file is the portable entry point every agent should load: the project gate, the conventions that are always true, and a table telling you which rule to open for which task. This file is just the index of what lives in [`.agents/rules/`](./rules/).
 
-**Do NOT preload all of these.** The library is ~1,000 lines, and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals. Loading it all on every turn is the single largest avoidable context cost here, and wrong-project content in context is what causes agents to build to the wrong stack.
+**Do NOT preload all of these.** The library is ~1,650 lines, and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals. Loading it all on every turn is the single largest avoidable context cost here, and wrong-project content in context is what causes agents to build to the wrong stack.
 
 **Read a rule when the task touches it** (the root `AGENTS.md` table maps task → rule):
 
