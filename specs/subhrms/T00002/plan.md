@@ -111,7 +111,7 @@
 - **Goal:** Set up test runners, verify database connectivity, and create schema migrations for notifications, settings, and preferences adhering strictly to SubHRMS conventions.
 - **Exit check:** `php artisan migrate --pretend` runs with zero syntax or foreign key errors.
 
-- [ ] **TASK-01 — Create notifications table migration**
+- [x] **TASK-01 — Create notifications table migration**
   - **Files:** `database/migrations/2026_10_15_000001_create_notifications_table.php` (Create)
   - **Change:** Define schema with `id` auto-increment, `idacct` indexed integer, `type`, `category`, `title`, `body`, `priority`, `actor_idacct`, `resource_type`, `resource_id`, `data` json, `dedup_key` indexed, `is_actionable`, `action_state`, `read_at`, `status` tinyint soft-delete, and timestamps. No foreign keys.
   - **Test:** `tests/Feature/Notification/NotificationSchemaTest.php` — asserts table structure and indexes.
@@ -119,7 +119,7 @@
   - **Depends on:** None
   - **Done when:** Migration runs successfully and test passes.
 
-- [ ] **TASK-02 — Create notification_settings table migration**
+- [x] **TASK-02 — Create notification_settings table migration**
   - **Files:** `database/migrations/2026_10_15_000002_create_notification_settings_table.php` (Create)
   - **Change:** Define schema with `id`, `idacct` unique integer, `dnd_enabled`, `dnd_start_time`, `dnd_end_time`, `email_notifications_enabled`, `push_notifications_enabled`, `in_app_notifications_enabled`, `reminder_missing_attendance`, `reminder_filing_deadlines`, `reminder_lead_hours`, `birthday_privacy_opt_out`, `anniversary_privacy_opt_out`, `status`, and timestamps.
   - **Test:** `tests/Feature/Notification/NotificationSchemaTest.php` — asserts table structure.
@@ -127,7 +127,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Migration runs and test passes.
 
-- [ ] **TASK-03 — Create notification_preferences table migration**
+- [x] **TASK-03 — Create notification_preferences table migration**
   - **Files:** `database/migrations/2026_10_15_000003_create_notification_preferences_table.php` (Create)
   - **Change:** Define schema with `id`, `idacct`, `category`, `channel_in_app`, `channel_push`, `channel_email`, `is_mandatory`, `status`, timestamps, and unique key `(idacct, category)`.
   - **Test:** `tests/Feature/Notification/NotificationSchemaTest.php` — asserts table structure and unique key.
@@ -142,7 +142,7 @@
 - **Goal:** Implement models, broadcast events, actions, queries, handlers, controller, console commands, and domain hooks for full backend notification capabilities.
 - **Exit check:** All backend unit and feature tests pass (`php artisan test --filter=Notification`); `php artisan route:list --path=api/notifications` returns registered routes.
 
-- [ ] **TASK-04 — Implement Notification Eloquent Model**
+- [x] **TASK-04 — Implement Notification Eloquent Model**
   - **Files:** `app/Models/Notification.php` (Create)
   - **Change:** Define `$table = 'notifications'`, `$fillable`, `$casts`, `scopeActive`, `scopeUnread`, `actor()` relation to `Account`, and `recipient()` relation to `Account`.
   - **Test:** `tests/Unit/NotificationModelTest.php` — verifies scopes and casts.
@@ -150,7 +150,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Model test passes.
 
-- [ ] **TASK-05 — Implement NotificationSetting and NotificationPreference Models**
+- [x] **TASK-05 — Implement NotificationSetting and NotificationPreference Models**
   - **Files:** `app/Models/NotificationSetting.php` (Create), `app/Models/NotificationPreference.php` (Create)
   - **Change:** Define `$table`, `$fillable`, `$casts`, relations to `Account`, and default accessor helper methods.
   - **Test:** `tests/Unit/NotificationModelTest.php` — verifies casts and defaults.
@@ -158,7 +158,7 @@
   - **Depends on:** TASK-02, TASK-03
   - **Done when:** Model tests pass.
 
-- [ ] **TASK-06 — Implement Notification Broadcast Events**
+- [x] **TASK-06 — Implement Notification Broadcast Events**
   - **Files:** `app/Events/Notifications/NotificationCreated.php` (Create), `app/Events/Notifications/NotificationCountUpdated.php` (Create)
   - **Change:** Implement `ShouldBroadcastNow`, broadcast on `new PrivateChannel("user.{$idacct}")`, broadcast names `NotificationCreated` and `NotificationCountUpdated`, serializable payload arrays.
   - **Test:** `tests/Feature/Notification/NotificationBroadcastTest.php` — asserts event broadcast channel and payload structure.
@@ -166,7 +166,7 @@
   - **Depends on:** TASK-04
   - **Done when:** Event tests pass.
 
-- [ ] **TASK-07 — Implement BroadcastNotificationAction**
+- [x] **TASK-07 — Implement BroadcastNotificationAction**
   - **Files:** `app/Actions/Notifications/BroadcastNotificationAction.php` (Create)
   - **Change:** Wraps broadcast dispatch in safe `try/catch` block. Catches socket connection exceptions, logs warning, and does not re-throw.
   - **Test:** `tests/Feature/Notification/NotificationBroadcastTest.php` — asserts resilience when broadcast driver fails.
@@ -174,7 +174,7 @@
   - **Depends on:** TASK-06
   - **Done when:** Action safely handles offline broadcast server.
 
-- [ ] **TASK-08 — Implement CreateNotificationAction and CreateBatchNotificationsAction**
+- [x] **TASK-08 — Implement CreateNotificationAction and CreateBatchNotificationsAction**
   - **Files:** `app/Actions/Notifications/CreateNotificationAction.php` (Create), `app/Actions/Notifications/CreateBatchNotificationsAction.php` (Create)
   - **Change:** Checks user preference channel enablement (`channel_in_app`), verifies `dedup_key` within time window, performs DB insert, and dispatches `BroadcastNotificationAction` via `DB::afterCommit`. Batch action chunks inserts in 100 rows.
   - **Test:** `tests/Feature/Notification/CreateNotificationActionTest.php` — tests single insert, dedup key suppression, preference suppression, and transaction safety.
@@ -182,7 +182,7 @@
   - **Depends on:** TASK-04, TASK-07
   - **Done when:** Action tests pass with 100% assertions.
 
-- [ ] **TASK-09 — Implement ResolveNotificationRecipientsAction**
+- [x] **TASK-09 — Implement ResolveNotificationRecipientsAction**
   - **Files:** `app/Actions/Notifications/ResolveNotificationRecipientsAction.php` (Create)
   - **Change:** Resolves target account IDs based on active employment status (`status = 1`), unit scoping, department scoping, or approval matrix (`ApproverMatrix` / `ApproverList`).
   - **Test:** `tests/Unit/ResolveNotificationRecipientsTest.php` — asserts inactive employee exclusion and approval tier resolution.
@@ -190,7 +190,7 @@
   - **Depends on:** TASK-04
   - **Done when:** Unit test passes.
 
-- [ ] **TASK-10 — Implement CheckMissingAttendanceAction**
+- [x] **TASK-10 — Implement CheckMissingAttendanceAction**
   - **Files:** `app/Actions/Notifications/CheckMissingAttendanceAction.php` (Create)
   - **Change:** Evaluates active employees: calls `ResolveShiftForDateAction`, verifies shift is not Rest Day (`idshift !== 1`, `code !== 'REST'`), checks `Holiday` table, checks `AppLeave` table, checks `AppOfficialBusinessTrip` table, checks shift start time + grace period, inspects `timelogs` and `timesheet`. Dispatches `timekeeping.missing_time_in` / `missing_time_out` with dedup keys. Auto-resolves if employee logs punch.
   - **Test:** `tests/Feature/Notification/CheckMissingAttendanceActionTest.php` — tests regular workday detection, holiday exclusion, leave exclusion, and timelog presence.
@@ -198,7 +198,7 @@
   - **Depends on:** TASK-08
   - **Done when:** Action correctly alerts missing logs and excludes valid non-working cases.
 
-- [ ] **TASK-11 — Implement Queries: GetNotificationsQuery, GetNotificationCountQuery, GetNotificationSettingsQuery**
+- [x] **TASK-11 — Implement Queries: GetNotificationsQuery, GetNotificationCountQuery, GetNotificationSettingsQuery**
   - **Files:** `app/Queries/Notifications/GetNotificationsQuery.php` (Create), `app/Queries/Notifications/GetNotificationCountQuery.php` (Create), `app/Queries/Notifications/GetNotificationSettingsQuery.php` (Create)
   - **Change:** Scopes queries strictly to `$user->id` and `status = 1`. Formats relative timestamps, actor details, category filters, pagination, and settings defaults.
   - **Test:** `tests/Feature/Notification/NotificationQueriesTest.php` — tests pagination, category filtering, unread counting, and IDOR isolation.
@@ -206,7 +206,7 @@
   - **Depends on:** TASK-04, TASK-05
   - **Done when:** Queries return formatted payloads matching API contracts.
 
-- [ ] **TASK-12 — Implement Handlers: MarkRead, MarkAllRead, Dismiss, UpdateSettings, UpdatePreferences**
+- [x] **TASK-12 — Implement Handlers: MarkRead, MarkAllRead, Dismiss, UpdateSettings, UpdatePreferences**
   - **Files:** `app/Handlers/Notifications/MarkNotificationReadHandler.php` (Create), `app/Handlers/Notifications/MarkAllNotificationsReadHandler.php` (Create), `app/Handlers/Notifications/DismissNotificationHandler.php` (Create), `app/Handlers/Notifications/UpdateNotificationSettingsHandler.php` (Create), `app/Handlers/Notifications/UpdateNotificationPreferencesHandler.php` (Create)
   - **Change:** Wraps state updates in `DB::transaction`. `MarkNotificationReadHandler` validates ownership (`idacct === auth()->id()`). `UpdateNotificationPreferencesHandler` throws exception if user attempts to disable `is_mandatory = 1`.
   - **Test:** `tests/Feature/Notification/NotificationHandlersTest.php` — tests marking read, marking all read, soft deletion, and mandatory preference guard.
@@ -214,7 +214,7 @@
   - **Depends on:** TASK-04, TASK-05
   - **Done when:** Handler tests pass.
 
-- [ ] **TASK-13 — Implement NotificationsController and Register API Routes**
+- [x] **TASK-13 — Implement NotificationsController and Register API Routes**
   - **Files:** `app/Http/Controllers/global/NotificationsController.php` (Create), `routes/api.php` (Modify)
   - **Change:** Thin controller dispatching methods to Queries and Handlers. Wraps in `try/catch` and returns raw JSON. Registers routes under `Route::middleware(['auth:sanctum'])->group(...)` in `routes/api.php`.
   - **Test:** `tests/Feature/Notification/NotificationsControllerTest.php` — tests all 8 endpoints with status codes (200, 401, 403, 422).
@@ -222,7 +222,7 @@
   - **Depends on:** TASK-11, TASK-12
   - **Done when:** API endpoint test suite passes.
 
-- [ ] **TASK-14 — Implement Scheduled Console Commands**
+- [x] **TASK-14 — Implement Scheduled Console Commands**
   - **Files:** `app/Console/Commands/CheckMissingAttendanceCommand.php` (Create), `app/Console/Commands/NotifyFilingDeadlinesCommand.php` (Create), `app/Console/Commands/NotifyBirthdaysCommand.php` (Create), `app/Console/Commands/NotifyPendingApprovalsCommand.php` (Create)
   - **Change:** Commands execute corresponding Actions and Queries, logged to console output. Registered in Laravel scheduler.
   - **Test:** `tests/Feature/Notification/NotificationCommandsTest.php` — asserts commands run without error.
@@ -230,7 +230,7 @@
   - **Depends on:** TASK-10, TASK-12
   - **Done when:** Commands execute and tests pass.
 
-- [ ] **TASK-15 — Wire Domain Handlers to Dispatch Notifications (Decoupled Payroll & Approvals)**
+- [x] **TASK-15 — Wire Domain Handlers to Dispatch Notifications (Decoupled Payroll & Approvals)**
   - **Files:** `app/Handlers/Payroll/ReleasePayslipsHandler.php` (Modify), `app/Http/Controllers/tk/TimesheetProcessingController.php` (Modify), `app/Http/Controllers/employee/TKApplicationController.php` (Modify), `app/Http/Controllers/employee/AnnouncementController.php` (Modify), `app/Http/Controllers/hr/DisciplinaryActionController.php` (Modify)
   - **Change:** Dispatches `payroll.processing_completed` to Payroll Officers when calculation closes. Dispatches `payroll.payslip_released` to employees strictly inside `ReleasePayslipsHandler`. Dispatches approval, announcement, and disciplinary notices.
   - **Test:** `tests/Feature/Notification/DomainEventNotificationWiringTest.php` — tests that payroll processing notifies only staff, payslip release notifies employees with zero salary preview exposure, and leave workflow routes to approvers.
@@ -245,7 +245,7 @@
 - **Goal:** Build and wire the Web and Mobile notification centers, settings interfaces, live WebSocket Echo listeners, and deep-link routing following identical visual and conceptual tokens.
 - **Exit check:** Web builds clean (`npm run build`); Mobile types check clean (`npm run typecheck`); navbar badges reflect live unread count and tapping navigates to target screens.
 
-- [ ] **TASK-16 — Implement Web TypeScript Types, API client, and Pinia Store**
+- [x] **TASK-16 — Implement Web TypeScript Types, API client, and Pinia Store**
   - **Files:** `resources/views/web/src/module/employee/notifications/types.ts` (Create), `resources/views/web/src/module/employee/notifications/api/notificationsApi.ts` (Create), `resources/views/web/src/module/employee/notifications/store/useNotificationStore.ts` (Create)
   - **Change:** Define TypeScript contracts matching mobile types. Implement API wrappers using `window.http`. Pinia store manages `unreadCount`, list pagination, category tab filtering, and Echo WebSocket subscription.
   - **Test:** `resources/views/web/src/module/employee/notifications/__tests__/notificationStore.spec.ts` — tests store state mutations and API calls.
@@ -253,7 +253,7 @@
   - **Depends on:** TASK-13
   - **Done when:** Store accurately updates on simulated WebSocket and API responses.
 
-- [ ] **TASK-17 — Update Web Navbar Header with Live Notification Dropdown**
+- [x] **TASK-17 — Update Web Navbar Header with Live Notification Dropdown**
   - **Files:** `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` (Modify)
   - **Change:** Replace hardcoded `notifications` ref with `useNotificationStore`. Wire live unread count badge. Subscribe to `user.{userId}` on mount; listen for `NotificationCreated` and `NotificationCountUpdated`. Wire "Mark all read" and "View all notifications" link to `/notifications`.
   - **Test:** Manual check MT-01, MT-03; component unit test.
@@ -261,7 +261,7 @@
   - **Depends on:** TASK-16
   - **Done when:** Web header bell displays live unread count and dropdown renders real notifications.
 
-- [ ] **TASK-18 — Implement Web Full Notification Center Page**
+- [x] **TASK-18 — Implement Web Full Notification Center Page**
   - **Files:** `resources/views/web/src/module/employee/notifications/pages/NotificationsPage.vue` (Create), `resources/views/web/src/router/routes.ts` (Modify)
   - **Change:** Full-page inbox with shared category tabs (`All`, `Approvals & Requests`, `Attendance & Timekeeping`, `Payroll & Payslips`, `Announcements`, `HR Notices`, `Messages`), priority badge indicators, search input, pagination controls, mark-as-read, delete item, and deep-link routing on click.
   - **Test:** Manual check MT-03; component mount test.
@@ -269,7 +269,7 @@
   - **Depends on:** TASK-16
   - **Done when:** Navigating to `/notifications` renders full inbox with working category filters matching mobile concepts.
 
-- [ ] **TASK-19 — Implement Web Notification Settings Page**
+- [x] **TASK-19 — Implement Web Notification Settings Page**
   - **Files:** `resources/views/web/src/module/employee/notifications/pages/NotificationSettingsPage.vue` (Create), `resources/views/web/src/router/routes.ts` (Modify)
   - **Change:** Form interface for DND start/end times, reminder lead hours, master channel switches, privacy opt-out toggles, and per-category matrix. Displays locked Shield badge for mandatory categories.
   - **Test:** Manual check Flow 3; component test.
@@ -277,7 +277,7 @@
   - **Depends on:** TASK-16
   - **Done when:** User can toggle preferences and receive feedback on mandatory categories.
 
-- [ ] **TASK-20 — Implement Mobile TypeScript Contracts and API Layer**
+- [x] **TASK-20 — Implement Mobile TypeScript Contracts and API Layer**
   - **Files:** `resources/views/mobapp/src/module/employee/notifications/types/types.notifications.ts` (Create), `resources/views/mobapp/src/module/employee/notifications/api/notifications.api.ts` (Create)
   - **Change:** Define Mobile interfaces matching backend API contracts and Web types. Implement API methods (`fetchNotifications`, `fetchCount`, `markRead`, `markAllRead`, `dismissNotification`, `fetchSettings`, `updatePreference`).
   - **Test:** `resources/views/mobapp/src/module/employee/notifications/__tests__/notificationsApi.test.ts` — asserts API contracts.
@@ -285,7 +285,7 @@
   - **Depends on:** TASK-13
   - **Done when:** Mobile API module compiles with zero type errors.
 
-- [ ] **TASK-21 — Implement Mobile NotificationContext and useNotifications Hook**
+- [x] **TASK-21 — Implement Mobile NotificationContext and useNotifications Hook**
   - **Files:** `resources/views/mobapp/src/contexts/NotificationContext.tsx` (Create), `resources/views/mobapp/src/hooks/useNotifications.ts` (Create)
   - **Change:** React Context wrapping mobile app. Subscribes to `Echo.private('user.' + user.id)`. Maintains global unread count. Exposes `markAsRead`, `refreshNotifications`, and incoming toast alerts.
   - **Test:** Context test with mock Echo events.
@@ -293,7 +293,7 @@
   - **Depends on:** TASK-20
   - **Done when:** Context maintains accurate unread count across screen transitions.
 
-- [ ] **TASK-22 — Integrate Mobile Header and Notification Item Card**
+- [x] **TASK-22 — Integrate Mobile Header and Notification Item Card**
   - **Files:** `resources/views/mobapp/src/components/AppTopHeader.tsx` (Modify), `resources/views/mobapp/src/module/employee/notifications/components/NotificationItem.tsx` (Create)
   - **Change:** `AppTopHeader` consumes `useNotifications()` to display live badge count; tapping bell routes to `/(app)/notifications`. `NotificationItem` renders identical tokens as Web: category icon, priority accent border, relative timestamp, action state pill, and swipe-to-dismiss.
   - **Test:** Mobile Jest component test.
@@ -301,7 +301,7 @@
   - **Depends on:** TASK-21
   - **Done when:** Mobile header bell displays live badge and tapping navigates to notifications screen.
 
-- [ ] **TASK-23 — Implement Mobile NotificationsScreen and NotificationSettingsScreen**
+- [x] **TASK-23 — Implement Mobile NotificationsScreen and NotificationSettingsScreen**
   - **Files:** `resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx` (Create), `resources/views/mobapp/src/module/employee/notifications/pages/NotificationSettingsScreen.tsx` (Create), `resources/views/mobapp/src/app/(app)/notifications.tsx` (Create)
   - **Change:** Screen at `/(app)/notifications` with shared category pill filters (`All`, `Approvals & Requests`, `Attendance`, `Payroll`, `Announcements`, `HR`, `Messages`), pull-to-refresh, deep-linking routing, and empty state. Settings screen mirrors web 4-part structure with locked mandatory toggles.
   - **Test:** Manual check MT-04; mobile snapshot test.
@@ -316,7 +316,7 @@
 - **Goal:** Execute the full acceptance walk, verify all acceptance criteria (AC-01 through AC-44), and run end-to-end regression suites across backend and frontends.
 - **Exit check:** All test suites green (`php artisan test`, `npm run build`, `npm run typecheck`); zero open critical findings.
 
-- [ ] **TASK-24 — Full Acceptance Walk & End-to-End Regression Suite**
+- [x] **TASK-24 — Full Acceptance Walk & End-to-End Regression Suite**
   - **Files:** `tests/Feature/Notification/NotificationFullAcceptanceTest.php` (Create)
   - **Change:** Execute comprehensive test covering all 44 acceptance criteria: leave submission to approval flow, decoupled payroll processing vs. payslip release, missing attendance schedule evaluation (rest day/leave/holiday exclusions), mandatory preference enforcement, IDOR rejection, and WebSocket event payloads.
   - **Covers:** AC-01 through AC-44
