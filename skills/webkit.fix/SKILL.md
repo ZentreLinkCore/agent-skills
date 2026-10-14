@@ -1,7 +1,7 @@
 ---
 name: webkit-fix
 description: |
-  Applies the approved findings of one existing report (code-review, verify, investigation, refactor or design-review) with the smallest safe change, runs a regression check and the SemVer step, then closes the loop: marks each finding fixed in that report and recomputes its status, ticks plan.md and task.md, and records the fixes in the spec, so the review does not need a re-run. Ends with a Fix Summary. Never re-reviews, adds findings, or changes a requirement.
+  Applies the approved findings of one existing report (code-review, verify, investigation, refactor or design-review) with the smallest safe change and a regression test for each, runs a regression check and the SemVer step, then closes the loop: marks each finding fixed in that report and recomputes its status, ticks plan.md and task.md, and records the fixes in the spec, so the review does not need a re-run. Ends with a Fix Summary. Never re-reviews, adds findings, or changes a requirement.
   Trigger: "/webkit-fix", "apply the fixes", "fix the findings", "fix what the review found", "apply the fix plan"
   Use when: a report in the ticket folder lists required fixes and they should now go into the code.
 ---
@@ -156,6 +156,7 @@ Where the fix usually lives ([project-profile.md](../../rules/project-profile.md
 Rules while applying:
 
 - **Smallest diff** that resolves the finding. Preserve imports, unrelated methods, comments, formatting, and business logic ([incremental-generation.md](../../rules/incremental-generation.md)).
+- **Every fix ships with a regression test** ([testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory)): the finding's failure scenario written as a test, a unit test where the logic runs without the database, a feature test on a disposable database for endpoints, Handlers, and authorization, a component test for a frontend fix. Write it first and watch it fail on the current code; then apply the fix and watch it pass. A frontend app with no runner gets one set up first, per testing.md. The test is part of the fix, never an "Additional issue".
 - **Report's fix cannot be applied as written** (the approach would break something, or the code changed shape): apply it only if an equivalent change achieves the same thing in substance. Otherwise skip it and explain why; the status becomes PARTIALLY COMPLETED. Never substitute a different design of your own.
 - **Additional issue discovered** (a problem the report does not contain): do **not** fix it. Record it in the summary as **"Additional issue discovered — requires separate review"**, with its location. If it blocks an approved fix, stop that fix and mark the status PARTIALLY COMPLETED.
 
@@ -174,9 +175,9 @@ After each fix, verify:
 
 Run the checks the project actually has:
 
-- PHP: `php -l <file>`, `vendor/bin/phpunit --filter <test>` for the affected area, `php artisan route:list --path=api` after a route change.
-- Frontend: `npm run typecheck` and `npm run build` where defined. Not every project has a JS test runner; never run or report a test command the project does not define.
-- The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result.
+- PHP: `php -l <file>`, the regression tests you added and the affected area's existing tests (`php artisan test --filter <Name>`; feature tests on a disposable database per [testing.md](../../rules/testing.md#backend-phpunit)), `php artisan route:list --path=api` after a route change.
+- Frontend: the regression tests you added and the area's existing tests (`npm test -- <path>`), plus `npm run typecheck` and `npm run build` where defined.
+- The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result. Its regression test is this check; a scenario that cannot be a test (device-only) is traced instead.
 
 A check that fails because of your change is fixed before moving on; a check that was already failing before your change is noted, not fixed.
 
@@ -191,7 +192,7 @@ Before completion, confirm:
 - ✓ No requirement changed in the spec (Phase 8's notes are bookkeeping)
 - ✓ No scope expanded
 - ✓ Project conventions maintained
-- ✓ Each fix's own scenario checked (Phase 5): this is the evidence Phase 8 records
+- ✓ Each fix's own scenario checked (Phase 5), with a regression test that failed before and passes now: this is the evidence Phase 8 records
 
 ---
 
@@ -221,8 +222,8 @@ Replace the `- **Resolution:** Open` line of every finding in the Phase 2 list (
 
 | Outcome | Resolution line | Counts as |
 | --- | --- | --- |
-| Applied, and the finding's own failure scenario now gives the expected result (Phase 5) | `✅ FIXED — <YYYY-MM-DD>, /webkit-fix: <one-line change> (<file:line>). Confirmed: <scenario> → <result>.` | Closed |
-| Applied, but the scenario cannot be executed here (no test database, device only); the code path was traced end to end | `✅ FIXED (traced) — <date>, /webkit-fix: <change>. Not executed: <reason>. Traced: <path>.` | Closed, flagged |
+| Applied, and the finding's own failure scenario now gives the expected result (Phase 5) | `✅ FIXED — <YYYY-MM-DD>, /webkit-fix: <one-line change> (<file:line>). Test: <test path> (failed before, passes now).` | Closed |
+| Applied, but the scenario cannot be executed here (no disposable database, device only); the code path was traced end to end | `✅ FIXED (traced) — <date>, /webkit-fix: <change>. Test: <test path> written, not run (<reason>). Traced: <path>.` | Closed, flagged |
 | Phase 1 found it already resolved | `✅ ALREADY RESOLVED — <date>: <evidence>.` | Closed |
 | Skipped, blocked, or not applicable as written | `❌ NOT FIXED — <reason>.` | Open |
 

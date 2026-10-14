@@ -29,6 +29,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 - **Frontend:** {{pages / components / hooks / page registration built}}
 - **Database:** {{migrations scaffolded and not run, or "None — reused `<table>`"}}
 - **Registrations:** {{route-file and router entries added}}
+- **Tests:** {{target test files added, per .agents/rules/testing.md, with their run result; a runner set up in the target is also named in Notes}}
 
 ---
 

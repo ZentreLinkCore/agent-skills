@@ -45,7 +45,7 @@ Secondary tells: `<source-path>` (React) has `.agents/blueprint/scaleup/` and `a
 
 - **Backend**: Laravel (PHP), Sanctum auth. Entry: `app/`, routes in `routes/api.php` (orchestrator) + per-portal files under `routes/api/`.
 - **Frontend**: Vue 3 `<script setup>` + Composition API, Vue Router, Tailwind CSS, Vite. Root: `resources/views/web/src/`.
-- **Testing**: PHPUnit (`vendor/bin/phpunit`), Vitest (`npm run test`). `tests/` at project root.
+- **Testing**: PHPUnit (`php artisan test`; suites `Unit` and `Feature`, `tests/` at project root). Feature tests extend `Tests\Feature\DisposableDatabaseTestCase` and run only against a `*_test` database. **No frontend test runner is configured yet** (no `test` script, no Vitest): the first skill that needs a frontend test sets up Vitest per [testing.md](./testing.md#setting-up-a-missing-frontend-runner-one-time-done-by-the-skill). The mobile app `resources/views/mobapp` (Expo) likewise has none; it gets jest-expo the same way.
 
 ---
 
@@ -292,7 +292,7 @@ export { default as <feature>Routes } from './route/<feature>.routes';
 - **Backend**: Laravel (PHP), **Sanctum stateful SPA session** (cookie-based, not bearer tokens). Same Query/Handler/Action pattern as `<source-path>` (Vue).
 - **Frontend**: **React 19** + `react-router-dom` v7, Tailwind CSS 4, Radix UI primitives, `lucide-react` icons, Vite 8.
 - **TypeScript**: configured and enforced — `tsconfig.json` at project root, `npm run typecheck` (`tsc --noEmit`), and `npm run build` runs typecheck first. `allowJs: true` + `checkJs: false` during migration: `.jsx`/`.js` still run but are unchecked; every `.ts`/`.tsx` file gets `strict: true`.
-- **Testing**: PHPUnit (`vendor/bin/phpunit`). **No Vitest is configured** — do not reference `npm run test`.
+- **Testing**: PHPUnit (`vendor/bin/phpunit`). **No frontend test runner is configured yet**: the first skill that needs a frontend test sets up Vitest per [testing.md](./testing.md#setting-up-a-missing-frontend-runner-one-time-done-by-the-skill); until then there is no `npm run test`.
 
 ### Frontend layout
 

@@ -32,6 +32,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 1. **{{Finding reference}}**
    - **Files Modified:** `{{path}}`, `{{path}}`
    - **Summary:** {{what was changed}}
+   - **Regression Test:** `{{test path}}` — {{fails on the old code, passes on the fix; or "written, not run — <reason>"; or "None — <reason>" for a change with no behavior}}
 
 ---
 

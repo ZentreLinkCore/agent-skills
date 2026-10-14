@@ -16,7 +16,7 @@
 7. [Project Structure Standards](./rules/project-structure.md) - File and folder layouts across backend and frontend.
 8. [Naming Convention Standards](./rules/naming-convention.md) - Casing for components, variables, tables, models, classes.
 9. [Git Workflow Standards](./rules/git-workflow.md) - Branch names, Conventional Commits, the mandatory branch gate.
-10. [Testing Standards](./rules/testing.md) - PHPUnit targets, mocking, critical-calculation coverage. **Not every project configures a JS test runner** — where none exists, use `npm run typecheck` / `npm run build`.
+10. [Testing Standards](./rules/testing.md) - **Every backend and frontend change ships with a test that has run**: unit tests for pure logic, feature tests on a disposable `*_test` database for Handlers, Queries, endpoints and authorization, a schema test per migration, a regression test per fix, unit and component tests on the frontend. An app with no frontend runner gets one set up by the skill (Vitest for Vue / React + Vite, jest-expo for Expo), dev dependencies only. Binding on `webkit.implement`, `webkit.fix`, `webkit.refactor`, `webkit.migrate`.
 11. [Documentation Standards](./rules/documentation.md) - Inline JSDoc/PHPDoc comments and API schemas.
 12. [HRMS Domain Rules](./rules/hrms-rules.md) - Overtime, late logs, SSS/PhilHealth/Pag-IBIG, rate factors, portal separation. **Only for projects with payroll and timekeeping.**
 13. [Execution Strategy](./rules/execution-strategy.md) - Workspace search order and scan optimization.

@@ -1,7 +1,7 @@
 ---
 name: webkit-implement
 description: |
-  Builds an approved ticket by executing its `plan.md` task by task (backend first, then frontend), reusing existing code before creating any, then applies the SemVer step from `.agents/config/<project>.yml`. Never changes the spec or the scope; stops with "Specification clarification required" when the spec falls short.
+  Builds an approved ticket by executing its `plan.md` task by task (backend first, then frontend), each change with its test (unit, feature, schema or component; it sets up a frontend test runner where an app has none), reusing existing code before creating any, then applies the SemVer step from `.agents/config/<project>.yml`. Never changes the spec or the scope; stops with "Specification clarification required" when the spec falls short.
   Trigger: "/webkit-implement", "implement the ticket", "build the spec", "execute the plan", "start coding T#####"
   Use when: a ticket already has spec.md and plan.md and the code should now be written on its branch.
 ---
@@ -210,7 +210,7 @@ Implement only what the specification defines.
 
 - Migrations, schema updates, and indexes (`->index()` on relationship and frequently filtered columns, plus timestamps), using **your project's FK and soft-delete style** (from the profile, Phase 0).
 - Never create a migration for a table that exists: search `database/migrations/` for `Schema::create('<table>')` first.
-- **Never run migrations automatically.** List them in the summary; the user runs them.
+- **Never run migrations automatically.** List them in the summary; the user runs them. (The feature and schema tests migrate a **disposable** `*_test` database only, per [testing.md](../../rules/testing.md#backend-phpunit); that is not running the migrations.)
 
 **Business logic**
 
@@ -234,7 +234,7 @@ Implement only what the specification defines.
 
 **Domain calculations** (payroll, overtime, leave credits): follow the spec and [hrms-rules.md](../../rules/hrms-rules.md) for exact rates; never hard-code ad-hoc numbers.
 
-**Testing**: add the tests [testing.md](../../rules/testing.md) requires for changed business logic, where the project has a test runner.
+**Testing (mandatory, with each task)**: every backend change ships with its test, per [testing.md — Every Code Change Ships With a Test](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory): a unit test for pure logic, a feature test for each Handler, Query, and endpoint (response shape, validation, and authorization both ways), a schema test for each migration. Write it with the change, run it, and tick the task only when it passes. Use the task's **Test** line; a plan without one still gets the test.
 
 Full worked examples of each layer, in this codebase's exact style, are in [project-profile.md](../../rules/project-profile.md); open the closest sibling class before writing.
 
@@ -251,6 +251,7 @@ Begin only after the backend is ready. Implement the pages, components, forms, s
 - **Validation** matches the backend rules and shows the backend's error messages.
 - **States**: loading, error (the spec's error responses, not only success), empty, and permission-based visibility (hide or disable per the spec's authorization table).
 - **Components**: reuse the design system; never duplicate a component. A component general enough for other modules goes in the shared components directory.
+- **Testing (mandatory, with each task)**: every util, composable / hook, api function, component, and page you add or change gets its test, per [testing.md](../../rules/testing.md#frontend). No runner in this app yet → set it up first, exactly as [testing.md](../../rules/testing.md#setting-up-a-missing-frontend-runner-one-time-done-by-the-skill) says (dev dependencies only, proven by the first test), and record it in Notes.
 - **Styling**: Tailwind and your project's tokens only. Every color has its `dark:` counterpart; cards and tables use `bg-white dark:bg-slate-800`. Accent colors follow the profile: per-portal accents ([ui-design.md](../../rules/ui-design.md)) where the project has portals, otherwise the project's theme tokens.
 - **Where [ui-design.md](../../rules/ui-design.md)'s table rules apply** (projects with portals): wide tables support drag-to-scroll; statutory ID columns (SSS, PhilHealth, Pag-IBIG) are left-aligned, non-wrapping monospace with an icon.
 
@@ -266,6 +267,7 @@ Before finishing, verify:
 - Loading, error, and empty states exist.
 - Permission handling works for every role in the spec, including the roles that must be rejected.
 - Edited PHP files parse (`php -l <file>`); the frontend typechecks / builds where the project has those scripts.
+- **Every test added in this run passes**, together with the existing tests of the areas touched: `php artisan test --testsuite=Unit`, the feature tests on a disposable database ([testing.md](../../rules/testing.md#backend-phpunit)), and each frontend app's `npm test`. A test that could not run leaves its task unticked, named in Notes with the command that runs it.
 - Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
 - Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.
 - `task.md` is current, per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): §2 matches the plan's ticks, the §1 Implement row reads `<done>/<total> tasks`, §4 lists the plan's §9 Commands for the User still to run, **Next step** is `/webkit-verify <ticket>` (or the first unticked task's blocker), and §5 has one line for this run. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first.

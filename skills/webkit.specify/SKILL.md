@@ -106,6 +106,7 @@ Then inspect:
 | Endpoints and backend classes | route files, controllers, Query / Handler / Action classes | §8 Backend; plan §2 |
 | Frontend modules | pages, components, composables, api, stores | §8 Frontend; plan §2 |
 | Check commands | `composer.json` / `package.json` scripts, test config | §12; plan §1 Checks |
+| Test runners | `phpunit.xml` suites, the disposable-database base class in `tests/`; each frontend app's `test` script and runner in `devDependencies` | §12; plan §1 Tests; a runner-setup task when an app has none |
 
 Rules:
 
@@ -175,17 +176,17 @@ The plan **derives**; it never decides. Every task traces to an ID in the spec, 
 | Section | Must hold |
 | --- | --- |
 | Metadata | Same project, ticket, and feature as the spec; **Based on Spec Version** = the spec's Specification Version; Plan Revision `1`; Plan Status `Ready` (or `Draft` while the spec has Open Questions). |
-| §1 Technical Context | The facts from Phase 2 that `/webkit-implement` would otherwise re-discover: project, stack, HTTP client, state, DB conventions, design system, the reference sibling feature, and the exact check commands. |
+| §1 Technical Context | The facts from Phase 2 that `/webkit-implement` would otherwise re-discover: project, stack, HTTP client, state, DB conventions, design system, the reference sibling feature, the exact check commands, and the test commands (backend and each frontend app). |
 | §2 Reuse Map | One row per §8 component, class, and table: the search actually run, what it found, and REUSE / EXTEND / CREATE. A CREATE row says why nothing fit. |
 | §3 File Change Map | Every file touched, Create or Modify, in task order. Nothing the spec does not need. |
-| §4–§7 Phases | Preparation → Backend → Frontend Integration → Validation. Tasks in dependency order (migration → model → Query / Handler / Action → controller → route → api layer → state → components → pages → route registration). Each task: Files, Change (exact: methods, columns, keys, props), Covers, Depends on, Done when. |
+| §4–§7 Phases | Preparation → Backend → Frontend Integration → Validation. Tasks in dependency order (migration → model → Query / Handler / Action → controller → route → api layer → state → components → pages → route registration). Each task: Files, Change (exact: methods, columns, keys, props), **Test** (file and what it asserts, per [testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory): unit, feature, schema, or component test), Covers, Depends on, Done when (including its test passing). A frontend app with no test runner: Preparation opens with a task that sets one up, per testing.md. |
 | §8 Acceptance Walk | Every AC in spec §10, how it is exercised (test or manual MT-xx), and the task that delivers it. |
-| §9 Commands for the User | Migrations, seeders, package installs, env keys, native rebuilds: everything `/webkit-implement` must not run itself, in order, with rollback. |
+| §9 Commands for the User | Migrations, seeders, package installs, env keys, native rebuilds: everything `/webkit-implement` must not run itself, in order, with rollback. The dev-only test runner is not listed: the implementing skill sets it up ([testing.md](../../rules/testing.md#setting-up-a-missing-frontend-runner-one-time-done-by-the-skill)). |
 | §10 Plan Change Log | `1 · <today> · <spec version> · Created plan · All`. |
 
 Rules:
 
-- **Coverage check before saving.** Every FR in §6 is in some task's Covers; every AC in §10 is in the Acceptance Walk. A gap means a missing task, or a requirement nobody can build: find out which.
+- **Coverage check before saving.** Every FR in §6 is in some task's Covers; every AC in §10 is in the Acceptance Walk; every task that changes backend or frontend code has a Test line. A gap means a missing task, or a requirement nobody can build: find out which.
 - **A gap in the spec is fixed in the spec.** If planning shows the spec is missing something a task needs (no contract for an endpoint the flow calls, a table with no columns), correct the spec in Phase 3 first, then plan it. Never fill the gap inside the plan.
 - **Task size.** One file, or one tightly coupled change (a route and its controller method). A task too big to check with one Done When is two tasks.
 - **No requirements, no rationale.** The plan cites `FR-xx` / `AC-xx` / `D-xx` and never restates them. The why lives in spec §15.

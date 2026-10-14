@@ -33,7 +33,7 @@ Secondary tells: `<source-path>` (React) has `app/Models/Organization.php` and `
 | Controllers | `app/Http/Controllers/<portal>/` (lowercase) | `app/Http/Controllers/<Domain>/` (PascalCase) |
 | Design system | globally-registered Vue components | `src/components/ui/` + barrel — **import them** |
 | HTTP client | `@/app/axios/axiosInstance` → returns `AxiosResponse`, use `.data` | `@/app/axios/http` → **already unwrapped** |
-| JS tests | Vitest | **none configured** — use `npm run typecheck`, `npm run build` |
+| JS tests | **none configured yet** — the skill sets up Vitest on first need (`testing.md`) | **none configured yet** — the skill sets up Vitest on first need (`testing.md`) |
 
 > The database rows are **direct opposites**. Never carry one project's rule into the other.
 

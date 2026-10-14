@@ -22,7 +22,11 @@ Fill rules. Delete this comment and every other guide comment from the finished 
    frontend integration starts.
 8. Coverage: every FR in spec §6 appears in at least one task's Covers; every AC in spec §10 appears in §8
    Acceptance Walk.
-9. /webkit-implement edits only two things here: a task checkbox ([ ] → [x]) once its Done When holds, and the
+9. Every task that changes backend or frontend code has a Test line naming the test file and what it asserts, per
+   .agents/rules/testing.md ("Every Code Change Ships With a Test"); "None — <reason>" only for a change with no
+   behavior. A frontend app with no test runner gets a Preparation task that sets one up. Done When includes the
+   test passing.
+10. /webkit-implement edits only two things here: a task checkbox ([ ] → [x]) once its Done When holds, and the
    Plan Status. Everything else changes through /webkit-specify and is logged in §10.
 -->
 
@@ -61,7 +65,8 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 | Database conventions | {{FK style; relationship column style; soft-delete style}} |
 | Design system | `{{components directory / barrel}}` |
 | Reference implementation | `{{path to the closest sibling feature to copy the shape of}}` |
-| Checks | `{{lint / typecheck / build / test commands}}` |
+| Checks | `{{lint / typecheck / build commands}}` |
+| Tests | `{{backend: unit and feature test commands, and how feature tests get a disposable database}}` · `{{frontend: test command, or "no runner — set up in TASK-01"}}` |
 
 ---
 
@@ -95,6 +100,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 - [ ] **TASK-01 — {{title}}**
   - **Files:** `{{path}}` ({{Create / Modify}})
   - **Change:** {{exact change: config keys, types, permissions, columns}}
+  - **Test:** {{test that proves it, or "None — <reason>"; a runner setup task proves itself by its first test}}
   - **Covers:** {{FR-xx / NFR-xx}}
   - **Depends on:** {{TASK-xx, or "None"}}
   - **Done when:** {{checkable result}}
@@ -104,11 +110,12 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 ## 5. Phase 2 — Backend
 
 - **Goal:** {{goal}}
-- **Exit check:** {{e.g. `php artisan route:list --path=api/...` lists the route; `php -l` passes; tests green}}
+- **Exit check:** {{e.g. `php artisan route:list --path=api/...` lists the route; `php -l` passes; every task's backend test green}}
 
 - [ ] **TASK-02 — {{title}}**
   - **Files:** `{{path}}` ({{Create / Modify}})
   - **Change:** {{exact change: class + method, columns + indexes, validation rules, response keys}}
+  - **Test:** `{{tests/Unit/... or tests/Feature/...}}` — {{what it asserts}}
   - **Covers:** {{FR-xx, AC-xx}}
   - **Depends on:** {{TASK-xx}}
   - **Done when:** {{checkable result}}
@@ -118,11 +125,12 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 ## 6. Phase 3 — Frontend Integration
 
 - **Goal:** {{goal}}
-- **Exit check:** {{e.g. typecheck / build passes; the page loads and calls the endpoint}}
+- **Exit check:** {{e.g. every task's frontend test green; typecheck / build passes; the page loads and calls the endpoint}}
 
 - [ ] **TASK-03 — {{title}}**
   - **Files:** `{{path}}` ({{Create / Modify}})
   - **Change:** {{exact change: api function, state field, component props, loading / error / empty states}}
+  - **Test:** `{{path/to/file.test.ts}}` — {{what it asserts}}
   - **Covers:** {{FR-xx, AC-xx}}
   - **Depends on:** {{TASK-xx}}
   - **Done when:** {{checkable result}}
@@ -131,12 +139,12 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 
 ## 7. Phase 4 — Validation
 
-- **Goal:** Every AC in spec §10 is exercised (§8) and the project's checks pass.
-- **Exit check:** {{all check commands green; §8 walked}}
+- **Goal:** Every AC in spec §10 is exercised (§8) and the project's checks pass. The per-task tests already exist (each task's Test line); this phase adds the cross-task tests (an AC that spans several tasks) and runs everything together.
+- **Exit check:** {{all test suites and check commands green; §8 walked}}
 
 - [ ] **TASK-04 — {{title}}**
   - **Files:** `{{test path}}` ({{Create / Modify}}), or "None — manual"
-  - **Change:** {{tests added, or the manual scenario run}}
+  - **Change:** {{cross-task tests added, the full suites run, or the manual scenario run}}
   - **Covers:** {{AC-xx}}
   - **Depends on:** {{TASK-xx}}
   - **Done when:** {{command and its expected result}}

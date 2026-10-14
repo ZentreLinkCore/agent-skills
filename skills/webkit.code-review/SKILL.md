@@ -204,7 +204,7 @@ Report **only with measurable impact** (query count, rows loaded, requests per a
 - Wrong abstraction
 - Dead code, commented-out blocks, stray debug output, stale comments
 - Inconsistent patterns versus sibling modules
-- Changed business logic without the test [testing.md](../../rules/testing.md) requires
+- Changed backend or frontend behavior without the test [testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory) requires (unit, feature, schema, regression, or component test): MEDIUM, raised to HIGH for money, authorization, or data integrity. A test that asserts nothing real (`assertTrue(true)`, a snapshot of nothing) counts as missing.
 
 ### 6. Architecture
 

@@ -1,7 +1,7 @@
 ---
 name: webkit-refactor
 description: |
-  Behavior-preserving restructuring toward a stated goal: remove duplication, move logic into the project's Query / Handler / Action and component patterns, use the design system, delete dead code. Proved by the project's own checks before and after; writes `refactor.md`. Never fixes bugs or changes routes, APIs or schema.
+  Behavior-preserving restructuring toward a stated goal: remove duplication, move logic into the project's Query / Handler / Action and component patterns, use the design system, delete dead code. Proved by the project's own checks and tests before and after (a characterization test first where none covers the code); writes `refactor.md`. Never fixes bugs or changes routes, APIs or schema.
   Trigger: "/webkit-refactor", "refactor", "clean up", "remove duplication", "dead code", "consolidate"
   Use when: the code works but should be restructured without changing what it does.
 ---
@@ -137,8 +137,9 @@ Ask:
 
 Before changing anything, run the checks the project actually has and record the results:
 
-- PHP: `php -l <file>` for files you will touch; `vendor/bin/phpunit --filter <area>` (PHPUnit exists in both projects).
-- Frontend: `npm run typecheck`, `npm run build` where defined. **Not every project has a JS test runner**: never run or report one the project does not define.
+- PHP: `php -l <file>` for files you will touch; `php artisan test --filter <area>` (PHPUnit exists in both projects; feature tests on a disposable database per [testing.md](../../rules/testing.md#backend-phpunit)).
+- Frontend: `npm test -- <path>`, `npm run typecheck`, `npm run build` where defined.
+- **No test covers the code you will move → write one now** (a characterization test: it pins today's behavior, including its odd cases), per [testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory): a unit test for pure logic, a feature test for an endpoint, Handler, or Query, a component test for a frontend piece (a frontend app with no runner gets one set up first). It must pass **before** the first move; it is the proof the refactor changed nothing. A refactor of untested code proved only by typecheck is not proved.
 - **API payloads**: for every endpoint whose code you will touch, capture the response shape now (e.g. `php artisan tinker --execute="..."` against a read-only call, or the existing test's assertion).
 
 A check that already fails at baseline is recorded as failing; it is not this refactor's job to fix it.
@@ -217,7 +218,7 @@ Do **not**:
 - add features or expand scope beyond the stated goal,
 - change routes, request / response shapes, database schema, model events, or visible UI behavior,
 - edit the specification,
-- introduce a different architecture, library, or folder structure,
+- introduce a different architecture, library, or folder structure (the dev-only test runner [testing.md](../../rules/testing.md#setting-up-a-missing-frontend-runner-one-time-done-by-the-skill) sets up is the one exception),
 - report a check as passing that was not run.
 
 ---

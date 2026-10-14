@@ -33,6 +33,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 - **Frontend:** {{what was built}}
 - **Database:** {{migrations and schema changes, or "None"}}
 - **Shared Components:** {{shared components added or extended, or "None"}}
+- **Tests:** {{one entry per test file added or changed, with its run result, e.g. "`tests/Unit/ComputeXActionTest.php` — 6 passed"; "written, not run — <reason>" with the command; a runner set up in this run is also named in Notes}}
 
 ---
 

@@ -285,7 +285,7 @@ Build the feature in the target from the contract, matching the target's profile
 
 **Backend first.**
 
-- **Data.** Reuse the target model and table when the target scan found them. Otherwise scaffold a migration and a model in the target's database conventions (foreign-key style, relationship-column naming, soft delete, indexes, timestamps). **Never run migrations**: list them for the user to run in the target.
+- **Data.** Reuse the target model and table when the target scan found them. Otherwise scaffold a migration and a model in the target's database conventions (foreign-key style, relationship-column naming, soft delete, indexes, timestamps). **Never run migrations**: list them for the user to run in the target. (Feature and schema tests migrate a **disposable** `*_test` database only, per [testing.md](../../rules/testing.md#backend-phpunit); that is not running the migrations.)
 - **Logic.** The target's read and write layers per §10, writes inside `DB::transaction`, returning JSON that matches §4 exactly: keys, types, status codes, and error shapes.
 - **Validation and authorization** from §6, enforced on the server, with the same rejection status and body.
 - **Routes** in the target's route file and middleware group, with the URL path, method, and guard from §4; confirm with `php artisan route:list --path=api` in the target.
@@ -304,12 +304,13 @@ Build the feature in the target from the contract, matching the target's profile
 - Every new target file has its row in contract §11 (Searched, Found, Decision) before it is created. A `CREATE` with no recorded search is a violation.
 - In existing target files, the smallest diff: preserve comments, imports, unrelated methods, and formatting ([incremental-generation.md](../../rules/incremental-generation.md)).
 - Field names, endpoint paths, status values, formulas, and transitions equal the contract. The look, the library, and the layout are the target's.
+- **Every backend and frontend piece built in the target ships with its test**, per [testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory), in the target's own test layout: unit tests for the §5 formulas (same inputs, same rounding as the source), feature tests for the §4 endpoints and §6 rejections, a schema test for each scaffolded migration, component tests for the §7 states. A target frontend with no runner gets one set up first, per testing.md. These tests are the parity proof Phase 7 runs.
 
 ---
 
 ## Phase 7 — Verify Parity
 
-1. **Static checks in the target.** `php -l` on every new or edited PHP file; the target's typecheck, build, or lint scripts where it defines them, and never a script it lacks. Fix what the migration introduced; note checks that were already failing.
+1. **Tests and static checks in the target.** Run every test added in Phase 6 (feature tests on a disposable database per [testing.md](../../rules/testing.md#backend-phpunit)); `php -l` on every new or edited PHP file; the target's typecheck, build, or lint scripts where it defines them. Fix what the migration introduced; note checks that were already failing. A test that could not run makes its contract item unchecked in §12.
 2. **Contract parity.** Walk §2–§8 against the target: every field traces to §3; every endpoint returns the §4 JSON and status, errors included; every status value and transition matches §2; every formula matches §5 with the same rounding; every validation message and rejection matches §6; every UI state of §7 and edge case of §8 exists. Execute where you can (`route:list`, a read-only `tinker` call, a request against local data); otherwise trace the code path and say so.
 3. **Round trip.** Given only the contract, would the target behave identically to the source? Anything implicit is made explicit, in the code and in the contract.
 4. **Fill §12** in the same contract run: one row per checked item, then **PARITY CONFIRMED** (every row equal) or **PARITY WITH GAPS** (each differing or unchecked row named).
