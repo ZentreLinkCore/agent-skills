@@ -5,10 +5,10 @@
 | Field | Value |
 | --- | --- |
 | Ticket | T00001 (subhrms) |
-| Branch | `T00001` — backend repo: base `origin/master`, 73 files changed, +9,105/-422 lines (HEAD `fc999da2`); mobile repo `resources/views/mobapp` (`hrms-react-native`): base `origin/main`, 122 files changed, +49,260/-1,327 lines (HEAD `c3130cc`); both identical to `origin/T00001` |
+| Branch | `T00001` — backend repo: base `origin/master`, 96 files changed, +12,841/-659 lines (HEAD `75ebebff`); mobile repo `resources/views/mobapp` (`hrms-react-native`): base `origin/main`, 125 files changed, +58,129/-5,564 lines (HEAD `2f59796`); both identical to `origin/T00001`, working trees clean |
 | Reviewer Role | Senior Developer Review |
-| Review Date | 2026-10-13 |
-| Review Run | v1 — initial |
+| Review Date | 2026-10-14 |
+| Review Run | v2.1 — fix pass 2026-10-14 by /webkit-fix: 95 of 101 findings closed (CRITICAL 1 of 1, HIGH 20 of 22, MEDIUM 52 of 56, LOW 22 of 22); still open: #5 and #9 (HIGH), #43, #47, #78 and #79 (MEDIUM); not re-reviewed. Run v2 was a full re-review after fix passes v1.1 and v1.2: the 43 closed v1 findings re-checked against the code (36 hold, 7 reopened in part: #3, #11, #17, #19, #36, #37, #39), 4 v1 findings still open (#23, #26, #31, #44), and first-time coverage of the files v1 did not read; 101 findings: 1 CRITICAL, 22 HIGH, 56 MEDIUM, 22 LOW |
 
 ---
 
@@ -16,20 +16,22 @@
 
 ### Overall Code Quality
 
-CHANGES REQUIRED
+CHANGES REQUIRED (after fix pass v2.1)
 
 ### Summary
 
-This change is not mergeable: it carries four CRITICAL security defects, including an authenticated arbitrary-file-deletion path and two ways to read any message in the system, plus twenty HIGH findings. The most consequential is Finding #1: a client-supplied attachment path is stored as sent and later passed to `@unlink`, so any employee can delete files such as `.env` or `public/index.php`. Findings marked "Executed" were reproduced against the committed code in a disposable MySQL; the others were traced by reading, and each says which. The diff is far larger than one review can read in full (about 58,000 added lines), so the high-risk areas were reviewed first and the rest is listed under INFO "Not reviewed".
+**Fix pass v2.1 (2026-10-14, `/webkit-fix`):** 95 of the 101 findings are closed, including the CRITICAL #1 and 20 of the 22 HIGH. Each closure has a test that failed before the change and passes now, except where its Resolution says *traced* (5: #52, #53, #57, #76, #101: the code lives in the 4,100-line `ConversationScreen` or is dead-code removal) or *equivalent change* (5: #4, #18, #41, #59, #95: a different mechanism than the report named, with the reason in the line). Still open: #5 and #9 (HIGH; both wait for a decision, the verdict stays CHANGES REQUIRED) and #43, #47, #78, #79 (MEDIUM). Backend suite after the pass: 649 passed and 7 errors, all in `Tests\Unit\ComputeWithholdingTaxActionTest` (a `BindingResolutionException`, present before this pass); mobile: 63 suites and 455 tests pass and `tsc --noEmit` is clean. This pass did not re-review the code. Test paths in the Resolution lines: a bare `FooTest` is `tests/Feature/Messages/FooTest.php`; mobile tests are under `resources/views/mobapp/tests/` (moved there from beside the source on 2026-10-14).
+
+*Run v2 summary, before the fix pass:* This change is not mergeable. The most consequential problem is Finding #1: one message of repeated emoji, within the 4,000-character limit the server accepts, blocks the JavaScript thread of every recipient's app for tens of seconds each time the message renders, and the cost grows cubically (executed: 2.8 s at 2,400 characters). Beyond it, 22 HIGH findings remain: a manager-only channel can be joined and read as live previews by any employee, the link-preview SSRF guard is silently disabled, a removed member keeps the private channel's live feed, and the mobile app still reports success for failed actions, shows fabricated application details next to an enabled Approve button, and crashes on iOS when the camera is used. Run v1's 43 closed findings mostly hold; the findings below are new code (including the fixes), code v1 did not read, and the seven v1 findings that are only partly closed.
 
 ---
 
 ## Changed Areas
 
-- **Frontend:** the messaging module of the mobile app (`src/module/employee/messages/`: 58 files, about 28,000 lines: screens, modals, drawers, the chat hook, the API layer, the context, parsers and utilities), the routes under `src/app/(app)/messages/`, shared components (`AppTopHeader`, `BottomSheetModal`, `ApplicationDetailModal`, wrappers), and changes outside messaging that ride on the branch: a new Notifications screen, `useTimeInOut`, AI chat and filing modals, `AuthContext`, `http.ts`, `package.json`, `app.json`.
-- **Backend:** `MessagesController` (462 lines on master, 2,679 now), 9 handlers, 6 actions, 8 queries, 6 models, 5 new or changed broadcast events, `BroadcastAuthController`, `routes/channels.php`, `routes/api/employee.php`; unrelated edits to `AttendanceController`, `AuthController`, `BiometricController`, `GetEmployeeDashboardQuery`, `AppServiceProvider`.
-- **Database:** 16 migrations (6 under `database/migrations/`, 10 under `alters/messages/`): `conversations` flags, `conversation_members` (admin flag, unique index), `channel_sections`, `channel_join_requests`, `custom_mentions`, message pins, system events, attachment dimensions; a conversation seeder.
-- **Other:** `composer.json` / `composer.lock` (Scout and Meilisearch), `config/database.php`, `config/scout.php`, `public/.htaccess`, `php.ini`, `public/.user.ini`, `start.sh`, `.env.example`, the web `echo.ts`; one unit test file.
+- **Frontend:** the messaging module of the mobile app (`src/module/employee/messages/`: about 60 files: screens, modals, drawers, the chat hook, the API layer, the context, parsers and utilities), the routes under `src/app/(app)/messages/`, the new jest-expo runner and two test files, and changes outside messaging that ride on the branch: a new Notifications screen, `ApplicationDetailModal` (new, 1,445 lines), `AppTopHeader`, `BottomSheetModal`, `useTimeInOut`, `AuthContext`, the theme, AI chat and filing modals, `app.json`, `package.json`, `README.md`.
+- **Backend:** `MessagesController` (2,261 lines), 14 Handlers (6 extracted from the controller by the fix passes), 9 Actions, 8 Queries, 6 models, 6 broadcast events, `ProcessApprovalDecisionHandler` shared with the manager portal, `BroadcastAuthController`, `routes/channels.php`, `routes/api/employee.php`; unrelated edits to `AttendanceController`, `AuthController`, `BiometricController`, `GetEmployeeDashboardQuery` and the web `echo.ts`.
+- **Database:** 17 migrations (`database/migrations/` and `alters/messages/`): `conversations` flags, `conversation_members` (admin flag, unique index), `channel_sections`, `channel_join_requests`, `custom_mentions`, thread broadcast flag, message pins, system events, attachment dimensions; a conversation seeder.
+- **Other:** `.env.example`, 14 new backend test files (13 in `tests/Feature/Messages` plus `tests/Unit/DatabaseTimezoneConfigTest.php`) and `AttendancePunchCooldownTest`, `DisposableDatabaseTestCase`, the jest runner (`jest ~29.7.0`, `jest-expo ~57.0.6`, `@testing-library/react-native ^14.1.0`).
 
 ---
 
@@ -39,429 +41,940 @@ This change is not mergeable: it carries four CRITICAL security defects, includi
 
 #### Finding #1
 
-- **Finding:** Security — arbitrary file deletion through a client-supplied attachment path
-- **File:** [`app/Handlers/Messages/DeleteMessageHandler.php`](app/Handlers/Messages/DeleteMessageHandler.php#L234) (and [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L196))
-- **Line:** 234-256 (`unlink` branches), 196 (path stored as sent)
-- **Issue:** `SendMessageHandler` stores `attachments[].path` exactly as the client sent it; nothing validates it (the controller passes `$request->input('attachments', [])` straight through and no rule matches `attachments.*`). When the sender deletes that message, `deleteAttachmentFile` runs `file_exists`, `is_file` and `@unlink` on `storage_path('app/public/' . $diskPath)` and on `public_path($rawPath)` with no containment. Input: `POST …/messages` with `attachments: [{ "name": "x", "path": "../../.env" }]`, then `DELETE` that message. **Executed:** calling the real `deleteAttachmentFile` with a `../…` path to a sentinel file outside `storage/app/public` deleted it.
-- **Why It Matters:** any authenticated employee can delete any file the PHP user can write: `.env`, `public/index.php`, logs, other employees' uploads. The same unvalidated path also lets an `http://` URL render as an in-app file.
-- **Recommended Fix:** in `SendMessageHandler` accept only paths that `UploadAttachmentHandler` issued (pattern `^storage/messages/[0-9a-f-]{36}\.[a-z0-9]+$`, file exists on the `public` disk) and answer 422 otherwise; in `deleteAttachmentFile` use only `Storage::disk('public')`, delete the `storage_path` and `public_path` branches, and reject any path containing `..`.
-
-#### Finding #2
-
-- **Finding:** Security — `reply_to_id` returns the text of any message to any sender
-- **File:** [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L165)
-- **Line:** 165, 230-231 (response and broadcast), `app/Models/Message.php:58`
-- **Issue:** `reply_to_id` is stored without checking that the parent message belongs to `$conversationId`; `Message::parent()` is an unscoped `belongsTo`, and the reply payload carries `replyTo.text`, `sender` and `senderAvatar` into the HTTP response and the `MessageSent` broadcast. **Executed:** a member of public channel #Ops posted `reply_to_id` = the id of a message in a private DM between two other people; the response returned `replyTo.text` = the DM text. Message ids are sequential, so every message in the system can be enumerated this way. (A second #Ops member reading the list through `GET …/messages` did not receive the text.)
-- **Why It Matters:** private DMs, private channels and manager-only channels are readable by any employee who can post anywhere.
-- **Recommended Fix:** before `Message::create`, require `Message::where('conversation_id', $conversationId)->whereKey($replyToId)->exists()` and answer 422 otherwise.
-
-#### Finding #3
-
-- **Finding:** Security — deep-link mentions copy any message, author and channel name
-- **File:** [`app/Actions/Messages/ResolveMentionsAction.php`](app/Actions/Messages/ResolveMentionsAction.php#L249)
-- **Line:** 249 (`execute`, `message_link`), 377 (`formatForViewer`), 213 and 350 (`channel_link`), 495 (text parsing)
-- **Issue:** `message_link` resolution runs `DB::table('messages')->where('id', …)->first()` and copies the text, the author's name and avatar and the channel name into the mention, with no visibility check; `formatForViewer` repeats it for every reader. No structured payload is needed: `parseMentionsFromText` turns plain text such as `app://message/45` or `https://x?message_id=45` into such a mention. **Executed:** a user posted `see app://message/<id of a DM message>`; the response and another reader's `GET` both contained the DM text. `Conversation::find($targetId)` at 213 and 350 likewise returns the name of any private channel, and the custom-mention lookup at 198 bypasses the conversation scope.
-- **Why It Matters:** a second route to read every private message, needing nothing but the ability to post.
-- **Recommended Fix:** resolve a linked message or channel only when it is in `Conversation::visibleTo($sender)` at send time and again for each viewer in `formatForViewer`; otherwise omit the text, author and channel name; scope the custom-mention lookup the same way.
-
-#### Finding #4
-
-- **Finding:** Security — `getConversation` returns raw `Account` rows (government IDs) for a disabled conversation
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L153)
-- **Line:** 153
-- **Issue:** when the requested conversation is absent from `GetConversationsQuery` (it lists only `status != 0`), the method falls back to `'members' => $convModel->members ?? []`, serialising full `Account` models; `Account::$hidden` covers only `password` and `remember_token`. **Executed:** a non-member calling `GET /conversations/{id}` on a disabled public channel received a member's row with 57 attributes, including `tin` (`123-456-789-000`) and `sss`; the row also carries PhilHealth, Pag-IBIG, birth date and addresses.
-- **Why It Matters:** every employee can read every member's tax and social-security numbers for any conversation whose `status` is 0.
-- **Recommended Fix:** map the members to `id`, name and avatar, as `getConversationMembers` already does, instead of returning the models.
+- **Finding:** Security — one message of repeated emoji freezes every recipient's app (ReDoS in the message parser)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/utils/mentionParser.ts`](resources/views/mobapp/src/module/employee/messages/utils/mentionParser.ts#L404)
+- **Line:** 404 (`MSG_CHIP_PATTERN`), 441 (`DM_CHIP_PATTERN`); called from `components/MessageContent.tsx:130` and `:200`
+- **Issue:** both patterns start with a greedy repeated group `(?:[💬🔍]\s*)+` followed by a lazy class that can match the same emoji, so a failed match backtracks cubically. `parseMessageSegments` runs them unconditionally on the full text of every message (no length or trigger guard, `mentionParser.ts:129`), and the server accepts up to 4,000 characters (`SendMessageHandler::MAX_TEXT_LENGTH`, `mb_strlen`). Input: `'💬 '.repeat(1900)` (3,800 characters). **Executed** against the two literal patterns in Node/V8: `'💬 '`×100 → 5 ms, ×200 → 43 ms, ×400 → 364 ms, ×800 → 2,778 ms (DM pattern 2,713 ms); a normal message takes under 1 ms. The reviewer measured ×1300 at 13 s and ×2000 at 11.6 s on the MSG pattern alone; ×1900 extrapolates to roughly 30-45 s. Hermes was not measured.
+- **Why It Matters:** a cross-user denial of service by message content, persistent, needing only the ordinary permission to send. The message is rendered at least twice per mount (the `quotes` memo and `renderInlineSegments`) and sits in the newest window, so opening the conversation freezes the app each time until someone deletes the message; in General that is every employee.
+- **Recommended Fix:** in `mentionParser.ts` replace `(?:[💬🔍]\s*)+` with a single `[💬🔍]\s*` and exclude the emoji from the lazy class (`[^\n#🔒💬🔍]+?`), or delete the two heuristics (structured `message_link` mentions already carry the data); also cap the length of text the parser scans. Add a unit test (the jest runner exists) with 2,000 repeats that must finish in under 50 ms.
+- **Resolution:** ✅ FIXED — `mentionParser.ts`: both chip patterns are now one emoji plus a non-space first character with the emoji excluded from the lazy class (author capped at 120 characters), the heuristics are skipped above `CHIP_SCAN_MAX_LENGTH = 8000`, and `trailingChipPrefixLength` replaces the two quadratic `(?:[💬🔍]\s*)+$` tails. Test: `resources/views/mobapp/tests/module/employee/messages/utils/mentionParser.test.ts` (2,000 emoji, emoji + `@`, emoji + 3,990 spaces, repeated chips, spam + a real chip). Failed before the change: "parses a message made only of repeated chip emoji in under 100 ms (47633 ms) Received: 47563' and 'emoji followed by thousands of spaces ... Receiv..."; passes now.
 
 ### HIGH
 
+#### Finding #2
+
+- **Finding:** Security — any employee can join a manager-only channel and then receives live previews of its messages
+- **File:** [`app/Handlers/Messages/JoinChannelHandler.php`](app/Handlers/Messages/JoinChannelHandler.php#L30)
+- **Line:** 30-47 (fan-out in `app/Handlers/Messages/SendMessageHandler.php:364-390`)
+- **Issue:** the handler loads the conversation with `Conversation::find()` and refuses only private channels and DMs; it never applies `Conversation::isVisibleTo`, which hides `role = 'manager'` channels from every `role_access` outside 1, 2 and 7 (`Conversation.php:67-95`). **Executed:** employee E (`role_access` 3) POSTs `/api/employee/messages/conversations/{id}/join` on a public manager-only channel and gets 200 "You have joined"; a `conversation_members` row is created and a manager sees "Intruder, Eve" in the member list. `SendMessageHandler` then sends `UnreadCountUpdated` (`last_message`, the first 80 characters) to every membership row without a visibility check: after a manager posted "Confidential: layoff list ready", E received exactly that text on `private-user.{E}`. A private channel correctly answers 403, so 200 versus 403 also reveals which ids are manager-only.
+- **Why It Matters:** a non-manager reads previews of a restricted channel and appears in its member list.
+- **Recommended Fix:** after `Conversation::find` in `JoinChannelHandler` add `if (!Conversation::isVisibleTo($conversation->id, $user)) throw new \Exception('Channel not found', 404);`; as defence in depth have the `SendMessageHandler` fan-out and `RecordSystemEventAction` skip member rows that fail `visibleTo`.
+- **Resolution:** ✅ FIXED — `JoinChannelHandler` applies `Conversation::isVisibleTo` (404 'Channel not found', after the private and DM refusals so a private channel still answers 403); the `SendMessageHandler` fan-out sends `UnreadCountUpdated` in a manager-only channel only to members with `role_access` 1, 2 or 7 (one query for the member list); `RecordSystemEventAction` drops invisible recipients. Tests: `ChannelMembershipRefusalTest`, `SendMessageManagerOnlyFanOutTest`. Failed before the change: "Expected response status code [404] but received 200."; passes now.
+
+#### Finding #3
+
+- **Finding:** Security — mention search ignores the manager-only rule and hand-rolls the visibility check
+- **File:** [`app/Queries/Messages/SearchMentionsQuery.php`](app/Queries/Messages/SearchMentionsQuery.php#L49)
+- **Line:** 49-64, 90-93, 222-228
+- **Issue:** access is `$isMember || public channel || announcement`, not `Conversation::isVisibleTo`, so `role = 'manager'` is never applied. **Executed:** a `role_access` 3 employee called `GET /api/employee/messages/mentions/search?conversation_id=<public channel with role=manager>` and received 200 with `people = ["Mgr One","Mgr Two"]` (the channel's members, from `$memberIds` at :90-93) and `custom = ["SecretCrew"]` (the conversation-scoped group); the same user gets `data: []` from `/conversations/{id}/messages`, so the other read paths do enforce the rule.
+- **Why It Matters:** member names and job titles of a manager-only channel and its group names are readable by every employee who guesses the id; spec §6.1 rule 1 says regular employees cannot view or search manager channels (the same class as v1 #7).
+- **Recommended Fix:** replace :49-64 with `if ($conversationId && !Conversation::isVisibleTo($conversationId, $user)) throw new \Exception('Access denied to conversation', 403);` and keep `$conversation` for the type and `is_system`; add the feature test the file lacks.
+- **Resolution:** ✅ FIXED — `SearchMentionsQuery` builds its access check from `Conversation::isVisibleTo()` (403 'Access denied to conversation') and keeps type and `is_system` with a narrow select. Tests: `MentionSearchVisibilityTest` (an employee gets 403 and no names for a manager-only public channel; roles 1, 2 and 7 still get members and groups; a private channel answers 403 to an outsider; a public channel and an own DM still work). Failed before the change: "Expected response status code [403] but received 200."; passes now.
+
+#### Finding #4
+
+- **Finding:** Security — the link-preview SSRF guard is silently disabled, so DNS rebinding still works
+- **File:** [`app/Queries/Messages/GetLinkPreviewQuery.php`](app/Queries/Messages/GetLinkPreviewQuery.php#L182)
+- **Line:** 175-185 (`'stream' => true` at :182, `CURLOPT_RESOLVE` at :183), 200
+- **Issue:** `fetchPublicPage()` validates the host's IPs and then pins the connection with `CURLOPT_RESOLVE`, but `'stream' => true` makes Guzzle choose the `StreamHandler` (PHP `fopen`), which ignores the `curl` option and re-resolves DNS itself. Input: an authenticated employee calls `GET /api/employee/messages/link-preview?url=http://rebind.attacker.example/` on a name that answers a public address to the validation lookups and 127.0.0.1 or an internal address to the connection lookup. **Executed** with the app's `Http` facade against a local server and identical options: `stream=true` → `ConnectionException: Connection refused for URI http://pin-test.invalid:…` (pin ignored); `stream=false` → status 200, the pinned host answered. The real rebinding exchange was not run (no controlled DNS). Same cause, second symptom (executed): `read(1048576)` on the stream returns one chunk, so `og:` tags after about 16 KB of inline CSS are missed (`bytes_read=16220` against `52118` without `stream`).
+- **Why It Matters:** the server fetches an internal URL and returns its title, description and image to the caller (cached 24 h for everyone), or triggers a blind GET with side effects on an internal service.
+- **Recommended Fix:** remove `'stream' => true` so the cURL handler runs and `CURLOPT_RESOLVE` takes effect; enforce the 1 MB cap with a `CURLOPT_WRITEFUNCTION` (or a progress callback) and add `CURLOPT_PROTOCOLS => CURLPROTO_HTTP|CURLPROTO_HTTPS`.
+- **Resolution:** ✅ FIXED (equivalent change) — `GetLinkPreviewQuery` no longer sets `'stream' => true`, so the `CURLOPT_RESOLVE` pin takes effect again; the 1 MB cap is a Guzzle `sink` (`app/Support/CappedResponseBody.php`) that refuses bytes past the cap so curl aborts the transfer, instead of the `CURLOPT_WRITEFUNCTION` the report named; protocols are limited to http and https and every hop is still re-validated. Tests: `tests/Unit/LinkPreviewRequestOptionsTest.php`, `LinkPreviewPinnedFetchTest` (the request reaches the pinned address and not the name, tags after 20 KB of CSS are found, a body over the cap is cut). Failed before the change: "old options through the Http facade (stream=true) -> 'ConnectionException: Connection refused for URI http://pin-test.invalid:39811/head' (stream=f..."; passes now.
+
 #### Finding #5
 
-- **Finding:** Database — the join-request unique key makes any second approve or decline fail
-- **File:** [`database/migrations/alters/messages/2026_10_04_000001_add_requires_approval_and_create_channel_join_requests.php`](database/migrations/alters/messages/2026_10_04_000001_add_requires_approval_and_create_channel_join_requests.php#L27)
-- **Line:** 27; `app/Http/Controllers/employee/MessagesController.php:1223` (approve), `:1296` (decline)
-- **Issue:** the table is `unique(conversation_id, account_id, status)`, and approve/decline run `update(status = …)` on the pending row. **Executed:** approve → the user leaves → requests again → approve: `500 {"message":"SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '5-6-approved' …"}` and the user is not added. The status is also written before the member row is inserted, with no transaction.
-- **Why It Matters:** a user who was ever approved or declined can never be processed again, and the admin sees raw SQL.
-- **Recommended Fix:** make the key `(conversation_id, account_id)` and update it in place, or delete the resolved row when a new request is created; wrap approve in `DB::transaction` and insert the member first.
+- **Finding:** Security — a removed or departed member keeps receiving the private channel live
+- **File:** [`routes/channels.php`](routes/channels.php#L21)
+- **Line:** 21-30; `app/Handlers/Messages/RemoveConversationMemberHandler.php:97-125`
+- **Issue:** the `conversation.{id}` rule runs once, when the socket subscribes, and nothing revokes an open subscription (no `terminate`, `unsubscribe` or `leave(` in `app/` or `routes/`); removal, leaving, switching a channel to private and deactivating an account all leave it untouched. Input: U is a member of private channel P with `private-conversation.P` already subscribed; an admin removes U. Every later `MessageSent`, `ReactionUpdated`, `MessagePinUpdated` and `MessagesRead` (full message text, attachment URLs, names) still reaches U until the socket drops; a script client can hold it indefinitely. Traced (framework behavior plus the greps), not executed against a websocket server.
+- **Why It Matters:** private-channel confidentiality ends at the next reconnect instead of at removal.
+- **Recommended Fix:** pick one and record it: terminate that user's websocket connections on remove, leave, drop, privacy flip and deactivation (Reverb/Pusher user-terminate), or stop broadcasting full payloads on the shared channel (send a thin "changed" event and let REST, which checks membership, return the content); if the risk is accepted it needs an explicit decision in the spec.
+- **Resolution:** ❌ NOT FIXED — not applied: the report's fix is a design choice (terminate the user's sockets on remove, leave, drop, privacy flip and deactivation, or stop broadcasting full payloads on the shared channel, or record the risk as accepted in the spec), not a code change a fixer may pick. `MessagePinUpdated` is now a flags-only payload (see #35), which narrows only that one event. Needs your decision; recorded under Waiting On in task.md.
 
 #### Finding #6
 
-- **Finding:** Security — the realtime channel rule ignores the inactive-account guard
-- **File:** [`routes/channels.php`](routes/channels.php#L30)
-- **Line:** 30-34
-- **Issue:** `$conversationChannel` only calls `Conversation::isVisibleTo`; the REST endpoints also apply `GeneralAccessAction` (inactive account → 403). **Executed:** for an inactive account REST answered 403 while `isVisibleTo(General)` returned `true`. The REST call authenticated the account's token, so a deactivated employee with an existing token can subscribe to `private-conversation.{General}` and receive every message live; nothing is logged.
-- **Why It Matters:** deactivated accounts keep a live feed of the company-wide channel.
-- **Recommended Fix:** in the callback, load the conversation and return `false` when `GeneralAccessAction::check($conversation, $user)` fails.
+- **Finding:** Correctness — `DeleteMessageHandler` broadcasts a wrong unread count, does N+1 work and unlinks files before the commit
+- **File:** [`app/Handlers/Messages/DeleteMessageHandler.php`](app/Handlers/Messages/DeleteMessageHandler.php#L159)
+- **Line:** 159-199 (cache default at :178), 80-83, 105-108
+- **Issue:** for every other member it computes `Cache::get("last_read_{conv}_{member}", 0)` and counts messages above it; the cache is not the source of truth (`getUnreadCount` and `GetMessagesQuery` only `remember()` it for 24 h). Input: member M has `last_read_message_id = 950`, the key is cold (a `cache:clear` on deploy, or 24 h without a read), the channel has 1,000 messages from others and someone deletes one. M receives `unread_count ≈ 1000` instead of the real number, and `MessagesContext.tsx:308/340` writes it straight onto the row, silently. In the same transaction: `Conversation::with('members')` hydrates full `Account` rows (government IDs) only to read ids, one COUNT and one synchronous `ShouldBroadcastNow` call run per member before the commit (the v1 #10 rationale), and `deleteAttachmentFile()` unlinks files at :80-83 and :105-108 before the rows are removed, so a later failure rolls back the rows but the files are gone (`dropConversation` correctly does this after commit).
+- **Why It Matters:** wrong badges after any delete on a cold cache, send latency linear in members, and unrecoverable file loss on a rollback; `SendMessageHandler` already received the fix and delete was missed.
+- **Recommended Fix:** extract the grouped unread query from `SendMessageHandler.php:364-374` into one Action and use it here; run the broadcasts in `DB::afterCommit`; replace `with('members')` with a `pluck('account_id')`; collect the file paths inside the transaction and call `deleteAttachmentFile` after commit, as `dropConversation` does.
+- **Resolution:** ✅ FIXED — `DeleteMessageHandler` takes unread counts from the new `CalculateMemberUnreadCountsAction` (one grouped query, after the row is gone, no `Conversation::with('members')`), collects attachment paths inside the transaction, and unlinks files and sends `UnreadCountUpdated` in `DB::afterCommit`; `SendMessageHandler` uses the same Action. Tests: `DeleteMessageHandlerTest` (the real unread count with a cold cache, broadcasts only after the commit, a failure inside the transaction leaves files, rows and broadcasts untouched, a file another message still uses is kept). Failed before the change: "messages 4 and 5 are unread (6 is gone) Failed asserting that 5 is identical to 2."; passes now.
 
 #### Finding #7
 
-- **Finding:** Security — channel listings bypass `Conversation::visibleTo`
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L802)
-- **Line:** 802; `app/Queries/Messages/SearchMessagesQuery.php:366-383`
-- **Issue:** `getRecipients` lists every `channel` and `announcement` with no scope, and the unscoped `conversations` list of the search filters only `is_private = false`. **Executed:** a non-member's `GET /recipients` listed the private channel "Execs"; a `role_access` 3 user searching `Payroll` received the manager-only channel "Payroll Managers" with its description. Every other read path uses `visibleTo`, and the business rule is that regular employees cannot view or search manager channels.
-- **Why It Matters:** the names and descriptions of private and manager-only channels (for example "salary review committee") are disclosed to every employee.
-- **Recommended Fix:** build both lists from `Conversation::visibleTo($user)`.
+- **Finding:** Correctness — `GetConversationsQuery` returns `last_read_message_id` = 0 for every conversation
+- **File:** [`app/Queries/Messages/GetConversationsQuery.php`](app/Queries/Messages/GetConversationsQuery.php#L138)
+- **Line:** 138 (closure `use (...)` list), 289
+- **Issue:** `$lastReadMap` is built at :82-85 but is not in the `use (...)` list of the `->map(function ($conv) use (...))` closure at :138 (verified: the list is `$user, $lastMessages, $unreadCounts, $otherLastReadMap, $userPendingRequests, $pendingCounts, $accountDetails`), and :289 reads `$lastReadMap[$conv->id] ?? 0`, so the `??` hides the undefined variable. **Executed:** read position 75 stored, `GetConversationsQuery::execute()` returned `last_read_message_id = 0` with the correct `unreadCount = 1`. The mobile client reads it as `initialLastReadId` (`ConversationScreen.tsx:1003`), and `loadInitial` (`useChatRoom.ts:903-906`) opens "around the unread position" only when it is set, so with a cold list a conversation never opens at the unread position: it loads the newest 25 messages. With more than 25 unread, the older unread messages sit above the window with no marker, and `markReadUpTo(maxVisibleId)` (`ConversationScreen.tsx:2823`) marks them read without ever showing them.
+- **Why It Matters:** the v1 #19 unread-jump path is unreachable from the inbox and unseen messages are silently marked read; no error, and no test asserts the field.
+- **Recommended Fix:** add `$lastReadMap` to the closure's `use` list at :138 and assert `last_read_message_id` in `ConversationListQueryCostTest` or `ConversationExposureTest`.
+- **Resolution:** ✅ FIXED — `GetConversationsQuery` adds `$lastReadMap` to the map closure's `use` list. Test: `ConversationListFieldsTest::the_list_returns_the_stored_read_position_of_every_joined_conversation`. Failed before the change: "Failed asserting that 0 is identical to 1.' (stored position = first message id)"; passes now.
 
 #### Finding #8
 
-- **Finding:** Security — member add and drop are not restricted to channels, so a DM creator can expose or wipe a DM
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L2227)
-- **Line:** 2227 (`addConversationMembers`), 2482 (`dropConversation`)
-- **Issue:** both check only creator or co-admin; neither checks `type`. **Executed:** the creator of a DM between Ann and Bob added a third person, who then read the DM history; the creator then dropped the DM and the conversation and all its messages were deleted for both parties.
-- **Why It Matters:** one participant can disclose the other's messages to a third person without consent, or destroy the other's history.
-- **Recommended Fix:** require `$conversation->type === 'channel'` in add, remove, role-change and drop; for DMs offer only a per-user hide.
+- **Finding:** Performance — a message page still costs O(messages) queries for cards, links and unresolved `@` (v1 #11 reopened in part)
+- **File:** [`app/Queries/Messages/GetMessagesQuery.php`](app/Queries/Messages/GetMessagesQuery.php#L459)
+- **Line:** 459-489; `app/Actions/Messages/ResolveMentionsAction.php:106-112, 222, 272-299, 412-445, 606-633`
+- **Issue:** **Measured** (`GetMessagesQuery::execute`, one 25-message page): plain messages 9 queries; 10 leave cards + 15 plain 39 (+3 per card: `findByDocnumber` tries up to 5 application tables in sequence, then `resolveApplicationDetails` again); 10 attendance-adjustment cards 69 (+6 per card); 12 messages with a stored `channel_link` plus `message_link` and 13 messages with an unresolved `@` (an email address) 218 queries (`conversations` 109, `vw_accounts_details` 37, `messages` 26, `custom_mentions`, `positions`, `units` 13 each). Causes: `messageLinkMention` (about 4 queries) runs twice per message (`execute()` and `formatForViewer` at :441); each `channel_link` runs a `visibleTo()->find` in both; `mentions = null` is stored when nothing resolved (`SendMessageHandler.php:188`), so every message containing an unresolved `@` re-runs `parseMentionsFromText` (4 queries) on every page load, forever; `AccountDetailVW::first()` loads the whole wide view row (salary, TIN, SSS) only to read name and picture.
+- **Why It Matters:** link, card and email-bearing messages cost 3-10 queries each, the same order as the 116 queries per 25 plain messages that v1 #11 rated HIGH; the existing test (`MessageListQueryCostTest.php:155-185`) tolerates the per-message lookups.
+- **Recommended Fix:** batch the cards (collect `linked_ticket_id`s and run one `whereIn('docnumber', …)` per application table); store `mentions = []` once resolved at send time and re-resolve only when `$msg->mentions === null`; resolve all channel ids and message ids of the page once and let `formatForViewer` read from that map; select only `id, fname, lname, pic` for the author.
+- **Resolution:** ✅ FIXED — Batched: `GetMessagesQuery::applicationsFor()` (one `whereIn` per application table, at most 5 per page) and `pageContextFor()`; mentions are re-resolved only when `mentions === null`; `ResolveMentionsAction::linkLookupsFor()` (3 queries per page); the thread and pinned queries pass the same page context. `SendMessageHandler` stores `'mentions' => $resolvedMentions ?: []` (`[]` means resolved, nothing). Tests: `MessagePageBatchingTest` (ten leave cards cost a fixed number of queries), `SendMessageStoredMentionsTest`. Existing rows with `mentions = null` are still re-resolved on read (see Notes). Failed before the change: "Failed asserting that null is identical to '[]'."; passes now.
 
 #### Finding #9
 
-- **Finding:** Correctness — approval from a chat card skips the tier workflow, the locks and the transaction
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L1846)
-- **Line:** 1782-1913 (apply at 1846-1878); compare `app/Http/Controllers/manager/ApprovalRequestController.php:121-261`
-- **Issue:** the manager portal runs inside `DB::transaction`, locks the row with `lockForUpdate`, requires `status = 0`, rejects locked pay periods, approves only the current tier and finalises only when no tier remains. The chat endpoint, once the caller is the current-tier approver, sets every tier to `status = 1` and the application to approved in one call, with no transaction, no lock and no pay-period check; any `status` string other than `Approved` (for example `Pending`) is written as declined (`status = 2`).
-- **Why It Matters:** a tier-1 approver can finalise a request and skip HR, approve into a locked pay period, and two approvers can race; payroll data changes without the portal's safeguards.
-- **Recommended Fix:** extract the body of `ApprovalRequestController::store` into one shared Handler called by both; validate `status` in `{Approved, Declined}` in the chat endpoint and let it only synchronise the card.
+- **Finding:** Data — pre-existing replies vanish from the room list, and so do replies sent by the unchanged web client
+- **File:** [`database/migrations/alters/messages/2026_09_16_000001_add_is_thread_broadcast_to_messages_table.php`](database/migrations/alters/messages/2026_09_16_000001_add_is_thread_broadcast_to_messages_table.php#L25)
+- **Line:** 25; `app/Queries/Messages/GetMessagesQuery.php:56-62`
+- **Issue:** the migration adds `is_thread_broadcast` with `default(false)` and no back-fill, while the list query now returns only `reply_to_id IS NULL OR is_thread_broadcast = 1`. **Executed:** master-state rows were seeded and the branch migrations run; conversation 1 listed `[1]` while the table held `1` and `2 (reply_to=1, bc=0)`, and a DM listed `[3]` while `4 (reply_to=3)` was hidden. The master web client (`resources/views/web/.../messages.api.ts: sendMessage`) posts `{text, reply_to, attachments}` with no thread flag and has no thread view: the same payload returned 200 but a reload showed only the parent.
+- **Why It Matters:** silent loss of history from channel and DM timelines for existing data and for the web messenger, which shares this API and is not retired.
+- **Recommended Fix:** in that migration, when the column is newly created, run `DB::table('messages')->whereNotNull('reply_to_id')->update(['is_thread_broadcast' => true])` (legacy inline replies were always shown in the room); for the web client either send the flag from `messages.api.ts` or record that the web messenger is retired.
+- **Resolution:** ❌ NOT FIXED — partial. The data half is fixed: the `is_thread_broadcast` migration back-fills existing replies to 1 only when the column is newly created (`ThreadBroadcastBackfillMigrationTest`: a legacy reply stays in the room list, a later thread-only reply does not). The web client half is not: the unchanged web messenger still sends no flag, so its replies vanish from the room list; that needs a decision, either send the flag from `messages.api.ts` or record the web messenger as retired. Recorded under Waiting On in task.md.
 
 #### Finding #10
 
-- **Finding:** Performance — each send fans out synchronously inside the database transaction
-- **File:** [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L136)
-- **Line:** 136, 278, 338-362; all six events implement `ShouldBroadcastNow`
-- **Issue:** inside `DB::transaction` the handler broadcasts `MessageSent` synchronously (before commit), runs `AdvanceThreadReadAction` (a lock that can throw), then for every other member runs one `COUNT` query and one synchronous `UnreadCountUpdated` broadcast. Traced: for 300 members that is 300 counts and 300 HTTP calls while the transaction is open, and a failure after the first broadcast rolls the row back while clients already display the message.
-- **Why It Matters:** send latency grows with channel size and holds the connection and locks during network I/O; a ghost message appears when a later step fails.
-- **Recommended Fix:** commit first, then broadcast (`DB::afterCommit` or a queued job); compute every member's unread count in one grouped query from `conversation_members.last_read_message_id`.
+- **Finding:** Data integrity — the punch timestamp conversion in `AttendanceController::record` is untested
+- **File:** [`app/Http/Controllers/AttendanceController.php`](app/Http/Controllers/AttendanceController.php#L267)
+- **Line:** 267-269; `tests/Feature/AttendancePunchCooldownTest.php:33`
+- **Issue:** master used `Carbon::parse($request->timestamp)`, which keeps the offset; the branch adds `->tz(config('app.timezone'))`, which changes the stored `date`, `date_in`, `timein`, `date_out` and `timeout` of every mobile punch (the app sends `new Date().toISOString()` with `Z`). **Executed:** `2026-10-14T00:00:00.000Z` is stored as 2026-10-14 08:00:00 under Asia/Manila. All 6 cooldown tests omit `timestamp` and use `travelTo` + `now()`; none covers the conversion, a punch across midnight or a backdated timestamp. The conversion itself looks correct; the gap is the test, on code that feeds late, undertime and payroll (testing.md raises a missing test to HIGH for money and data integrity).
+- **Why It Matters:** behavior that differs by `APP_TIMEZONE` changed silently for payroll-feeding data, with nothing to catch a regression.
+- **Recommended Fix:** add feature tests posting `timestamp` with `Z` and with an offset under two app timezones, plus a `GetLastPunchQuery` test for 23:59:30 followed by 00:00:10 and for a punch later than `at`.
+- **Resolution:** ✅ FIXED — test-only: production code was already correct (`AttendanceController::record` converts to the application time zone). Tests: `tests/Feature/AttendancePunchCooldownTest.php` (`Z` and ±08:00 timestamps under UTC and Asia/Manila, time_out, a punch across midnight, a backdated timestamp judged by its own time) and `tests/Feature/GetLastPunchQueryTest.php` (midnight, later-than-at, one-day look-back, other employee, invalid input).
 
 #### Finding #11
 
-- **Finding:** Performance — mentions are re-resolved twice per message on every page load
-- **File:** [`app/Queries/Messages/GetMessagesQuery.php`](app/Queries/Messages/GetMessagesQuery.php#L504)
-- **Line:** 504-529 (calls `ResolveMentionsAction.php:31`, which runs `Conversation::with('members')->find`)
-- **Issue:** for every message that has text and no stored mentions, the `mentions` and `isUserTargeted` closures each call `ResolveMentionsAction::execute`, which loads the conversation and all its members before finding nothing. **Measured:** loading one page of plain-text messages took 36 queries for 5 messages and 116 for 25, about 4 queries per message, 53 of them against `conversations` and 55 touching `conversation_members`.
-- **Why It Matters:** the main list endpoint is O(messages × members) in queries; the same pattern applies to thread replies and pinned messages.
-- **Recommended Fix:** resolve once per message, pass the already-loaded `Conversation` (the action accepts one), and skip resolution when the text contains none of `@`, `#`, `://`, `💬`.
+- **Finding:** Testing — authorization and security controls ship without refusal tests
+- **File:** [`tests/Feature/Messages`](tests/Feature/Messages)
+- **Line:** whole directory (absence)
+- **Issue:** no test calls these with a non-admin, non-owner or non-member: add-member, remove-member, role change (and the Lead Admin handover), pin, reaction, edit, channel sections; the link-preview SSRF guard (private, loopback, mapped-IPv6 and shared-range addresses, redirects, userinfo URLs, body cap) and the upload allow-list (html, svg, a `.php` name, a gif with a `.php` extension) have no test at all (only the happy-path upload in `SendMessageSecurityTest.php:193`); `SearchMentionsQuery`, `GetThreadRepliesQuery`, `GetPinnedMessagesQuery`, `GetChannelSectionsQuery`, `read_receipts` (AC-63 to AC-75) and the `since_id` / `around_id` branches are untested; `ResolveMentionsAction` has only link-disclosure tests (nothing for `@all`, `@here`, custom, position, user); nothing asserts that search hits exclude private conversations, manager-only channels, deleted rows or other people's DMs. Defects found in this run (#2, #3, #4, #7, the Lead Admin removal, editable system events) sit in exactly this untested code.
+- **Why It Matters:** testing.md ("Every Code Change Ships With a Test", authorization both ways: the allowed role passes, every other role is rejected) makes this HIGH for authorization.
+- **Recommended Fix:** add Feature tests in `tests/Feature/Messages/`: a plain member gets 403 on add, remove-other and role change; a co-admin cannot remove or demote the creator and the handover runs on Lead Admin leave; pin, react and edit are refused for someone who cannot see or has left the conversation; system events are not editable; channel sections touch only the caller's own; `LinkPreviewTest` (with `Http::fake` for the DNS-independent cases) and an upload-rejection test; visibility both ways, pagination (`before_id`, `since_id`, `around_id` without gap or duplicate) and `GetConversationsQuery` field values for each query class.
+- **Resolution:** ✅ FIXED — Refusal tests added for every control the report lists, and mutation-checked: handlers `ChannelMembershipRefusalTest`, `EditMessageAuthorizationTest`, `PinAndReactionTest`, `ChannelSectionsTest`; link-preview guard `LinkPreviewTest` (private, loopback, link-local, IPv4-mapped IPv6, redirects, userinfo, non-http) and upload allow-list `UploadAttachmentTest`; query classes `MentionSearchVisibilityTest`, `SearchHitsVisibilityTest`, `MessageListVisibilityTest`, `MessageListPagingTest`, `ResolveMentionsMembersTest`, `ConversationListFieldsTest`. Removing `Conversation::visibleTo` from the search fails 2 of 4 hit tests; removing `->visible()` fails the deleted-rows test. Failed before the change: "the defects found by these tests (see #2, #25, #26, #81)"; passes now.
 
 #### Finding #12
 
-- **Finding:** Performance — the client controls `limit` and it is not capped
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L229)
-- **Line:** 229; `app/Queries/Messages/GetMessagesQuery.php:74`
-- **Issue:** `$limit = $request->input('limit', 25)` reaches the query with only a lower bound; thread replies and pinned messages have no limit at all. **Measured:** `?limit=100000` on a 150-message channel returned all 150 messages in one response and ran 616 queries.
-- **Why It Matters:** combined with Finding #11, any authenticated employee can make one request cost hundreds of thousands of queries.
-- **Recommended Fix:** clamp to 1–100 as the search and members endpoints already do; paginate thread replies and pinned messages.
+- **Finding:** Correctness — a read flush can clear unread messages that were never loaded (v1 #19 reopened)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L770)
+- **Line:** 770-784 (`reportRead`); `pages/ConversationScreen.tsx:2823` (`markReadUpTo`)
+- **Issue:** the `hasNewer` / `loadNewer` mechanism works, but a live `.MessageSent` that lands past the unloaded gap is reported by the screen as the maximum visible id and `markReadUpTo` sends that id with no clamp to the contiguous window. **Executed** (real hook, fake server): unread window 48..73, last read 60, 47 messages (74-120) not loaded, `hasNewer = true`; live message 121 arrives; the flush calls `markAsRead(5, 121)`, the server answers remaining 0, and `markConversationAsRead(5, 121, 0)` clears the badge and moves the server read position to 121 while the 47 messages were never shown (and the seen avatar moves for other members). The user's own send past the gap does the same. The existing hook test 6 stops at the window end, so it passes.
+- **Why It Matters:** the original harm of v1 #19 (unread messages never shown, badge zeroed) is still reachable.
+- **Recommended Fix:** in `markReadUpTo` and `flushPendingRead`, while `stateRef.current.hasNewer`, clamp the target to `stateRef.current.newerCursor`; add a hook test for the live-message-past-the-gap case.
+- **Resolution:** ✅ FIXED — `useChatRoom.ts` `clampReadTarget`: while `hasNewer` is set the reported read position is `min(target, newerCursor)`, used by `flushPendingRead` and by the unmount flush. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.readclamp.test.tsx`. Failed before the change: "Expected: 5, 73 / Received: 5, 121"; passes now.
 
 #### Finding #13
 
-- **Finding:** Performance — the conversation list is N+1 and over-fetches
-- **File:** [`app/Queries/Messages/GetConversationsQuery.php`](app/Queries/Messages/GetConversationsQuery.php#L29)
-- **Line:** 29, 63-71, 82-95, 176
-- **Issue:** `with(['members'])` hydrates full `Account` rows for every member of every visible public channel; a view lookup and a `Cache::remember` run per conversation (the cache store is `database`); the unread `COUNT` runs for channels the user has not joined and is then discarded (153-155). **Measured:** 23 queries for a 9-row list, 33 for 14, 53 for 24, about 2 extra queries per conversation.
-- **Why It Matters:** this is the landing screen and Finding #21 makes the app call it on every incoming message.
-- **Recommended Fix:** select only `id, fname, lname, pic` for members; restrict the unread count to joined conversations; look the DM names up with one `whereIn`.
+- **Finding:** Correctness — jumping to an old message leaves a block of messages that can never be loaded
+- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L2047)
+- **Line:** 2047-2064 (`loadAroundMessage`), reducer `append_new` at :325-328; caller `pages/ConversationScreen.tsx:3217`
+- **Issue:** `loadAroundMessage` merges an around-window into `confirmed` through `append_new` and updates neither `hasNewer` nor `newerCursor`. **Executed** (real hook, fake server): a channel with ids 1-300 and the latest 25 loaded (276-300); the user taps a pinned message, a message link or a pin event for id 40; the list becomes `[28..53 | 276..300]`. After `loadNewer()` and `loadOlderMessages()` 222 messages (54-275) were still missing with `hasNewer = false`; scrolling past 53 lands directly on 276 with no gap indicator.
+- **Why It Matters:** a large block of history is unreachable after a search, pin or link jump.
+- **Recommended Fix:** when the around-window is not contiguous with the loaded range, replace `confirmed` with the window and set `hasNewer = true` and `newerCursor` to the window's newest id, as `load_done` does for the unread window (or expose a `jump` action that reuses the initial-load path).
+- **Resolution:** ✅ FIXED — New reducer action `around_done`: an overlapping window merges, a non-contiguous one replaces the confirmed list and sets `hasNewer = true` with `newerCursor` = the window's newest id; `loadAroundMessage` dispatches it. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.jump.test.tsx`. Failed before the change: "ids(messages) held [28..53, 276..300] ('Expected - 0, Received + 25' at toEqual(range(28,53)))"; passes now.
 
 #### Finding #14
 
-- **Finding:** Data — a migration seeds invented business data
-- **File:** [`database/migrations/2026_09_29_000001_create_custom_mentions_and_add_mentions_to_messages.php`](database/migrations/2026_09_29_000001_create_custom_mentions_and_add_mentions_to_messages.php#L31)
-- **Line:** 31-58
-- **Issue:** the migration inserts the groups `PayrollTeam` and `OperationsSupport`, filled with the first four non-disabled accounts (`limit(4)`, no ordering).
-- **Why It Matters:** in production four arbitrary employees become "the payroll team"; `@PayrollTeam` messages are then addressed to, and highlighted for, them. `project-profile.md` requires seeding by a stable key.
-- **Recommended Fix:** remove the seed; create the groups from an admin screen or a keyed seeder.
+- **Finding:** Error handling — a failing `/recipients` call blanks the whole inbox (regression from the v1 #17 fix)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/contexts/MessagesContext.tsx`](resources/views/mobapp/src/module/employee/messages/contexts/MessagesContext.tsx#L84)
+- **Line:** 84-98, 123-127; `services/messages.api.ts:100-121`
+- **Issue:** `getStories()` now rethrows and sits in the same `Promise.all` as `getConversations()`, and `setConversations(convs)` runs only after both resolve. Input: `GET /conversations` returns 200 and `GET /recipients` (the unpaged whole-directory call, 30 s timeout) fails. **Executed** (real `MessagesProvider`, `getConversations` returning 2 rows, `getStories` rejecting): `allConversations.length = 0`, `unreadCount = 0`; `loadData` swallows the error ("keep the list already on screen"), so on a cold start the list is empty with no error and no retry; pull-to-refresh fails the same way.
+- **Why It Matters:** a failure in the optional stories row hides the user's conversations and unread badge.
+- **Recommended Fix:** in `fetchConversationsAndUnread` call `getStories().catch(() => null)` as the unread count does (or `Promise.allSettled`) and apply the conversations even when stories fail.
+- **Resolution:** ✅ FIXED — `MessagesContext.tsx`: `getStories().catch(() => null)`, so conversations and the unread count apply when `/recipients` fails. Test: `resources/views/mobapp/tests/module/employee/messages/contexts/MessagesContext.test.tsx` (the real `MessagesProvider`). Failed before the change: "allConversations ids 'Expected [5,6] / Received []"; passes now.
 
 #### Finding #15
 
-- **Finding:** Configuration — the database session time zone is set globally in a messaging branch
-- **File:** [`config/database.php`](config/database.php#L60)
-- **Line:** 60; `app/Providers/AppServiceProvider.php:38`
-- **Issue:** `'timezone' => env('DB_TIMEZONE', '+08:00')` sets the MySQL session zone for every connection of the application, and the provider calls `date_default_timezone_set` (which Laravel already does from `APP_TIMEZONE`). TIMESTAMP columns are converted on read, so if the server runs UTC (the repository's MySQL image sets no default zone) every existing timestamp reads 8 hours later after deployment. Traced; the effect depends on the production server's zone.
-- **Why It Matters:** all message, attendance and payroll timestamps can shift silently.
-- **Recommended Fix:** remove both lines (or default the connection zone to `null`); confirm the production zone and ship any change on its own ticket.
+- **Finding:** Reliability — closing the second screen of the same conversation unsubscribes the first
+- **File:** [`resources/views/mobapp/src/services/realtime/echo.ts`](resources/views/mobapp/src/services/realtime/echo.ts#L271)
+- **Line:** 271-279 (`leave`); `hooks/useChatRoom.ts:1195-1196`
+- **Issue:** channel search inside a conversation passes `initialChannel` = the current conversation (`ConversationScreen.tsx:4015-4027`) and `handleOpenMessageResult` (`MessagesSearchModal.tsx:750-762`) always `router.push`es a second `/(app)/messages/conversation` for that id; both screens call `getEcho().private('conversation.X')`, which returns the same `EchoChannel`, and the top screen's cleanup `leave('conversation.X')` unsubscribes and deletes it for both. **Executed** (real `useChatRoom` and `echo.ts`, fake pusher, two hook instances on conversation 5): after the second unmounts, `unsubscribe('private-conversation.5')` was called and `subscribed = []` while the first is still mounted.
+- **Why It Matters:** the screen underneath stays mounted but receives no live messages, typing, reactions, pins or read receipts until the user leaves and re-enters (and `setActiveConversationId(null)` makes that conversation's unread events show as unread); the foreground resync fetches over REST but does not re-subscribe a channel removed from the map.
+- **Recommended Fix:** reference-count `private()` and `leave()` in `echo.ts` (leave when the count reaches 0); also have `handleOpenMessageResult` scroll to the message instead of pushing a second screen when `item.conversation_id` equals the open conversation.
+- **Resolution:** ✅ FIXED — `echo.ts` `EchoChannel.refCount`: `private()` increments and `leave()` unsubscribes only at 0 (also on `close()` and `disconnect`). Tests: `resources/views/mobapp/tests/services/realtime/echo.test.ts`, `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.channel.test.tsx` (two real `useChatRoom` instances over the real echo and a fake pusher). Failed before the change: "expect(pusher().unsubscribe).not.toHaveBeenCalled() Received number of calls: 1' (hook-level one shown by temporarily disabling the refCount guard)"; passes now.
 
 #### Finding #16
 
-- **Finding:** Correctness — Approve and Decline report success when the server refused
-- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L2927)
-- **Line:** 2927-2989, 3026-3040; `hooks/useChatRoom.ts:1568-1580`
-- **Issue:** `messages.api.updateTicketStatus` throws on a 403, but the hook's `updateTicketStatus` catches it with `console.warn`, so `handleApproveTicket`'s `try` never fails: the card flips to Approved and `@Name Your application … has been approved.` is sent as a real chat message. The gate ends `return isApproverRole || Boolean(user)` (3039), true for any signed-in user who did not send the card. Input: a non-approver recipient taps Approve; the server refuses (Finding #9's check) and nothing is thrown.
-- **Why It Matters:** an HR-sensitive, false statement is posted persistently while the real application is unchanged.
-- **Recommended Fix:** make the hook return a boolean or rethrow and roll back the optimistic update; send the confirmation only on success and show an error otherwise; drive `canApprove` from a server-provided approver flag.
+- **Finding:** Correctness — the deep-link scroll effect has no run-once guard and scrolls back to the old target on every list change
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L3289)
+- **Line:** 3289-3307
+- **Issue:** the effect depends on `[params.target_message_id, isLoading, invertedRows]` (verified), the param is never reset (no `setParams` anywhere) and `invertedRows` is a new array on any change to `messages`, `userTickets` or `initialLastReadId`: a live message, a reaction, an `upload_progress` tick, a read mark, your own send. Each run queues a 250 ms `setTimeout` then `scrollToIndex({index: targetIndex, animated: true})` plus a 2.5 s highlight, with no cleanup, and `targetIndex` is captured before the timer so it can be off by one. Input: open a conversation from a search result (`MessagesSearchModal.tsx:760` pushes `target_message_id`), scroll to the newest or send a reply: within 250 ms of the next message event the list animates back to the old target and flashes it; the `scrollToNewest` at :1497 after a send is overridden. Traced; not run on a device.
+- **Why It Matters:** search-then-jump is a core flow and the conversation becomes unusable until the screen closes, repeating on every event in a busy channel.
+- **Recommended Fix:** add `handledTargetRef = useRef<number|null>(null)`, return early when it equals `targetMsgId`, set it when the scroll is issued, reset it in the `[conversationId]` effect at :1168 and clear the timers in cleanup (or call `router.setParams({target_message_id: undefined})` after the jump).
+- **Resolution:** ✅ FIXED — The deep-link scroll effect moved to `hooks/useScrollToTargetMessage.ts`: a run-once guard per target, one 250 ms timer, a reset on conversation change, timers cleared on unmount. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useScrollToTargetMessage.test.tsx`. Failed before the change: "Cannot find module './useScrollToTargetMessage'' and, with the guard line removed (mutation of the new hook), 'Expected number of calls: 1 / Receiv..."; passes now.
 
 #### Finding #17
 
-- **Finding:** Error handling — failures are rendered as empty data, and optimistic actions are never rolled back
-- **File:** [`resources/views/mobapp/src/module/employee/messages/services/messages.api.ts`](resources/views/mobapp/src/module/employee/messages/services/messages.api.ts#L281)
-- **Line:** 277-281; `hooks/useChatRoom.ts:785` and `:1449-1518`; `pages/ConversationScreen.tsx:2187`
-- **Issue:** `getThreadReplies` catches every error and returns `{ root: null, replies: [] }`, which the screen stores as `threadRepliesMap[id] = []`, wiping replies already known; `load_failed` carries no error (785), so a failed open shows "No messages yet" with no retry; `editMessage`, `deleteMessage` and `togglePinMessage` swallow server errors, so the UI keeps the edited, deleted or pinned state until reload. Traced.
-- **Why It Matters:** the user is shown wrong information (an empty thread, a deleted message that still exists) with no error.
-- **Recommended Fix:** have the API methods throw; keep an `error` field in the chat state with a retry action; snapshot and revert optimistic edit, delete and pin state on failure.
+- **Finding:** Fabricated data — `ApplicationDetailModal` shows invented shifts and times as the request's details, with Approve and Decline enabled
+- **File:** [`resources/views/mobapp/src/components/modals/ApplicationDetailModal.tsx`](resources/views/mobapp/src/components/modals/ApplicationDetailModal.tsx#L555)
+- **Line:** 555, 599, 656, 674, 738, 756, 911, 928 (and 93-106)
+- **Issue:** verified: every detail field falls back to a made-up value when the server sends null (`oldShift || 'Regular Shift (08:00 AM - 05:00 PM)'`, `newShift || 'Opening Shift (06:00 AM - 03:00 PM)'`, `timeIn || '08:00 AM'`, `timeOut || '05:00 PM'`, overtime `'05:00 PM'` / `'07:30 PM'`, OB trip `'09:00 AM'` / `'04:00 PM'`), and with no ticket it shows id `APP-REQ`, status `Pending` and date `Recently filed`. The file is new on the branch. An attendance adjustment filed with only one log is valid (`HandleAttendanceAdjustmentQuery::createAdjustment` stores `'etime' => $data['etime'] ?? null`), `GetMessagesQuery.php:769-770` then returns `timeOut: null`, and the modal prints "Adjusted Time-Out 05:00 PM"; for any card whose application row is missing or not owned by the sender the server returns only id, type, title and status (`GetMessagesQuery.php:598-606`) and an overtime or change-shift card shows the invented times. `canApproveCurrentApplication` (`ConversationScreen.tsx:3079`) is true for the real approver.
+- **Why It Matters:** an approver decides an HR request (time credit, shift) on data nobody filed, with no error or marker.
+- **Recommended Fix:** delete all fallback literals; when a field is null hide the row or show "Not provided"; when the type needs details that are absent show "Details unavailable" and disable Approve and Decline; remove the `APP-REQ` / `Pending` / `Recently filed` defaults and render nothing when `ticket` is null.
+- **Resolution:** ✅ FIXED — `ApplicationDetailModal`: the fallback ticket and the `APP-REQ` / Pending / Recently filed defaults are removed, `if (!currentTicket) return null`, shift and time literals are replaced by 'Not provided', a 'Details unavailable' card disables Approve and Decline, and an unknown status is not shown as Pending. Tests: `resources/views/mobapp/tests/components/modals/ApplicationDetailModal.test.tsx`. Failed before the change: "6 of 8 failed on the original file, e.g. `Received: <Text ...>05:00 PM</Text>` at queryByText('05:00 PM') and `Unable to find an element with text:..."; passes now.
 
 #### Finding #18
 
-- **Finding:** Correctness — direct messages vanish from the inbox based on their text
-- **File:** [`resources/views/mobapp/src/module/employee/messages/utils/messagePreview.ts`](resources/views/mobapp/src/module/employee/messages/utils/messagePreview.ts#L144)
-- **Line:** 144-170; `contexts/MessagesContext.tsx:315`
-- **Issue:** `hasDirectMessageHistory` treats a last message that starts with `no message`, `no messages` or `say hi` as "no history", and the inbox filters those conversations out. **Executed:** `"Say hi to Marco for me"` and `"No messages from payroll yet?"` return `false`; the conversation disappears even when it has unread messages. The backend placeholder is exactly `No messages yet`.
-- **Why It Matters:** real conversations become unreachable from the list for ordinary sentences.
-- **Recommended Fix:** decide from structure (no last-message id) or the exact backend placeholder, never from message text.
+- **Finding:** Configuration — the `expo-image-picker` config plugin is missing, so "Take photo" aborts iOS native builds
+- **File:** [`resources/views/mobapp/app.json`](resources/views/mobapp/app.json#L37)
+- **Line:** 37-70 (no entry); `package.json:20`; callers `ConversationScreen.tsx:1625,1635`, `ThreadModal.tsx:445-447`
+- **Issue:** `expo-image-picker` is a dependency, but `plugins` lists only expo-router, splash-screen, secure-store, font, image, status-bar, web-browser, video, screen-orientation, media-library and audio (verified), and `ios.infoPlist` holds only `NSAppTransportSecurity` and `NSMicrophoneUsageDescription`: no `NSCameraUsageDescription` or `NSPhotoLibraryUsageDescription`. `/ios` and `/android` are gitignored, so the Info.plist is generated from `app.json`; per the library source the iOS camera permission requester calls `RCTFatal` when the usage string is absent. Input: any iOS dev-client or EAS build, tap Camera in a conversation or thread: the app aborts. Android is fine; Expo Go hides it. Traced from `node_modules`; no iOS build was run.
+- **Why It Matters:** a crash in a core composer action on every iOS release build.
+- **Recommended Fix:** add `["expo-image-picker", {"cameraPermission": "…", "photosPermission": "…", "microphonePermission": false}]` to `plugins`.
+- **Resolution:** ✅ FIXED (equivalent change) — `app.json` gets the `expo-image-picker` plugin with camera and photo-library strings; `microphonePermission` is the same string expo-audio uses, not `false` as the report suggested, because `false` would drop `android.permission.RECORD_AUDIO` and `NSMicrophoneUsageDescription` and break voice messages. Tests: `resources/views/mobapp/tests/app.json.test.ts`. Failed before the change: "`Received: undefined` (plugin options absent)"; passes now.
 
 #### Finding #19
 
-- **Finding:** Correctness — a conversation opened at the unread position has no way to load newer messages
-- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L747)
-- **Line:** 747-761
-- **Issue:** with unread messages the first load is `getMessages({ aroundId: lastRead, limit })`, which returns a window on both sides of the cursor; the reducer tracks only `hasMore` for older pages and nothing loads newer ones (`since_id` exists in the API but is never called). Input: 40 unread messages in a channel; only the window after the cursor shows, later messages appear only if they arrive live, and the read flush zeroes the badge.
-- **Why It Matters:** unread messages in the middle of a busy conversation are never shown.
-- **Recommended Fix:** track `hasNewer`, add `loadNewer(sinceId)` called when scrolling to the end, and do not clear the unread badge until the newest message is loaded.
+- **Finding:** Error handling — a failed channel update is reported as success
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx#L305)
+- **Line:** 305-357; `services/messages.api.ts:693-696`
+- **Issue:** verified: `messagesApi.updateConversation` catches every error and returns `null`, and `handleSave` merges `updatedChannel || {}` with the typed name, description and policy, runs the callbacks and closes; its own `catch` (:334-355) also does a "Fallback local update" and closes. Input: an admin edits the name while the request fails (offline, 500, or no longer an admin): the modal closes as saved, `onUpdated` calls `refreshSilently()` (`MessagesScreen.tsx:1592`), the old name flashes back and no error is ever shown; the success haptic (:293) fires before the request.
+- **Why It Matters:** the same class as v1 #16 and #17, in code v1 did not read.
+- **Recommended Fix:** make `updateConversation` rethrow (as `removeConversationMember` does); in `handleSave` show an `Alert` on failure, stay open and delete the fallback branch.
+- **Resolution:** ✅ FIXED — `messages.api.ts` `updateConversation` rethrows; `ManageChannelModal.handleSave` alerts 'Could not save changes', stays open, does not merge the typed name into the context, the 'Fallback local update' branch is deleted and the success haptic fires only after the server accepts. Tests: `resources/views/mobapp/tests/module/employee/messages/services/messages.api.test.ts`, `resources/views/mobapp/tests/module/employee/messages/components/ManageChannelModal.test.tsx`. Failed before the change: "Received promise resolved instead of rejected"; passes now.
 
 #### Finding #20
 
-- **Finding:** Reliability — the realtime layer has no recovery path
-- **File:** [`resources/views/mobapp/src/services/realtime/echo.ts`](resources/views/mobapp/src/services/realtime/echo.ts#L93)
-- **Line:** 93-103, 157-169; `hooks/useChatRoom.ts`
-- **Issue:** `init()` memoises `initPromise`; when `/api/broadcasting/config` fails it calls `setupFallback()`, which returns silently when no `EXPO_PUBLIC_*` key exists (typical for a release build), leaving no connection for the whole session. Nothing in the messaging module uses `AppState` or a reconnect hook to fetch what was missed, although the API supports `since_id`. Input: cold start on a poor network, or a locked phone for ten minutes: no live messages, typing or unread updates, and missed messages appear only after reopening the conversation.
-- **Why It Matters:** the central promise of a chat module fails silently.
-- **Recommended Fix:** clear `initPromise` on failure and retry with backoff and on foreground; on `AppState` `active` and on socket reconnect fetch since the newest known id and refresh the list.
+- **Finding:** Data integrity — picking a channel photo sends a device file path that breaks the avatar for every member
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx#L245)
+- **Line:** 245-254, 298-303; `components/UserAvatar.tsx:81-99`; `app/Http/Controllers/employee/MessagesController.php:1259-1261`
+- **Issue:** `handlePickAvatar` stores the picker's `uri` (`file:///var/mobile/...jpg`) and `handleSave` posts it as `avatar` (verified: `avatar: avatarUri` at :301) with no upload step; the server stores any string (`updateConversation` has no validation); `getProfileImage` passes only `http(s)` and `data:` through, so a `file://` value becomes `${base}/assets/images/profile/file:///var/...` and `UserAvatar` renders an `<Image>` that 404s, replacing the default tile with a blank square. Input: an admin picks a photo and taps Save: every member then sees a blank tile for that channel. Traced.
+- **Why It Matters:** a visible, shared-data corruption from an ordinary admin action.
+- **Recommended Fix:** upload the image first and send the returned URL (or remove the picker if the app supports no channel avatars); validate `avatar` on the server (`string|max` and an allowed form).
+- **Resolution:** ✅ FIXED — Server: `updateConversation` validates `avatar` (null, an http(s) URL, `data:image/`, or `storage/messages/<uuid>.<ext>`, max 65535, else 422). Client: `ManageChannelModal.handleSave` uploads the picked photo with `uploadAttachment` first and sends only the returned absolute URL; an upload failure alerts and keeps the modal open. Tests: `UpdateConversationTest`, `resources/views/mobapp/tests/module/employee/messages/components/ManageChannelModal.test.tsx`. Failed before the change: "Expected response status code [422] but received 200.' (file:///var/mobile/... avatar accepted)"; passes now.
 
 #### Finding #21
 
-- **Finding:** Performance — every unread event triggers three full refetches, including the whole directory
-- **File:** [`resources/views/mobapp/src/module/employee/messages/contexts/MessagesContext.tsx`](resources/views/mobapp/src/module/employee/messages/contexts/MessagesContext.tsx#L298)
-- **Line:** 298, 76-90; `services/messages.api.ts:98-122`
-- **Issue:** the `.UnreadCountUpdated` handler ends with `refreshSilently()`, which fetches `getConversations`, `getUnreadCount` and `getStories`, and `getStories` is `GET /recipients` (every active employee plus all channels, unpaged). The event also reaches the sender's own channel. Traced: one message in a 200-member channel makes 200 devices send 600 requests.
-- **Why It Matters:** load grows with members per message, and `setConversations(convs)` can overwrite newer optimistic state.
-- **Recommended Fix:** apply the event payload locally; refetch only for an unknown conversation id, debounced; remove `/recipients` from this path.
+- **Finding:** Correctness — tapping a channel tile in the Active Team strip creates or opens a DM with an unrelated colleague
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx#L255)
+- **Line:** 255-273, 755-766; `services/messages.api.ts:100-122`; `app/Http/Controllers/employee/MessagesController.php:804-813`
+- **Issue:** `getStories()` maps all of `GET /recipients`, and the server lists channels and announcements first; those items carry `id = conversation id` and no `conversation_id`, so `handleSelectStory` (verified) skips its `conversationId` branch and calls `createConversation(story.id)`, posting `{recipient_id: <channel conversation id>}`. **Executed** (the real response bodies replayed through the client mapping): `tap channel tile -> POST /conversations {recipient_id: 3}`. Input: the user taps the "General" tile (id 1): the server creates or opens a DM with account #1; if the id equals the user's own the server answers 422 and the user sees only a `console.warn`. There is no in-flight guard (unlike `NewChatModal`'s `creatingId`), so a double tap can race the DM check-then-create transaction into two DMs for one pair.
+- **Why It Matters:** the user lands in a chat with a stranger, or nothing happens, from a tile that is labelled as a channel.
+- **Recommended Fix:** filter channels and announcements out of `getStories` (colleagues only) or give channel tiles a `conversationId` and open them directly; add a tap guard.
+- **Resolution:** ✅ FIXED — `messages.api.ts` `getStories` keeps colleagues only (no channel or announcement tiles) and invents no presence or status ring; `MessagesScreen.handleSelectStory` opens the existing DM or creates one behind a synchronous in-flight guard (a ref), tiles without a numeric id never reach `createConversation`, failures alert, and tiles are no longer matched to channels by name. Tests: `resources/views/mobapp/tests/module/employee/messages/services/messages.api.test.ts`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesScreen.test.tsx` (6 tests on the strip: existing DM, double tap, retry after failure). Failed before the change: "lists colleagues only' received ids [1,2,30,31,32] (channel/announcement tiles present) and 'does not invent presence' Expected: true Received: false"; passes now.
 
 #### Finding #22
 
-- **Finding:** Security — an attachment name can write outside the cache directory on the device
-- **File:** [`resources/views/mobapp/src/utils/mediaSave.ts`](resources/views/mobapp/src/utils/mediaSave.ts#L34)
-- **Line:** 34-36, 177
-- **Issue:** the download target is `` `${targetDir}${safeFilename}` `` where `safeFilename` is the attachment's `name` with only an extension ensured; the name is sender-controlled and stored unsanitised (`SendMessageHandler.php:195`). Input: an attachment named `../../Documents/x.ext`; when the recipient taps Save the file is written to that path inside the app sandbox with attacker-chosen content. Traced; not run on a device.
-- **Why It Matters:** a message can overwrite files the app relies on in its sandbox.
-- **Recommended Fix:** take the basename and allow only `[A-Za-z0-9._-]`; also sanitise `name` in `SendMessageHandler`.
+- **Finding:** Error handling — section edits and pin / favorite have no rollback and are never persisted
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx#L362)
+- **Line:** 362-413, 429-551, 580-638, 647-660, 873
+- **Issue:** the same optimistic-without-rollback class as v1 #17: move (:410-412), save (:618-620) and delete (:635-637) update local state first and on failure only `console.warn`. `handleTogglePin` and `handleToggleFavorite` call `setCustomGroups` only, with no API call, creating a local "Pinned" or "Favorites" section with id `cg-pin-<ts>`; the next successful move re-reads the sections (:404-409) and replaces the list, and a restart loses them. The server never sends `isPinned`, so the conversation-level Pinned section (:647) and the DM "Pinned" chip (:873) are always empty. Moving into a section that still has a client-generated `cg-` id is also mishandled: `MoveChannelToSectionHandler` finds no target, removes the channel from all sections and returns success. Traced.
+- **Why It Matters:** the user's organization of channels silently disappears and failed edits look saved.
+- **Recommended Fix:** roll back on failure and `Alert`; persist pin and favorite through `saveChannelSection` or remove those actions.
+- **Resolution:** ✅ FIXED — `MessagesScreen` section move, save and delete snapshot the sections, await the API (a false answer is a failure), restore the snapshot and alert on failure; a move into a client-generated `cg-` section is refused. Pin and Favorite are removed instead of persisted: the conversation-level Pinned section and the DM Pinned chip are gone, and the hold modals render those actions only when a handler is passed (none is). Tests: `resources/views/mobapp/tests/module/employee/messages/pages/MessagesScreen.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/MoveChannelSectionModal.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/HoldModals.test.tsx`. Failed before the change: "Received: <Text>Mute</Text> (and Pin/Favorite rendered with no handler)"; passes now.
 
 #### Finding #23
 
-- **Finding:** Data integrity — time in/out defaults to hard-coded Cebu coordinates
-- **File:** [`resources/views/mobapp/src/module/employee/attendance/hooks/useTimeInOut.ts`](resources/views/mobapp/src/module/employee/attendance/hooks/useTimeInOut.ts#L54)
-- **Line:** 54, 213-214
-- **Issue:** the diff changes the initial `gpsLocation` from `null` to `{ latitude: 10.3157, longitude: 123.8854 }` and removes the fallback assignments; the punch sends `gpsLocation?.latitude ?? null`. Only the web branch reads a real position (130), so the simulated coordinates are submitted as the employee's location unless one was read.
-- **Why It Matters:** attendance records carry a fabricated location, silently.
-- **Recommended Fix:** start from `null`, read the device position (`expo-location`), and send `null` plus a flag when unavailable.
-
-#### Finding #24
-
-- **Finding:** Fabricated data — the Notifications tab shows invented notifications
-- **File:** [`resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx`](resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx#L28)
-- **Line:** 28-105
-- **Issue:** the screen is new on this branch and initialises state with `INITIAL_NOTIFICATIONS`, six hard-coded items ("Leave Application Received", "Clock-In Verified …", "Overtime Request Approved"); no API is called anywhere in the module.
-- **Why It Matters:** every employee sees made-up HR events on a primary tab.
-- **Recommended Fix:** load notifications from an API, or hide the tab until one exists.
+- **Finding:** Fabricated data — controls and copy state effects and guarantees the product does not have
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/MessagesMoreScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/MessagesMoreScreen.tsx#L571)
+- **Line:** 571-579; `pages/MessagesScreen.tsx:1539-1568, 1609-1616, 1645-1652`; `components/GroupDetailsDrawer.tsx:538-554, 1262-1271`; `components/ColleagueProfileDrawer.tsx:265-282, 478, 506, 607-611, 788-794`; `app/Http/Controllers/employee/MessagesController.php:836`
+- **Issue:** (a) the More screen footer says "Enterprise End-to-End Encryption" (verified :574) while messages are stored as plaintext in `messages.text` and read server-side for search and previews, and it hard-codes "SubHRMS Messenger • v2.4.0" against `package.json` 1.0.0; (b) there is no mute endpoint (`routes/api/employee.php`) and the spec has no mute, yet the DM and announcement hold modals do `conv.isMuted = !conv.isMuted` (verified at `MessagesScreen.tsx:1610,1646`: a mutation of a context object that triggers no render and calls no API, replaced by the next `refreshSilently`), `ChannelHoldModal` gets no `onToggleMute` at all, and the drawers show `Alert` "You will no longer receive sound notifications…", a static "Notifications & sounds … are enabled", "Calling …" alerts and an alert for "View all media"; (c) the server reports every colleague and channel as online (`'online' => true // Simulating active status`, verified at `MessagesController.php:836`, also `GetConversationsQuery.php:183,193`), so the header "N colleagues active", the green dots and the "Online" chip show headcount, and `getStories` fabricates `hasStatus` from the index parity (`messages.api.ts:113`).
+- **Why It Matters:** false statements about security, notification state and presence in an HR messaging product (the same kind as v1 #16 and #24); a user believes a channel is muted or messages are encrypted when neither is true.
+- **Recommended Fix:** remove or reword the encryption line and show the real app version; hide mute, call, "view all media" and notification controls until an API backs them (or persist mute); implement real presence or remove the dot, the "colleagues active" count and the Online chip; if the placeholders are intended, record it in the spec.
+- **Resolution:** ✅ FIXED — Server: no `online` claim in `getRecipients`, `createConversation`, `getConversationMembers` or `GetConversationsQuery` (`ConversationLifecycleTest`, `ConversationListFieldsTest`). Client: `getStories` presence removed; the Mute tiles and rows, the call buttons and 'Notifications & sounds' are removed from the hold modals, `GroupDetailsDrawer`, `ColleagueProfileDrawer` and `ChannelHoldModal`; the 'Enterprise End-to-End Encryption' footer now shows the app version; the 'N colleagues active' subtitle, the green dots and the Online chips are gone from `AppTopHeader`, `DedicatedMessagesHeader`, `MessagesScreen`, `UserAvatar` and `MessageAvatar`. Tests: `resources/views/mobapp/tests/module/employee/messages/components/HoldModals.test.tsx`, `HeadersPresence.test.tsx`, `DedicatedMessagesHeader.test.tsx`, `UserAvatar.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesMoreScreen.test.tsx`, `resources/views/mobapp/tests/components/dashboard/AppTopHeader.test.tsx`. Failed before the change: "Failed asserting that an array does not have the key 'online'."; passes now.
 
 ### MEDIUM
 
+#### Finding #24
+
+- **Finding:** Authorization — `updateConversation` is not restricted to channels and validates nothing
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L1202)
+- **Line:** 1202-1267
+- **Issue:** no `type === 'channel'` check and no visibility check; `$isAdminRole` (`role_access` 1 or 2) is allowed for any non-system conversation. A `role_access` 2 account can `PUT /conversations/{dmId}` `{name: "x"}` on a DM between two other people and `RecordSystemEventAction` writes a `channel_renamed` message into that private DM (the DM creator can do the same). `name`, `description` and `avatar` are unvalidated, while `createConversation` validates them with `max:255`: a 300-character name hits `VARCHAR(255)` and answers 500. v1 #8 closed this class for add, remove, role and drop, not for update; spec §4.7 and AC-80 say "channel".
+- **Recommendation:** after `Conversation::find` require `$conversation->type === 'channel'` (403 "This is only available for channels.") and add the `validate([...])` shape of `createConversation` (name and description `max:255`, avatar `string|max:65535`, booleans).
+- **Resolution:** ✅ FIXED — `updateConversation` answers 403 unless the conversation is a channel, validates name and description (max 255), booleans and the avatar (see #20), and refuses reserved names on rename. Tests: `UpdateConversationTest` (a manager cannot rename a DM and nothing is written, a 300-character name is a 422 not a 500, non-boolean flags are a 422, a channel admin can still update and the events are recorded). Failed before the change: "Expected response status code [403] but received 200.' (manager renames DM) and 'Expected response status code [422] but received 500.' (300-char n..."; passes now.
+
 #### Finding #25
 
-- **Finding:** Correctness — hooks called after an early return in `MessageContent`
-- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageContent.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageContent.tsx#L98)
-- **Line:** 98 (`return null`) before 137 (`useMemo`)
-- **Issue:** ESLint reports `react-hooks/rules-of-hooks` at 137:25 ("called conditionally"). React throws if one instance flips between empty and non-empty text. No concrete trigger was found (candidates: an unkeyed root row in `ThreadModal` when the thread changes).
-- **Recommendation:** move every hook above the early return.
+- **Finding:** Authorization — a co-admin can remove the Lead Admin, who keeps every admin power
+- **File:** [`app/Handlers/Messages/RemoveConversationMemberHandler.php`](app/Handlers/Messages/RemoveConversationMemberHandler.php#L64)
+- **Line:** 64-69; `app/Actions/Messages/IsChannelAdminAction.php:28-30`
+- **Issue:** removing someone else only requires `$isCurrentUserAdmin`; the target may be the creator, and the Lead Admin handover only runs for `$isSelf` (:85), so `created_by` is never reassigned, while `UpdateMemberRoleHandler` protects the creator (:51-53). **Executed:** co-admin A `DELETE /members/{lead}` returned 200 and the lead's member row was removed; the lead then POSTed `/members {member_ids:[lead]}` and re-created it, and `IsChannelAdminAction` keeps treating `created_by` as admin with no membership check (archive, drop, add, approve all pass). The Lead Admin handover message (:110-114) is a plain `Message::create` with no `system_event` and no broadcast, duplicating `member_left` and bypassing `RecordSystemEventAction`.
+- **Recommendation:** reject `!$isSelf && $targetMemberId === (int) $conversation->created_by` with 403, as `UpdateMemberRoleHandler` does; optionally require a membership row in `IsChannelAdminAction`; add a `lead_admin_changed` event type instead of the ad-hoc message. Spec §4 is silent on protecting the Lead Admin: it may need a decision.
+- **Resolution:** ✅ FIXED — `RemoveConversationMemberHandler`: a co-admin cannot remove the Lead Admin (403); the Lead Admin leaving hands over with a `lead_admin_changed` system event (new in `RecordSystemEventAction`) instead of an ad-hoc message, and cannot leave without a co-admin to take over; the creator can still remove a co-admin. Tests: `ChannelMembershipRefusalTest`. Failed before the change: "Expected response status code [403] but received 200."; passes now.
 
 #### Finding #26
 
-- **Finding:** Architecture — `MessagesController` is not thin
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php)
-- **Line:** whole file (2,679 lines; 462 on master)
-- **Issue:** 42 methods and at least ten responsibilities (conversation lifecycle, join approval, membership, unread state, ticket status, profile, sections); 46 `DB::table(`, 21 `Schema::has*`, one `DB::transaction`, four empty `catch` blocks; `createConversation` alone is over 200 lines. Against `laravel-standards.md` and `project-profile.md` ("controllers call a Query/Handler; writes in `DB::transaction`").
-- **Recommendation:** one Handler per use case, starting with join/approve, membership and ticket status.
+- **Finding:** Security — `EditMessageHandler` authorizes by `sender_id` only
+- **File:** [`app/Handlers/Messages/EditMessageHandler.php`](app/Handlers/Messages/EditMessageHandler.php#L36)
+- **Line:** 36-62; `app/Actions/Messages/RecordSystemEventAction.php:96`
+- **Issue:** **executed.** (a) System events are `messages` rows whose `sender_id` is the actor: the actor of "X was removed from #Pub by L" PUT new text "Bob Smith was promoted to Lead Admin by HR." and got 200; the mobile `SystemEventRow` renders `message.text`. (b) A user removed from a private channel still edits their own old messages there (200), while `SendMessageHandler` requires membership. (c) No length cap: a 20,021-character edit was accepted (send caps at 4,000, `MAX_TEXT_LENGTH`); the controller does no validation (`MessagesController.php:1488-1507`). `DeleteMessageHandler.php:50` has the same sender-only authorization.
+- **Recommendation:** refuse `system_event` rows (403 or 404), require `Conversation::isVisibleTo` plus a membership row for non-system channels, and share `MAX_TEXT_LENGTH`; add a feature test.
+- **Resolution:** ✅ FIXED — `EditMessageHandler`: text over `SendMessageHandler::MAX_TEXT_LENGTH` is a 422, the conversation must be visible (`visibleTo`, 404), a `system_event` row is a 404, and a non-system channel needs a membership row (403). Tests: `EditMessageAuthorizationTest` (14: a removed member of a public or of a private channel, a system event, over-length text, an invisible conversation). Failed before the change: "Expected response status code [404] but received 200."; passes now.
 
 #### Finding #27
 
-- **Finding:** Maintainability — `Schema::hasColumn` guards for columns this branch creates
-- **File:** [`app/Models/Conversation.php`](app/Models/Conversation.php) and the messaging classes
-- **Line:** `Conversation.php` (`scopeVisibleTo`), `MessagesController.php` (21 calls), `GetMessagesQuery.php`, `GetConversationsQuery.php`
-- **Issue:** about 43 `Schema::has*` calls in the messaging code, 26 of them guarding columns that this branch's own migrations add; each is an uncached metadata query on the request path.
-- **Recommendation:** remove the guards; add a `Message::scopeVisible()` for the "not deleted" filter that is pasted into several queries.
+- **Finding:** Data exposure — `getMessages` reveals who is typing in a conversation the caller cannot read, and issues one cache query per member
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L287)
+- **Line:** 287-310, 324-327; `app/Queries/Messages/GetMessagesQuery.php:42-50`
+- **Issue:** for an invisible conversation `GetMessagesQuery` returns an empty page instead of throwing; the controller still runs `Cache::remember("conv_all_members_{$id}")` and reads `typing_{$id}_{$memberId}`. **Executed:** an unrelated employee called `GET /conversations/<private DM id>/messages` while a member's typing key was set and got 200 `{"data":[],…,"typing":{"is_typing":true,"user":"Typist Name"}}`; the 200 also reveals the id exists. The sibling endpoints (`sendTypingEvent`, `markThreadAsRead`, `updateTicketStatus`) have an `isVisibleTo` guard. Also (`CACHE_STORE` defaults to `database`) each `Cache::has` is a SELECT: members-1 queries on every list request when nobody is typing.
+- **Recommendation:** before the typing block return the same 404 as the other endpoints when `!Conversation::isVisibleTo($id, $user)`; replace the loop with one `Cache::many(array_map(fn($m)=>"typing_{$id}_{$m}", $ids))`. Rule: security.md (owner/scope check on every read).
+- **Resolution:** ✅ FIXED — `getMessages` answers 404 when the conversation is not visible, before the query and the typing block; typists are read with one `Cache::many` instead of one `Cache::has` per member. Tests: `TypingVisibilityTest`. Failed before the change: "Expected response status code [404] but received 200.' and 'Failed asserting that 2 is identical to 1.' (typing lookups per request)"; passes now.
 
 #### Finding #28
 
-- **Finding:** Error handling — raw exception messages and non-HTTP codes become responses
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L576)
-- **Line:** 576, 1585, 1618, 1640 (`getCode()` as status); every `catch` returns `$e->getMessage()`
-- **Issue:** a PDO exception's code is a string such as `42S22`, which makes `response()->json(…, $status)` throw a `TypeError` that hides the real error (observed during verification); the bodies include SQL text, for example the executed responses of Findings #5 and #29 contained `SQLSTATE[23000] … Duplicate entry …`.
-- **Recommendation:** map exceptions to fixed messages and integer statuses; log the detail.
+- **Finding:** Validation — `attachments[]` is unbounded and `type` / `size` are unvalidated
+- **File:** [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L141)
+- **Line:** 141, 204-213; `MessagesController.php:590`
+- **Issue:** `assertValidAttachments` checks each `path` but not the count (one uploaded path can be repeated) and `type` and `size` are free strings that can be arrays (500) or exceed `VARCHAR(255)`. Input: `attachments` with 50,000 entries of the same valid path in one body: 50,000 `Storage::exists` calls and 50,000 INSERTs in one transaction, then the broadcast and every list response carry 50,000 attachments. Rule: security.md ("reject writing logic that receives dynamic request arrays without validating them first").
+- **Recommendation:** cap the count (for example 10) and validate each entry: `type` in `[image, video, audio, pdf, excel, file]`, `size` string `max:20`, `name` `max:255`.
+- **Resolution:** ✅ FIXED — `SendMessageHandler`: at most 10 attachments, each entry's `type` must be a kind the app sends (image, video, audio, voice, gif, pdf, excel, file), `size` a string of at most 20 characters and `name` a string of at most 255, else 422 'Invalid attachment.'. Client: pending attachments are capped at 10 in total (`utils/attachmentLimit.ts`, `hooks/usePendingAttachments.ts`, used by the screen and `ThreadModal`). Tests: `SendMessageAttachmentsValidationTest`, `resources/views/mobapp/tests/module/employee/messages/hooks/usePendingAttachments.test.tsx`. Failed before the change: "Expected response status code [422] but received 200.' (11 entries)"; passes now.
 
 #### Finding #29
 
-- **Finding:** Correctness — `createConversation` has no validation or transaction
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L853)
-- **Line:** 853-1060
-- **Issue:** `recipient_ids`, `admin_ids`, `name`, `description` and `avatar` are not validated. **Executed:** `POST /conversations` with `type: dm` and the caller's own id answered `500` with `Duplicate entry '6-3' for key …` (the member attach hits the unique index) after the conversation row was created.
-- **Recommendation:** validate the input, reject a self-DM, and wrap the creation in `DB::transaction`.
+- **Finding:** Validation — `addConversationMembers` does not validate `member_ids`
+- **File:** [`app/Handlers/Messages/AddConversationMembersHandler.php`](app/Handlers/Messages/AddConversationMembersHandler.php#L41)
+- **Line:** 41-62; `MessagesController.php:1914-1929`
+- **Issue:** ids are cast with `(int)` and inserted. **Executed:** `[99999]`, `[0]`, `["abc"]` and a scalar each return 500 "Something went wrong" and in a mixed batch the whole transaction rolls back, valid ids included; with no FKs in this schema, junk member rows would list as "Member #0". `createConversation` (`MessagesController.php:861-884`) validates the same lists and answers 422. Rule: project-profile.md ("referential integrity is enforced in the Query/Handler layer").
+- **Recommendation:** validate an array of positive ints (capped), check the ids exist in `accounts` and answer 422 like `createConversation`.
+- **Resolution:** ✅ FIXED — `AddConversationMembersHandler::validatedMemberIds()`: an array of at most 500 whole positive ids that all exist in `accounts`, else 422 before anything is written; duplicates collapse. Tests: `ChannelMembershipRefusalTest` (unknown id, 0, negative, non-numeric, scalar, nested list, valid + unknown, more than 500). Failed before the change: "Expected response status code [422] but received 500."; passes now.
 
 #### Finding #30
 
-- **Finding:** Data — `dropConversation` leaves files and dependent rows
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L2482)
-- **Line:** 2482-2560
-- **Issue:** it deletes attachment rows but not the stored files, and leaves `channel_section_items`, `channel_join_requests` and `custom_mentions` rows (the new tables have no foreign keys); it also plucks every message id into memory for `whereIn`.
-- **Recommendation:** delete the files and dependants inside the transaction, in chunks.
+- **Finding:** Error handling — `errorResponse` maps framework exceptions to 500 and leaks their messages
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L55)
+- **Line:** 55-72; `app/Handlers/Messages/ToggleReactionHandler.php:44-47`
+- **Issue:** the docblock assumes every non-DB exception is a deliberate refusal. **Executed** through reflection: `ModelNotFoundException` → 500 `{"message":"No query results for model [App\\Models\\Message]."}` (reacting to a message not in the conversation hits `->firstOrFail()`; `toggleReaction` also writes an error log); `LockTimeoutException` (`Cache::lock(...)->block(3)` in `SendMessageHandler.php:51`) → 500 with an empty message; a Redis-style `RuntimeException('Connection refused [tcp://10.0.0.5:6379]', 111)` → 500 with host:port exposed; `ErrorException` passes verbatim. 36 methods `catch (\Exception)` and 9 `catch (\Throwable)`, so a `TypeError` never reaches `errorResponse` from the 36 (`POST /upload` with `type[]=x` → `strtolower(array)` at `UploadAttachmentHandler.php:137`, full trace under `APP_DEBUG`). v1 #28 intended deliberate messages.
+- **Recommendation:** map `ModelNotFoundException` → 404 "Not found" and `LockTimeoutException` → 503 "Please try again", and for any code-0 exception that is not a known domain refusal log it and return the fixed message (or have handlers throw a small `HttpException` subclass); use `catch (\Throwable)` consistently; in `ToggleReactionHandler` use `->first()` and throw `new \Exception('Message not found', 404)`.
+- **Resolution:** ✅ FIXED — `MessagesController::errorResponse` keeps the message and status only for a plain `\Exception`: `ValidationException` is a 422 with its errors, `ModelNotFoundException` a 404 'Not found', `LockTimeoutException` a 503, any other `Throwable` is logged and answered with a fixed 500; the 36 `catch (\Exception)` now catch `\Throwable`. `UploadAttachmentHandler` rejects a non-string `type` with a 422 and `ToggleReactionHandler` throws a coded 404. Tests: `ErrorResponseMappingTest` (13), `UploadAttachmentTest`. Failed before the change: "Failed asserting that 400 is identical to 500.' / 'Failed asserting that 500 is identical to 422.' / 'Failed asserting that 36 is identical to 0.'..."; passes now.
 
 #### Finding #31
 
-- **Finding:** Correctness — the system channel is identified by literals
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L1351)
-- **Line:** 1351, 1980, 2439, 2497; `app/Actions/Messages/RecordSystemEventAction.php:48`
-- **Issue:** `id === 1`, `id <= 6` or `name === 'general'` decide system behaviour instead of `is_system`; anyone who names a channel "General" gets the system channel's rules.
-- **Recommendation:** use `$conversation->is_system` everywhere.
+- **Finding:** Security — legacy cross-conversation `reply_to_id` rows still leak on read, and thread statistics cross conversations
+- **File:** [`app/Queries/Messages/GetMessagesQuery.php`](app/Queries/Messages/GetMessagesQuery.php#L55)
+- **Line:** 55 (`parent.sender`), 504-509, 208-213, 253-260 (`threadStatsFor`); `GetThreadRepliesQuery.php:43,57,77`; `GetPinnedMessagesQuery.php:35`
+- **Issue:** `with('parent.sender')` loads the parent by id only and `threadStatsFor` counts `whereIn('reply_to_id', …)` with no conversation filter; the send guard (`SendMessageHandler.php:157-159`) stops new rows only, and master accepted any `reply_to_id` unchecked. **Executed:** a row in Carol's private room whose `reply_to_id` points at a message in a private channel she is not in made `GetMessagesQuery` return `replyTo = {text: "salary of Dave is 90k", sender: "Alice Alpha"}` to Carol; a member of the secret channel saw `threadCount = 1`, `threadLastReplyUser = "Carol Gamma"` on the secret message (leak in both directions).
+- **Recommendation:** scope the relations (`->with(['parent' => fn ($q) => $q->where('conversation_id', $conversation->id), 'parent.sender'])`) and add `conversation_id` to `threadStatsFor`; run `select count(*) from messages m join messages p on p.id = m.reply_to_id where p.conversation_id <> m.conversation_id` and null out any such `reply_to_id` in a migration.
+- **Resolution:** ✅ FIXED — Legacy parent rows are scoped by conversation: `parentInConversation()` in `GetMessagesQuery`, `GetThreadRepliesQuery` and `GetPinnedMessagesQuery`, and `threadStatsFor()` filters both reply levels by `conversation_id`. Tests: `LegacyReplyScopeTest`. Failed before the change: "replyTo carried the text and sender of a message Carol cannot read' and 'Failed asserting that 1 is identical to 0' (threadCount)"; passes now.
 
 #### Finding #32
 
-- **Finding:** Testing — the only test exercises a copy of the parser
-- **File:** [`tests/Unit/SearchMessagesSyntaxTest.php`](tests/Unit/SearchMessagesSyntaxTest.php#L12)
-- **Line:** 12-77
-- **Issue:** a private helper re-implements the parsing and never calls `SearchMessagesQuery`, so it cannot fail when production changes; nothing tests `visibleTo`, the inactive-account guard or any of the access rules above (`testing.md` requires coverage of access rules).
-- **Recommendation:** extract the parser into an Action both use, and add Feature tests for access and read state.
+- **Finding:** Security — the 💬 chip text still tells an outsider that a private channel exists (v1 #3 reopened in part)
+- **File:** [`app/Actions/Messages/ResolveMentionsAction.php`](app/Actions/Messages/ResolveMentionsAction.php#L511)
+- **Line:** 511-523, 527
+- **Issue:** `Conversation::where('name', …)->first()` has no visibility scope. **Executed:** employee Omar, not in private channel `layoffs-2027`, sends `💬 Alice Alpha in #layoffs-2027` and the chip resolves with `display_name = "Message"` (the hidden-link shape), while `…in #no-such-channel` resolves to `"Alice Alpha in #no-such-channel"` and a public channel resolves with its `conversation_id`: the difference tells an outsider the private channel exists (the 🔒 variant behaves the same), against the v1 #3 resolution. The DM pattern at :527 also matches the first word of every `💬 Author in #chan` chip and adds a spurious second `message_link` mention.
+- **Recommendation:** resolve with `Conversation::visibleTo(auth()->user() ?? self::everyoneViewer())` and emit the same chip for hidden and unknown, or do not resolve a channel by name there at all; skip the DM pattern for spans already matched.
+- **Resolution:** ✅ FIXED — `ResolveMentionsAction`: the 💬 chip resolves its channel with `Conversation::visibleTo(...)` limited to channel and announcement (a hidden one becomes an unknown chip with `conversation_id` null), and the DM pattern skips matches that start inside a chip span. Tests: `MentionHiddenChannelTest` (5). Failed before the change: "Failed asserting that actual size 2 matches expected size 1' (hidden chip plus a spurious DM link) and 'actual size 3 matches expected size 1' (pub..."; passes now.
 
 #### Finding #33
 
-- **Finding:** Dependencies — Scout and Meilisearch are declared and unused
-- **File:** [`composer.json`](composer.json)
-- **Line:** the added `laravel/scout` and `meilisearch/meilisearch-php` entries; `config/scout.php`
-- **Issue:** search is raw SQL; neither package is installed or used.
-- **Recommendation:** remove both packages and `config/scout.php`.
+- **Finding:** Data integrity — a `message_link` chip for a message that does not exist keeps the client-supplied author, text and channel
+- **File:** [`app/Actions/Messages/ResolveMentionsAction.php`](app/Actions/Messages/ResolveMentionsAction.php#L274)
+- **Line:** 274-299, 317-355
+- **Issue:** when `message_id` is not found, `$authorName`, `$messageText`, `$channelName` and `$authorAvatar` come straight from the request item and are stored in `messages.mentions` and re-rendered for every viewer. **Executed:** `{type: message_link, message_id: 999999, conversation_id: <visible channel>, author_name: "CEO Carlos", message_text: "Everyone gets a 100% bonus"}` is stored and shown to a colleague as `"CEO Carlos in #general-m"` with that text; a hard-deleted linked message also keeps its copied text in the referencing row's `mentions`.
+- **Recommendation:** when `message_id` is present and the row is not found return `hiddenMessageLink($messageId)` (or a "message unavailable" chip) and never copy `author_name`, `message_text` or `author_avatar` from the item; store only ids and read the text at render time.
+- **Resolution:** ✅ FIXED — `messageLinkMention()`: a `message_id` that is missing or not visible returns `hiddenMessageLink()`; `message_text`, `author_avatar` and `created_at` are never copied from the request and the author is read from the database. Tests: `MentionForgeryTest` (6). Failed before the change: "Failed asserting that 'CEO Carlos' is null."; passes now.
 
 #### Finding #34
 
-- **Finding:** Configuration — four PHP-limit mechanisms, one harmful, one publicly downloadable
-- **File:** [`public/.user.ini`](public/.user.ini)
-- **Line:** whole file; `php.ini`, `public/.htaccess`, `start.sh`
-- **Issue:** the container already sets `memory_limit = 512M` (`docker/php/php.ini:12`); `public/.user.ini` is honoured by FPM and lowers it to 256M for every request, and nginx denies only `.ht*` (`default.conf.template:59`) so the file is served; the root `php.ini` and the `.htaccess` blocks do not apply on nginx.
-- **Recommendation:** delete the four files and keep `docker/php/php.ini`.
+- **Finding:** Correctness — system events broadcast a hard-coded `unread_count: 1`
+- **File:** [`app/Actions/Messages/RecordSystemEventAction.php`](app/Actions/Messages/RecordSystemEventAction.php#L128)
+- **Line:** 128
+- **Issue:** for every non-actor member the event sends `unreadCount: 1`, while the mobile client treats `unread_count` as the absolute count (`MessagesContext.tsx:308-312`: `delta = unread - row.unreadCount`, then `unreadCount: unread`) and `SendMessageHandler` sends the real count from a grouped query (:364-374). **Executed:** a member with 5 unread messages got `unread_count = 1` after a member-add event (real count 6); every join, leave, pin, rename, promote and archive triggers it, silently (escalated one level for that).
+- **Recommendation:** compute the per-member count with the grouped query extracted into one shared Query or Action (also used by Finding #6), or do not send an unread event for system events.
+- **Resolution:** ✅ FIXED — `RecordSystemEventAction` sends each member's own `unread_count` from `CalculateMemberUnreadCountsAction` (one grouped query; the actor gets 0, a removed member 0) instead of a hard-coded 1. Tests: `SystemEventUnreadTest`, `CalculateMemberUnreadCountsActionTest` (7). Failed before the change: "Failed asserting that 1 is identical to 6."; passes now.
 
 #### Finding #35
 
-- **Finding:** Unrelated change — the punch cooldown was removed from a messaging branch
-- **File:** [`app/Http/Controllers/AttendanceController.php`](app/Http/Controllers/AttendanceController.php#L299)
-- **Line:** around 299 (commit `0b72ae79`)
-- **Issue:** the 60-second per-device guard is gone with no replacement. `time_in` is still blocked by the "already timed in" check, but a repeated `time_out` now falls through to the same-day record (313-320) with no cooldown.
-- **Recommendation:** ship attendance changes on their own ticket; key any cooldown on the last attendance punch, not the device's `last_used_at`.
+- **Finding:** Correctness — `MessagePinUpdated` broadcasts a message formatted for the pinner
+- **File:** [`app/Handlers/Messages/TogglePinMessageHandler.php`](app/Handlers/Messages/TogglePinMessageHandler.php#L46)
+- **Line:** 46, 57-63
+- **Issue:** `GetMessagesQuery::formatMessage($message, $user, 0)` is viewer-specific (`isSent`, `sender: 'You'`, `canDecide` for HR cards, `mentions[].is_targeted`, `userReacted`) and the same array goes to every subscriber, whereas `SendMessageHandler` neutralises the shared payload (`formatForViewer(…, 0)`). **Executed:** Alice pins her own message; the payload delivered to Bob has `isSent = true`, `sender = "You"`; the mobile app writes it into the pinned list (`useChatRoom.ts:1057-1062`) and `GroupDetailsDrawer.tsx:1362` renders `item.isSent ? 'You' : item.sender`, so Bob's pinned panel shows his colleague's message as "You". `canDecide` for another viewer can also be exposed (the server still enforces the approver on POST).
+- **Recommendation:** broadcast only `message_id`, `is_pinned`, `pinned_at` and `pinned_by`, or have the client refetch `GET /pinned`.
+- **Resolution:** ✅ FIXED — `MessagePinUpdated` now carries only `conversation_id`, `message_id`, `is_pinned`, `pinned_at` and `pinned_by {id, name}`; the pinner's own HTTP response still has their formatted message. The mobile `useChatRoom` flags the message from the event and refetches the pinned list, and ignores a `message` carried by an older payload. Tests: `PinAndReactionTest`, `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.messageActions.test.tsx`. Failed before the change: "Failed asserting that two arrays are equal.' (keys incl. message)"; passes now.
 
 #### Finding #36
 
-- **Finding:** Correctness — URLs containing `id=` are rewritten into channel chips
-- **File:** [`resources/views/mobapp/src/module/employee/messages/utils/mentionParser.ts`](resources/views/mobapp/src/module/employee/messages/utils/mentionParser.ts#L186)
-- **Line:** 186, 455 (duplicated at 935)
-- **Issue:** the deep-link pattern accepts `https?://…[?&](id|conversation_id)=…` for any host. **Executed:** `see https://forms.example.com/view?id=123 for the form` renders as `#Channel 123`, which opens conversation 123.
-- **Recommendation:** match only the app scheme or the API host, and require `message_id` for message links.
+- **Finding:** Correctness — thread replies are silently truncated, and `has_more` is wrong and never sent
+- **File:** [`app/Queries/Messages/GetThreadRepliesQuery.php`](app/Queries/Messages/GetThreadRepliesQuery.php#L72)
+- **Line:** 72-98; `MessagesController.php:674-683`
+- **Issue:** `limit(self::MAX_REPLIES)` per level and `$hasMoreReplies = $replies->count() > MAX`. **Executed:** a thread with 501 direct replies returns the newest 500 with the root's `threadCount = 501`, `has_more = false` (500 > 500 is false) and the controller's `data` object has no `has_more` at all; the oldest reply is unreachable (no paging parameter). The pinned list has no `has_more` either.
+- **Recommendation:** fetch `MAX_REPLIES + 1` per level (or count), compute `has_more` from that and forward it in `getThreadReplies`; consider `after_id` / `before_id` for threads.
+- **Resolution:** ✅ FIXED — `GetThreadRepliesQuery` fetches `MAX_REPLIES + 1` per level and returns `has_more`; `GetPinnedMessagesQuery::page()` does the same for pins; the controller forwards `data.has_more` for both. Tests: `ThreadRepliesHasMoreTest` (7), `ReadStateEndpointsTest`. Failed before the change: "Failed asserting that an array has the key 'has_more'.' and 'Failed asserting that null is true.', pinned: 'Failed asserting that an array has the..."; passes now.
 
 #### Finding #37
 
-- **Finding:** Correctness — messages you send from another device are dropped
-- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L802)
-- **Line:** 802-808
-- **Issue:** the `.MessageSent` handler returns early when `senderId` is the current user, assuming the send response already reconciled it; a message sent from the web or a second phone never appears on a phone that has the room open.
-- **Recommendation:** skip only when a pending `clientId` or the id is already known (`mergeConfirmed` already dedupes by id).
+- **Finding:** Performance — search runs one query per own-DM hit
+- **File:** [`app/Queries/Messages/SearchMessagesQuery.php`](app/Queries/Messages/SearchMessagesQuery.php#L488)
+- **Line:** 488-502
+- **Issue:** for each result where `$isSelf` in a DM the loop runs `DB::table('conversation_members')->join('accounts')…->first()` to name the partner. **Measured:** 20 own-DM hits = 32 queries (25 on `conversation_members`); `limit=100` costs about 100 extra. Rule: performance.md (N+1).
+- **Recommendation:** collect the DM `conversation_id`s of the page and resolve all partner names with one `whereIn` before the loop.
+- **Resolution:** ✅ FIXED — `SearchMessagesQuery` resolves the partner names of a page's own-DM hits with one `whereIn` join before the loop. Tests: `SearchOwnDmCostTest` (twenty own-DM hits cost no more queries than three). Failed before the change: "Failed asserting that 32 is equal to 16 or is less than 16."; passes now.
 
 #### Finding #38
 
-- **Finding:** Security — the pinned-message cache survives logout and is not user-scoped
-- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L596)
-- **Line:** 596, 1612-1635; `services/storage/secure-storage.ts:126-129`
-- **Issue:** full message JSON is cached under `subhrms_pinned_messages_<conversationId>`; `clearSession()` removes only the auth token and user, so the text stays on the device after logout and is merged into the next user's pinned list.
-- **Recommendation:** store ids only, key by user, clear on logout, and treat the server as authoritative.
+- **Finding:** Performance — the `read_receipts` payload is unbounded and sent with every page, including empty `since_id` polls
+- **File:** [`app/Queries/Messages/GetMessagesQuery.php`](app/Queries/Messages/GetMessagesQuery.php#L186)
+- **Line:** 186-193, 304-352
+- **Issue:** `readReceiptsFor` returns one entry per active member whose position is above 0. **Measured:** a channel with 1,500 readers returns 1,500 entries, 301,597 bytes; a `since_id` poll with no new messages returned 301,968 bytes, and the mobile client calls it on every foreground and reconnect resync; General holds a row for every employee who has ever read it.
+- **Recommendation:** cap the list (readers within the last N messages, or at most 50 distinct positions newest first) or skip receipts for system channels and channels above a member threshold.
+- **Resolution:** ✅ FIXED — `GetMessagesQuery::readReceiptsFor()` is capped at `MAX_READ_RECEIPTS = 50` readers (furthest position first, ordered and limited in SQL); a `since_id` poll with no new messages returns `read_receipts = []`; `seenByFor()` keeps the uncapped list. Tests: `ReadReceiptsCapTest` (1,500 readers become 50 and under 20 KB, a quiet poll, a small channel unchanged). Failed before the change: "Failed asserting that actual size 1500 matches expected size 50."; passes now.
 
 #### Finding #39
 
-- **Finding:** Reliability — retry defeats the server's replay protection
-- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L1520)
-- **Line:** 1102, 1520-1539
-- **Issue:** `retryMessage` calls `sendMessage`, which generates a new `local-…` `clientId` (1102); if the first POST committed and only the response was lost, the retry creates a duplicate and re-uploads attachments.
-- **Recommendation:** reuse the failed message's `clientId` and uploaded paths.
+- **Finding:** Performance — every member of the conversation is hydrated for `$memberIds` that nothing uses effectively
+- **File:** [`app/Actions/Messages/ResolveMentionsAction.php`](app/Actions/Messages/ResolveMentionsAction.php#L82)
+- **Line:** 82-86, 135, 157, 213; `app/Queries/Messages/SearchMentionsQuery.php:50-52, 90-93`
+- **Issue:** `$isRestrictedContext = in_array($conversation->type, ['group','direct'])` can never be true (the `conversations.type` enum is `channel|dm|announcement`), so position, department and custom `user_ids` are never narrowed to the members as the comment intends, while `$conversation->members` is lazy-loaded (all members, all columns) once per page and `SearchMentionsQuery` does `Conversation::with('members')->find()` on every autocomplete request. **Measured** (1,500-member channel): a page with one `#chan @all` message went from 15 ms to 97 ms; `GET /mentions/search?q=First1&conversation_id=<channel>` averaged 94.8 ms against 2.9 ms without `conversation_id`; the un-narrowed `user_ids` (every employee of a unit) are stored in `messages.mentions` and sent in every payload.
+- **Recommendation:** compare against the real types (`dm`, and `channel` / `announcement` where intended) and take members with `DB::table('conversation_members')->where('conversation_id', …)->pluck('account_id')` only when narrowing is needed; in `SearchMentionsQuery` use an `exists` membership check and load member ids only for the empty-`q` list.
+- **Resolution:** ✅ FIXED — `SearchMentionsQuery` uses `isVisibleTo` as an `exists` check and takes member ids from a `conversation_members` pluck (only for the empty-`q` list); `ResolveMentionsAction` never hydrates members: position and department narrow with a `whereIn` subquery, custom with one `whereIn`, and the conversation is read lazily. Tests: `MentionSearchVisibilityTest::a_typed_search_does_not_hydrate_the_members_of_the_conversation`, `ResolveMentionsMembersTest`. Failed before the change: "Failed asserting that two arrays are identical.' (user_ids held every analyst) and a query on the members relation (pivot_)"; passes now.
 
 #### Finding #40
 
-- **Finding:** Correctness — a stale thread response overwrites the current thread
-- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L2269)
-- **Line:** 2269-2287
-- **Issue:** `handleViewOriginalThread`'s `.then` calls `setActiveThreadMessage(finalRoot)` unconditionally (the sibling `handleReplyInThread` guards it); closing the thread or opening another before the response arrives reopens or swaps in the old one.
-- **Recommendation:** guard on the current thread id or a request token.
+- **Finding:** Duplication — `getEmployeeProfile` re-implements approver resolution and diverges from it
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L1355)
+- **Line:** 1355-1396
+- **Issue:** `ApproverMatrix::getApprovers()` / `ResolveApproverListAction` match one active matrix by unit and position and throw "No approval matrix configured" when none matches; the controller narrows by position only when a narrower match exists and otherwise keeps all the unit's matrices and takes the lowest `sort`. Input: an employee whose `pos_id` is in no matrix: the profile shows another position's approver as `reportingManager` while the real approval flow would refuse; `accountjob->first()` (:1340) has no ordering or status filter either. Rule: duplicate-prevention.md rule 3.
+- **Recommendation:** call `ResolveApproverListAction::execute($id)` in a try/catch, take the first approver and move the lookup into a `GetEmployeeProfileQuery`.
+- **Resolution:** ✅ FIXED — New `GetEmployeeProfileQuery`: `reportingManager` is the first approver from `ResolveApproverListAction::execute($id)` in a try/catch (only a plain `\Exception` means no manager); the response shape is unchanged. Tests: `EmployeeProfileTest` (no matrix, a matrix, an inactive matrix, another unit, no job record). Failed before the change: "Failed asserting that 'Head, Hedda (Finance Head)' is identical to null."; passes now.
 
 #### Finding #41
 
-- **Finding:** Reliability — the scroll-failure handler retries forever
-- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L2763)
-- **Line:** 2763-2774
-- **Issue:** the list has no `getItemLayout`; `onScrollToIndexFailed` re-calls the same `scrollToIndex` every 100 ms with no limit and no index check, so a target outside the render window loops until unmount and can throw if the list shrinks.
-- **Recommendation:** scroll by estimated offset first, retry once, bound the attempts and guard `index < length`.
+- **Finding:** Reliability — a retry reuses the `clientId`, but the server only de-duplicates within 2 seconds (v1 #39 reopened in part)
+- **File:** [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L26)
+- **Line:** 26, 48-66; `resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts:1365, 1537, 1852-1866`
+- **Issue:** the mobile retry now reuses the failed send's `clientId` and upload stash, but `REPLAY_WINDOW_SECONDS = 2` starts at the first commit, while a lost response is only reported after the 30 s axios timeout (`axiosInstance.ts:49`) and a retry is a manual tap, so the v1 #39 scenario (first POST committed, response lost, retry) still creates a duplicate; only a double tap within 2 s is de-duplicated.
+- **Recommendation:** key the replay protection on a unique `(conversation_id, sender_id, client_id)` or give it a TTL of minutes.
+- **Resolution:** ✅ FIXED (equivalent change) — the replay window is 600 s (`REPLAY_WINDOW_SECONDS`, cache key per conversation, sender and md5 of `client_id`) instead of 2 s. The report offered 'a unique key or a TTL of minutes'; the TTL needs no migration and expires by itself. Tests: `SendMessageReplayTest` (a retry after 45 s and after 5 minutes returns the original message; another client id, sender or conversation is not a replay). Failed before the change: "Failed asserting that 2 is identical to 1.' (duplicate row after 45 s) and 'Failed asserting that 4 is identical to 3."; passes now.
 
 #### Finding #42
 
-- **Finding:** Correctness — forwarding drops attachments
-- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ForwardMessageModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ForwardMessageModal.tsx#L119)
-- **Line:** 119-130
-- **Issue:** only text is sent; an attachment-only message becomes `[Forwarded File from X]: name`, so the file is not forwarded.
-- **Recommendation:** forward the attachments, or disable Forward for messages that carry them.
+- **Finding:** Data — the seeder and the migration disagree on whether "Company Announcements" is a system channel, and the seeder resets edited rows
+- **File:** [`database/seeders/ConversationSeeder.php`](database/seeders/ConversationSeeder.php#L30)
+- **Line:** 30, 47; `database/migrations/alters/messages/2026_09_29_000001_add_is_system_to_conversations_table.php:44-51`
+- **Issue:** the seeder sets `is_system => true` for the announcement while the migration back-fill flags only `type = channel` named general, and spec AC-67 / AC-73 treat announcements as non-system. **Executed:** with `is_system = false` a non-member's `POST …/read` returns `unread_count: 0` but writes nothing and the list still shows `unreadCount: 2`; with `true` it clears and creates a member row, so seeded and migrated databases behave differently (read state, `GeneralAccessAction`). `updateOrCreate` rewrites `description`, `is_archived`, `status`, `created_by` and `is_system` on every `db:seed` (an edited description and archived flag were reset).
+- **Recommendation:** use `firstOrCreate`; decide the announcement's `is_system` once and make seeder, migration and AC-67 agree.
+- **Resolution:** ✅ FIXED — `ConversationSeeder`: Company Announcements is `is_system => false` (AC-67, AC-73) and seeding uses `firstOrCreate`, so an edited row is never rewritten; the migration back-fill already agrees. Tests: `ConversationSeederTest` (4). Failed before the change: "Failed asserting that two arrays are identical ... 'Company Announcements' => true' (all 4 tests failed; e.g. last_read_id 2 instead of 0, descript..."; passes now.
 
 #### Finding #43
 
-- **Finding:** Performance — every inline video autoplays, unmuted and looping
-- **File:** [`resources/views/mobapp/src/module/employee/messages/components/InlineChatVideo.tsx`](resources/views/mobapp/src/module/employee/messages/components/InlineChatVideo.tsx#L142)
-- **Line:** 142-148
-- **Issue:** each bubble creates a player with `loop = true` and calls `play()` on mount; muting is never set. A chat with several videos starts several decoders and overlapping audio.
-- **Recommendation:** show a poster and play only the tapped video, starting muted.
+- **Finding:** Maintainability — non-messaging changes ride on the messaging branch
+- **File:** [`app/Http/Controllers/AttendanceController.php`](app/Http/Controllers/AttendanceController.php#L267)
+- **Line:** 267-269, 299-307; `app/Queries/Employee/GetEmployeeDashboardQuery.php:416-431`; `app/Http/Controllers/AuthController.php:141`; `app/Http/Controllers/BiometricController.php:145, 293, 456`; `.env.example`; `resources/views/web/app/echo.ts`
+- **Issue:** the attendance timezone conversion and restored cooldown (Finding #10); a `leaves` left join that changes `str_type` / `leave_type` from "Leave Application" to e.g. "Vacation Leave (VL)" for the web dashboard too (the join is valid, plausibly needed by the approval card, untested); `profile`, `avatar` and `pic` all carry `$account->pic` in four copies (the mobile client reads `profile ?? pic ?? avatar`, so one key is enough); `.env.example` changes `APP_TIMEZONE` UTC → Asia/Manila, adds AWS/Supabase/Gemini/MCP/Deploy keys and flips `BROADCAST_CONNECTION` to pusher; the web `echo.ts` default flips from reverb to pusher. Each hunk was checked and is correct; the issue is scope (v1 #35 recommended the same).
+- **Recommendation:** move the attendance, dashboard and auth / biometric payload changes to their own ticket(s) or accept them explicitly in the spec; reduce the three `pic` keys to one.
+- **Resolution:** ❌ NOT FIXED — not applied: moving the attendance, dashboard, auth and biometric payload, `.env.example` and web `echo.ts` changes off this branch is a ticket split, not a code fix; it needs your decision and `/webkit-specify`. (The Notifications screen that also rode on the branch was deleted as dead code under #76.) Recorded under Waiting On in task.md.
 
 #### Finding #44
 
-- **Finding:** Maintainability — oversized files mix many responsibilities
-- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx)
-- **Line:** whole files
-- **Issue:** `ConversationScreen.tsx` 4,021 lines, `MessageInputBar.tsx` 2,732, `MessagesSearchModal.tsx` 2,545, `MessagesScreen.tsx` 1,790, `ManageChannelModal.tsx` 1,980, `GroupDetailsDrawer.tsx` 1,938; the attachment-picker and size-formatting logic is copied in `ConversationScreen` and `ThreadModal`.
-- **Recommendation:** split by responsibility (list, composer, thread, search) and extract the picker into a hook.
-
-### LOW
+- **Finding:** Testing — the fixes and the extracted approval handler have no committed regression tests
+- **File:** [`tests/Feature/Messages`](tests/Feature/Messages)
+- **Line:** whole directory (absence); `app/Http/Controllers/manager/ApprovalRequestController.php:120-130`
+- **Issue:** the v1 resolutions for #28, #29, #30 and #47 cite throw-away harness runs, not committed tests: only `DmMembershipGuardTest` drops a channel and it asserts neither the files nor the dependants; nothing covers the string-SQLSTATE `errorResponse` case, the `createConversation` rollback and self-DM 422, `markAllAsRead` never moving a position backward, `updateConversation`, `archiveConversation`, `getUnreadCount`, `deleteMessage`'s cascade and file retention, or `getEmployeeProfile`. The payroll-affecting `POST /api/manager/approveRequest` now runs through `ProcessApprovalDecisionHandler` (verified identical to master's closure body by `diff -w`, and exercised by hand) but no test mentions `ApprovalRequestController`, `approveRequest` or the handler outside the chat endpoint; the controller keeps unused imports (`DB`, `PayPeriod`, `SyncTimesheetShiftAction`). Rule: testing.md (a bug fix needs a regression test; a handler or endpoint needs a feature test).
+- **Recommendation:** add `tests/Feature/Approval/ManagerApprovalTest.php` (single approve, a 2-tier flow with its 403/409/422 shapes, a batch with success and error items, a `cs` roster lock), one feature test per uncovered fix above, and remove the three unused imports.
+- **Resolution:** ✅ FIXED — Committed regression and characterization tests: `tests/Feature/Approval/ManagerApprovalTest.php` (15 tests on `POST /api/manager/approveRequest`: single approve, data list, decline with reason, sub-approver, 403, 409, 422, the 2-tier flow, a locked pay period, change-shift timesheet sync, batches with errors; the unused imports of `ApprovalRequestController` were removed), `DeleteMessageHandlerTest`, `ErrorResponseMappingTest`, `ConversationLifecycleTest` (create and rollback, self-DM, drop cascade, archive, members), `ReadStateEndpointsTest`, `EmployeeProfileTest`. Mutation-checked: removing the `DB::transaction`, the self-DM guard or the member-only filter of `markAllAsRead` each turns a test red. Failed before the change: "with the mutations applied 'Failed asserting that 1 is identical to 0.' (rollback), 'Expected response status code [422] but received 500.' (self-D..."; passes now.
 
 #### Finding #45
 
-- **Finding:** Structure — alter migrations outside `alters/`
-- **File:** [`database/migrations/2026_09_11_000001_add_is_admin_to_conversation_members_table.php`](database/migrations/2026_09_11_000001_add_is_admin_to_conversation_members_table.php)
-- **Line:** 1
-- **Suggestion:** `2026_09_11_000001`, `2026_09_12_000002`, `2026_09_12_000003` and `2026_09_13_000001` are `Schema::table` alters in `database/migrations/` while the other messaging alters live in `database/migrations/alters/messages/`; move them for consistency.
+- **Finding:** Testing — 14 of the 16 migrations have no schema test, and the unique-member migration's data-safety branch is untested
+- **File:** [`database/migrations/alters/messages/2026_10_13_000001_add_unique_member_index_to_conversation_members_table.php`](database/migrations/alters/messages/2026_10_13_000001_add_unique_member_index_to_conversation_members_table.php)
+- **Line:** whole file; `tests/Feature/Messages/` (absence)
+- **Issue:** `CustomMentionsMigrationTest` is the only migration test: nothing checks that `uq_conversation_members_conv_account` exists, that the migration aborts on duplicates, or that `UpsertConversationMemberAction::insertRow` and `readPosition` absorb error 1062 (all three behave correctly when run by hand: duplicates make `migrate` stop with a count and no index; two `insertRow` calls in one transaction leave 1 row). testing.md requires a schema test per migration (`hasTable`, `hasColumns`, `getIndexes`).
+- **Recommendation:** add a `ConversationMembersUniqueIndexTest` for those three cases and `Schema::hasColumns` / `getIndexes` checks for the new tables and the `messages` and `conversations` columns.
+- **Resolution:** ✅ FIXED — tests only: `ConversationMembersUniqueIndexTest` (the index exists and is unique; the migration aborts with '2 duplicate' and creates nothing, then succeeds once resolved and is a no-op on rerun; `insertRow` absorbs 1062 and rethrows other errors; `readPosition` absorbs a lost race) and `MessagingSchemaTest` (`hasColumns` and `getIndexes` for the sections, join requests, custom mentions, messages, conversations and conversation_members migrations).
 
 #### Finding #46
 
-- **Finding:** Configuration — a hard-coded API key as a fallback
-- **File:** [`resources/views/mobapp/src/module/employee/messages/components/GifPickerPanel.tsx`](resources/views/mobapp/src/module/employee/messages/components/GifPickerPanel.tsx#L47)
-- **Line:** 47-51
-- **Suggestion:** the code falls back to Giphy's public demo key when `EXPO_PUBLIC_GIPHY_API_KEY` is unset; require the environment variable and disable the picker without it.
+- **Finding:** Testing — `ChannelAuthorizationTest` passes only because the developer's `.env` has Pusher credentials
+- **File:** [`tests/Feature/Messages/ChannelAuthorizationTest.php`](tests/Feature/Messages/ChannelAuthorizationTest.php#L77)
+- **Line:** 77
+- **Issue:** the test asserts `^[^:]+:[0-9a-f]{64}$` on the Pusher `auth` string; with the empty `PUSHER_APP_KEY` of `.env.example` the string is `:<sig>`. **Executed:** `PUSHER_APP_KEY= PUSHER_APP_SECRET= PUSHER_APP_ID= vendor/bin/phpunit tests/Feature` gave 1 failure. The suite is green only with a populated `.env`.
+- **Recommendation:** set `config(['broadcasting.connections.pusher.key' => 'test-key', '…secret' => 'test-secret', '…app_id' => '1'])` in `DisposableDatabaseTestCase::setUp` or in this test.
+- **Resolution:** ✅ FIXED — `tests/Feature/DisposableDatabaseTestCase.php` pins `broadcasting.connections.pusher` key, secret and app id and re-registers the pusher and reverb broadcasters, so the channel authorization test no longer depends on the developer's `.env`; `ChannelAuthorizationTest` asserts the signature starts with `test-key:`. Failed before the change: "with PUSHER_APP_KEY= PUSHER_APP_SECRET= PUSHER_APP_ID=: 'Failed asserting that ':f3b519fd...' matches PCRE pattern '/^[^:]+:[0-9a-f]{64}$/'"; passes now.
 
 #### Finding #47
 
-- **Finding:** Performance — `markAllAsRead` runs several queries per conversation
-- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L2592)
-- **Line:** 2568-2600
-- **Suggestion:** fetch the newest message ids in one grouped query and update the read positions in one statement.
+- **Finding:** Architecture — `MessagesController` is still not thin (v1 #26, still open)
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php)
+- **Line:** whole file (2,261 lines; 462 on master)
+- **Issue:** the fix passes moved join, membership and approval writes into Handlers (not worse than recorded), but still inline: `createConversation` (:852-1092), `updateConversation` (:1202-1316), `updateTicketStatus` (:1607-1725), `archiveConversation` (:1957-2036), `dropConversation` (:2038-2141), and `DB::table(` reads in `getEmployeeProfile`, `getConversationMembers`, `getUnreadCount` and `markConversationAsRead` (`getUnreadCount` also runs `Cache::remember` once per conversation and counts without `->visible()`, unlike `GetConversationsQuery`). Against `laravel-standards.md` and `project-profile.md` ("controllers call a Query/Handler; writes in `DB::transaction`").
+- **Recommendation:** one Handler per remaining use case, starting with `createConversation`, `dropConversation` and `updateTicketStatus`, and a Query for the read models.
+- **Resolution:** ❌ NOT FIXED — partial, behavior-preserving. Done: `CreateConversationHandler`, `DropConversationHandler`, `UpdateTicketStatusHandler` and the read models `GetEmployeeProfileQuery`, `GetUnreadCountQuery`, `GetConversationMembersQuery` (code moved verbatim, same JSON and status codes, transactions kept); `MessagesController` went from 2,261 to about 1,676 lines. Still inline in the controller: `updateConversation`, `archiveConversation`, `markConversationAsRead`, `markAllAsRead`, the `getConversation` fallback, `getJoinRequests` and `getRecipients`; `getUnreadCount` still caches per conversation. Characterization tests were written first and passed on the old code (139 related tests pass after): `ConversationLifecycleTest`, `ReadStateEndpointsTest`, `EmployeeProfileTest`, `ApprovalFromChatTest`.
+
+#### Finding #48
+
+- **Finding:** Correctness — the system channel is still identified by literals, in more places than recorded (v1 #31, still open)
+- **File:** [`app/Handlers/Messages/SendMessageHandler.php`](app/Handlers/Messages/SendMessageHandler.php#L124)
+- **Line:** 116, 124; `MessagesController.php:1217, 1782, 1995, 2059`; `RecordSystemEventAction.php:50`; `GetConversationsQuery.php:43, 158`; `resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx:122-127`, `MoveChannelSectionModal.tsx:77-87`, `MessagesScreen.tsx:681-683, 1529-1534`, `GroupDetailsDrawer.tsx:130-136`
+- **Issue:** `id === 1`, `id <= 6` and name comparisons decide system behavior instead of `is_system` (verified at `SendMessageHandler.php:116` and `:124`). New instance: the "must join before posting" rule is skipped when the name is "general" (`strtolower(trim($name)) !== 'general'`), so a non-system public channel called "General" with `requires_approval = 1` lets a non-member `POST …/messages` and `UpsertConversationMemberAction::readPosition` (:296) inserts a `conversation_members` row: the poster becomes a member without joining or approval (AC-67, AC-84, AC-87). On the client four definitions disagree (name list, `id <= 6`, `is_system`, the server's `id === 1`): any employee who creates a channel "General" gets their own channel rendered view-only (no Manage, Leave or section moves) and sorted above the real General; `createConversation` has no uniqueness or reserved-name check. A migration back-fill flags only `type=channel, name=general`, so replacing `id === 1` / `id <= 6` also needs the legacy channels flagged.
+- **Recommendation:** drop the name clauses and rely on `$conversation->is_system` on both sides (use `is_system` / `isDefault` from the payload in the app), flag the legacy channels with a keyed back-fill, and reject reserved names in `createConversation`.
+- **Resolution:** ✅ FIXED — Every literal is gone; a channel is a system channel only when `is_system` says so (type `announcement` still means broadcast-only). Server: `SendMessageHandler`, `RecordSystemEventAction`, `EditMessageHandler`, `SearchMessagesQuery` (three spots), `GetConversationsQuery`, and `MessagesController` update, archive, drop and members; reserved names ('general', 'company announcements') are refused on create and rename (422); the legacy migration back-fill flags the five legacy default channels by name, type and no creator, never by id. Client: `utils/channelPermissions.ts getChannelPermissions()` and `MessagesScreen` read `is_system` / `isDefault` flags only. Tests: `SendMessageChannelRulesTest`, `SystemEventChannelKindTest`, `EditMessageAuthorizationTest`, `SearchSystemChannelNameTest`, `ConversationListFieldsTest`, `SystemChannelBackfillMigrationTest`, `ConversationLifecycleTest`, `resources/views/mobapp/tests/module/employee/messages/utils/channelPermissions.test.ts`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesScreen.test.tsx`. A database that already ran the migration needs it rolled back and re-run (see Notes). Failed before the change: "Expected response status code [200] but received 400.' (user-made channel with a low id archived/dropped) and 'Expected response status code [403]..."; passes now.
+
+#### Finding #49
+
+- **Finding:** Correctness — the composer's pasted-link detection is host-agnostic, so a third-party URL becomes a message chip and the URL is lost (v1 #36 reopened for this file)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx#L581)
+- **Line:** 581 (message regex), 744 (channel regex)
+- **Issue:** the third copy of the regex that the v1 #36 fix did not touch. **Executed** with the literals extracted from the file: `see https://shop.example.com/orders?message_id=88 please` matches; `https://click.mailer.example.org/r?u=abc&message_id=7731&x=1` matches only up to `message_id=7731` and leaves `&x=1` as text; `https://forms.example.com/view?id=123&message_id=9` matches; the channel regex matches `https://other.example.com/messages/conversation?id=7`; `createMessageDeepLinkRegex` (`mentionParser.ts:31`) matches none. On paste `handleBlockTextChange` (:579-741) replaces the URL with a `message_link` chip, calls `getMessageDetail(88)` with an id from a foreign URL and shows a quote card; `serializeBlocksToMarkdown` emits only the chip text, so the recipient gets a chip pointing at an unrelated in-app message instead of the user's link (`message-detail` is authorized, so this is silent content corruption, not a leak).
+- **Recommendation:** build both regexes from `createMessageDeepLinkRegex()` / `createChannelDeepLinkRegex()` (`mentionParser.ts:31/45`) inside `handleBlockTextChange` and delete the inline literals.
+- **Resolution:** ✅ FIXED — `MessageInputBar` uses `createMessageDeepLinkRegex()` and `createChannelDeepLinkRegex('i')` for pasted links, so a third-party URL stays text. Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageInputBar.test.tsx` (pasted links: four third-party URLs stay text; API-host and zentrelink links still chip). Failed before the change: "Unable to find an element with displayValue: see https://shop.example.com/orders?message_id=88 please (chip '💬 Message in #channel' rendered)"; passes now.
+
+#### Finding #50
+
+- **Finding:** Privacy — recent searches persist across logout and are shown to the next account on the device
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessagesSearchModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessagesSearchModal.tsx#L117)
+- **Line:** 117-141 (keys `subhrms_recent_dm_searches`, `subhrms_recent_global_searches`); `services/storage/secure-storage.ts:164-170`
+- **Issue:** up to 6 queries per mode, plus `item.text.slice(0,30)` (a snippet of a private message) when a result is opened with an empty query, are stored through the generic `SecureStorageService.setItem`, device-wide and not user-scoped; `clearSession()` removes only the token, the user and the pinned ids. User B signing in on the same device sees user A's recent searches (names, keywords such as salary or resignation). The same class as v1 #38, which fixed only the pinned cache.
+- **Recommendation:** store the history under a user-scoped key (or one `{userId, queries}` blob like the pinned cache), delete both keys in `clearSession()`, and do not save message-body snippets.
+- **Resolution:** ✅ FIXED — Recent searches live in secure storage under one user-scoped key (`subhrms_recent_searches`, at most 6, the typed query only); `clearSession()` clears them and purges the legacy keys. Tests: `resources/views/mobapp/tests/services/storage/secure-storage.test.ts` (8), `resources/views/mobapp/tests/module/employee/messages/components/MessagesSearchModal.test.tsx`. Failed before the change: "TypeError: SecureStorageService.addRecentSearch is not a function"; passes now.
+
+#### Finding #51
+
+- **Finding:** Correctness — editing a message sends only the text, so the server re-guesses mentions by first name
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L1455)
+- **Line:** 1455-1465, 2048-2110; `components/ThreadModal.tsx:630-635`; `services/messages.api.ts:722-731`; `hooks/useChatRoom.ts:1742`
+- **Issue:** `handleSend` computes `outgoingMentions` (:1455) but the edit branch calls `editMessage(id, text)` and the API sends `{text}`, while `EditMessageHandler.php:56-62` accepts `mentions` and `ResolveMentionsAction.php:41-43` falls back to `parseMentionsFromText`, whose regex stops at the first whitespace (**executed** in PHP: `"@Maria Reyes please approve my OT, cc @Ana Cruz"` yields names `["Maria","Ana"]`) and resolves `LIKE %Maria% ->first()`. Input: a message mentions @Maria Reyes (id 30, picked from the list) and "Maria Santos" (id 12) exists; the user fixes a typo: the stored mention becomes the arbitrary first match, `user_ids` and `is_targeted` flip and the wrong person is highlighted, with no error.
+- **Recommendation:** pass `mentions` from `getMentions()` through `editMessage(id, text, mentions)` and `messagesApi.editMessage(..., {text, mentions})` in `ConversationScreen.tsx:1461`, `ThreadModal.handleSend` and `handleEditThreadMessage`.
+- **Resolution:** ✅ FIXED — `messagesApi.editMessage(conversationId, messageId, text, mentions?)` sends `{text, mentions}`; `useChatRoom.editMessage`, `ConversationScreen` and `ThreadModal` pass the composer's mentions. Tests: `resources/views/mobapp/tests/module/employee/messages/services/messages.api.test.ts`, `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.messageActions.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/ThreadModal.test.tsx`. Failed before the change: "put called with {'text': ...} only (mentions missing from the payload)"; passes now.
+
+#### Finding #52
+
+- **Finding:** Correctness — your own thread replies sent from another device are dropped by the screen (v1 #37 incomplete)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L828)
+- **Line:** 828-831
+- **Issue:** the hook now forwards own-sender `.MessageSent` events that are not in flight (`useChatRoom.ts:964-970, :1006`), but `handleThreadReplyReceived` still starts with `if (myId && String(reply.senderId) === String(myId)) return;`. Input: the same account replies in thread R from the web or a second phone while this phone has R open: the hook still dispatches `increment_thread_count` (the preview says N+1) but the reply never enters `threadRepliesMap` or `activeThreadMessage`, so the open thread lacks it until reopened.
+- **Recommendation:** delete the early return (this device's own echo is already filtered in the hook and the screen dedupes by id at :850 and :884).
+- **Resolution:** ✅ FIXED (traced) — the early `return` for own replies is deleted from `handleThreadReplyReceived` (the hook already filters this device's own echo and `addThreadReply` dedupes by id); the reply bookkeeping moved to `hooks/useThreadViews.ts`. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useThreadViews.test.tsx`; the deleted guard lives in the 4,100-line `ConversationScreen`, which cannot be rendered in a test.
+
+#### Finding #53
+
+- **Finding:** Correctness — the thread composer's microphone does nothing
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ThreadModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ThreadModal.tsx#L585)
+- **Line:** 585-612, 1144-1145; `pages/ConversationScreen.tsx:3829-3894`
+- **Issue:** `handleVoiceReply` starts with `if (!rootMessage || !onSendVoiceReply) return;` and the only caller never passes `onSendVoiceReply` (grep: the only occurrences are inside `ThreadModal`), so tapping the mic in a thread starts no recording and shows no error (spec AC-21 describes the mic in "composer").
+- **Recommendation:** pass `onSendVoiceReply={(rootId, att, alsoSend) => handleSendThreadReply('', rootId, alsoSend, null, undefined, [att])}` or hide the mic in the thread.
+- **Resolution:** ✅ FIXED (traced) — `ConversationScreen` passes `onSendVoiceReply` to `ThreadModal` (the signature was checked against `handleSendThreadReply`). Test: `resources/views/mobapp/tests/module/employee/messages/components/ThreadModal.test.tsx` (the modal records from its mic and sends the stopped recording); the missing prop was in the screen, which cannot be rendered.
+
+#### Finding #54
+
+- **Finding:** Security — markdown link targets are not allow-listed and the error fallback passes the raw string to `Linking.openURL`
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageContent.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageContent.tsx#L164)
+- **Line:** 164-175, 346-352; `utils/markdownFormatter.ts:144, 232-240`
+- **Issue:** any `[label](anything)` becomes a link token; `handleOpenUrl` forces `https://` onto non-http strings and calls `WebBrowser.openBrowserAsync`, and on any throw `catch` calls `Linking.openURL(url)` with the unmodified sender-controlled string. **Executed** with the real `parseMarkdownTokens`: `[Open payslip](tel:+639170000000)` gives token url `tel:+639170000000`, browser target `https://tel:+639170000000`, which `new URL()` rejects; `expo-web-browser` 57.0.2 on iOS takes a `URL` argument and throws on an invalid one, so the fallback opens the dialer, SMS or another app's deep link when a recipient taps it (not run on a device; on Android Custom Tabs does not throw). Raw `https?` URLs are safe (`extractUrls` filters the protocol). This contradicts the v1 positive "link opening allows only http(s)".
+- **Recommendation:** in `handleOpenUrl` accept only `/^https?:\/\//i` (ignore everything else) and drop the `Linking.openURL(url)` fallback or restrict it to the validated value; the same fallback exists at `MessageAttachment.tsx:400-410` (server-derived http(s) there, lower risk).
+- **Resolution:** ✅ FIXED — New `utils/webLink.ts` `openWebLink()` accepts only `http(s)://`; `MessageContent.handleOpenUrl` uses it, and `MessageAttachment.handleDownloadFile` falls back to `Linking.openURL` only for an http(s) URI. Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageContent.test.tsx` (a phone-number link opens nothing), `resources/views/mobapp/tests/module/employee/messages/utils/webLink.test.ts`. Failed before the change: "with the old handleOpenUrl restored in MessageContent (mutation): 'Expected number of calls: 0 / Received number of calls: 1' (3 of 4 failed); and..."; passes now.
+
+#### Finding #55
+
+- **Finding:** Error handling — a failed delete is not rolled back in the thread views, the count or the replies cache (v1 #17 reopened in part)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L1880)
+- **Line:** 1880-1994, 1998-2046, 2114-2129; `hooks/useChatRoom.ts:1780-1840`
+- **Issue:** `deleteMessage` returns `false` and restores only the room list, while `handleDeleteMessage`, `handleDeleteThreadReply` and `handleDeleteRootFromThread` first mutate `threadRepliesMap`, `activeThreadMessage` and the root's count (`decrement_thread_count`) and then ignore the result. Input: delete a reply in an open thread while offline: the hook alerts "Could not delete message", but the reply vanished from the thread and the root shows N-1 while the server still has it until the thread is reopened. Edit and pin use the returned boolean to undo; delete was missed. A failed thread open is also only `console.warn`ed (:2187, :2276) and `ThreadModal.tsx:969-974` then shows "No replies in this thread yet".
+- **Recommendation:** use the result of `deleteMessage` as the edit and pin handlers do and extract one `patchThreadMessage(id, patch)` helper to replace the five near-identical patch blocks (:799-816, :919-957, :1972-1984, :2060-2102, :2288-2325); show an error state on a failed thread open. Rule: coding-standards.md (DRY).
+- **Resolution:** ✅ FIXED — Delete handlers use `deleteMessage`'s boolean and undo the thread views and the root count on failure; one `patchThreadMessage` replaces four patch blocks; a failed thread open sets `threadLoadFailedId` and `ThreadModal` shows 'Could not load this thread. Tap to retry'. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useThreadViews.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/ThreadModal.test.tsx`. Failed before the change: "Cannot find module './useThreadViews''; ThreadModal on HEAD: 'Received: <Text ...>No replies in this thread yet. Send a message below to start the..."; passes now.
+
+#### Finding #56
+
+- **Finding:** Correctness — the "NEW MESSAGES" divider appears above the user's own just-sent message
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L2610)
+- **Line:** 2610-2617, 2687, 324; `hooks/useChatRoom.ts:613, 921`
+- **Issue:** `firstUnreadMsgId = messages.find(m => m.id > initialLastReadId)` has no `!m.isSent` filter and `initialLastReadId` is captured once at open and never advanced. Input: open a fully read conversation (last read N) and send a message: after `send_done` its id is above N and the red NEW MESSAGES pill renders above the sender's own message and stays.
+- **Recommendation:** skip own messages (`!m.isSent`) when choosing `firstUnreadMsgId`, or compute it once when the first page lands and keep it in a ref.
+- **Resolution:** ✅ FIXED — New `utils/firstUnreadMessage.ts` skips the user's own messages when placing the 'NEW MESSAGES' divider. Tests: `resources/views/mobapp/tests/module/employee/messages/utils/firstUnreadMessage.test.ts`. Failed before the change: "Cannot find module './firstUnreadMessage'' (old inline `messages.find(m => m.id > initialLastReadId)` returned the own message 12 for [10, 11, 12(s..."; passes now.
+
+#### Finding #57
+
+- **Finding:** Performance — the row `React.memo` comparator is defeated, so every mounted row re-renders on each event
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L156)
+- **Line:** 156-185; sources at :2376, :3178, :3285, :3342
+- **Issue:** the comparator compares `onSelectPinnedMessage`, `onPressChannelLink`, `onPressMessageLink` and `knownChannels` by identity (:177-180), and their sources depend on changing state (`handleSelectPinnedMessage` on `[.., pinnedMessages, messages]`, `handlePressChannelLink` on `conversations`, `handlePressMessageLink` on `messages, conversations, activeThreadMessage, actionTargetMessage`, `knownChannels={conversations}`). A new message, reaction, edit, read flip, upload tick or any other conversation's unread update gives all of them new identities, so the outer comparator returns false, the inner `MessageRow` memo also fails and every mounted row (window size 11, at least 15) re-renders (traced; render counts not measured).
+- **Recommendation:** read these callbacks through refs (as `invertedRowsRef` already does) or make them stable, and compare `knownChannels` by length or content.
+- **Resolution:** ✅ FIXED (traced) — `renderItem` passes steady props to the row memo: `useLatestCallback` for the three press handlers and `useStableValue(conversations, sameKnownChannels)` for `knownChannels` (`hooks/useStableReferences.ts`). Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useStableReferences.test.tsx` (identity stays stable, the newest function is always called); the row render count itself could not be measured without rendering the screen.
+
+#### Finding #58
+
+- **Finding:** Correctness — an archived conversation's composer toolbar ignores read-only and a GIF tap posts
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx#L2317)
+- **Line:** 2317-2480; `pages/ConversationScreen.tsx:1778-1806, 1075, 3748-3749`
+- **Issue:** for an archived conversation the screen passes `disabled` / `isReadOnlyConversation`, the placeholder says "Sending messages is disabled" and Send and mic are disabled, but the `+` (:2317-2326), GIF (:2406-2433), emoji and `@` (:2462-2468) buttons never read `disabled` / `isReadOnly`: the drawer opens, tapping a GIF calls `handleSelectGif`, which guards only `isAnnouncementReadOnly` (:1782) and calls `sendMessage('', [gif])`, and `SendMessageHandler` has no archive check (grep "archiv" in `app/Handlers/Messages` returns nothing), so the post lands in the archived channel with no error.
+- **Recommendation:** disable or hide `+`, GIF, emoji and `@` when `disabled || isReadOnly` in `MessageInputBar`, and return early from `handleSelectGif` when the conversation is read-only (whether the server should refuse is listed under INFO).
+- **Resolution:** ✅ FIXED — `MessageInputBar` disables and dims the '+', GIF, emoji and '@' buttons when `disabled || isReadOnly`; `ConversationScreen.handleSelectGif` returns early on `isConversationReadOnly` (traced: the screen cannot be rendered). Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageInputBar.test.tsx` (toolbar). Failed before the change: "expect(onToggleDrawer).not.toHaveBeenCalled() Received number of calls: 3 ('menu','gif','emoji')"; passes now.
+
+#### Finding #59
+
+- **Finding:** Correctness — the long-press action sheet offers server-bound actions on unsent messages (id 0)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageActionModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageActionModal.tsx#L317)
+- **Line:** 317-382, 835, 940, 192-210; `components/MessageRow.tsx:239-244`
+- **Issue:** an optimistic message has `id: 0` (`useChatRoom.ts:1387`) and `pending` / `failed`; `MessageRow.handleLongPress` opens the sheet for any message (swipe and tap are guarded at :188 and :214) and only Retry is gated on `failed`. "Copy Message Link" on a pending or failed message copies `hrms://channel/<conv>/message/0` (a silent dead link); Pin, React, Edit and Delete send requests for `…/messages/0…` and fail with 404; a reaction on id 0 resolves `messages.find(m => Number(m.id) === 0)` and targets the first pending message when several are pending; Edit on a failed message has `editingMessage.id` 0 (falsy in `handleSend`) and is re-sent as a new message while the failed bubble stays.
+- **Recommendation:** when `message.pending || message.failed` show only Retry, Copy and local Delete, and hide link, pin, forward, react, thread and edit.
+- **Resolution:** ✅ FIXED (equivalent change) — `MessageActionModal` hides reaction, Reply, Thread, Pin, Forward, Edit, Download, Copy Link and Seen-by for a pending or failed message (Retry, Copy and Delete stay), and `handleDeleteMessage` asks 'This message was not sent. Delete it?' and drops an unsent message locally with no request. The bubble is hidden by `clientId` through `hooks/useDiscardedUnsentMessages.ts` because `useChatRoom` has no discard function; the failed entry stays in the hook's pending list until the screen unmounts (a `discardUnsentMessage` in `useChatRoom` would remove it for real). Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageActionModal.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/hooks/useDiscardedUnsentMessages.test.tsx`. Failed before the change: "Cannot find module './useDiscardedUnsentMessages'"; passes now.
+
+#### Finding #60
+
+- **Finding:** Bug prevention — the search modal re-applies the opening channel filter on every parent render, and its "load more" has no stale-response guard
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessagesSearchModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessagesSearchModal.tsx#L99)
+- **Line:** 99-113, 596-630
+- **Issue:** (a) `if (visible && !prevVisibleRef.current) { …; return () => clearTimeout(timer); }` returns before `prevVisibleRef.current = visible` runs, so the ref stays false while the modal is open, and the deps include `initialChannel`, which `ConversationScreen.tsx:4015-4027` passes as a fresh object literal on every render: any re-render while search is open (a new message, typing, a read receipt) re-runs the effect and `setChannelFilter(initialChannel)` re-adds the pill the user removed (**executed** in `react-test-renderer`, React 19.2.3: after the user removed the pill `channelFilter = null`, after one parent re-render it is the channel again). (b) The first search effect has an `isMounted` guard but `handleLoadMore` does not: with page 2 of "report" in flight and the query edited to "reports", the old page-2 response appends the old results to the new list, or (arriving between the debounce and the new response) leaves `setPage(2)` / `setHasMore(old)` so the next load-more skips page 2 of the new query.
+- **Recommendation:** set `prevVisibleRef.current = visible` before the early return (or depend on `visible` only and read `initialChannel` through a ref); capture a request token per search and per load-more, ignore stale responses and derive `nextPage` from the response.
+- **Resolution:** ✅ FIXED — `MessagesSearchModal` applies the opening channel and query only when `visible` turns true (read through a ref), a `searchTokenRef` makes stale first-page and load-more responses ignored, and `nextPage` comes from the response's pagination. Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessagesSearchModal.test.tsx`. Failed before the change: "expect(screen.queryByLabelText('Remove channel filter')).toBeNull() received the pill View; expect(screen.queryByText('stale page two row')).toBeNu..."; passes now.
+
+#### Finding #61
+
+- **Finding:** Error handling — API methods swallow errors and return empty data, so failures show as "no results" or as a false success
+- **File:** [`resources/views/mobapp/src/module/employee/messages/services/messages.api.ts`](resources/views/mobapp/src/module/employee/messages/services/messages.api.ts#L599)
+- **Line:** 599-613, 1145-1148, 1131-1148; consumers `components/MessagesSearchModal.tsx:555-587, 604-629, 693-731`, `ManageChannelModal.tsx:144-172, 834-843, 1309-1324`, `GroupDetailsDrawer.tsx:263-265`, `CreateChannelModal.tsx:155-157, 655-665`, `NewChatModal.tsx:74-76`, `MessagesMoreScreen.tsx:84-109`, `contexts/MessagesContext.tsx:251-257`
+- **Issue:** `searchMessages` catches every error and returns empty results with `has_more: false` (both callers' `.catch` handlers are dead code), `getChannelJoinRequests` returns `[]`, and `getConversation`, `getMessageDetail`, `joinChannel` and `getEmployeeProfile` return null: offline, search shows "No matching results"; a failed page 2 ends the results silently; an admin sees "No pending join requests"; a failed members load shows "No members found in this channel"; a failed colleagues load shows "All workspace colleagues are already members"; `markAllAsRead` swallows its failure (`.catch(() => {})`) and the More screen still alerts "All unread badges have been cleared"; `handleOpenUserResult` closes the modal first and on a `createConversation` failure only `console.warn`s, so tapping a colleague does nothing. The same class as v1 #17, fixed there only for thread, edit and delete.
+- **Recommendation:** rethrow in `searchMessages` and `getChannelJoinRequests` (as `searchMentions` does), expose an error state with Retry in each consumer, open the DM before `handleClose()` or alert on failure, and make `markAllAsRead` report its result.
+- **Resolution:** ✅ FIXED — `searchMessages`, `getChannelJoinRequests`, `markAllAsRead` and `updateConversation` rethrow (`messages.api.ts`), and the consumers show the failure: `MessagesSearchModal` (error and Retry, never 'No matching results'; a DM that cannot be opened alerts), `ManageChannelModal`, `GroupDetailsDrawer`, `CreateChannelModal`, `NewChatModal` (error and Retry), `MessagesContext.markAllAsRead` (resolves false and restores the badges) and `MessagesMoreScreen` ('Could Not Mark as Read'). Tests: `resources/views/mobapp/tests/module/employee/messages/services/messages.api.test.ts`, `resources/views/mobapp/tests/module/employee/messages/components/MessagesSearchModal.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/contexts/MessagesContext.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesMoreScreen.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/ManageChannelModal.test.tsx`, `GroupDetailsDrawer.test.tsx`, `CreateChannelModal.test.tsx`, `NewChatModal.test.tsx`. Failed before the change: "Expected: false / Received: undefined' (and Expected: true / Received: undefined)"; passes now.
+
+#### Finding #62
+
+- **Finding:** Correctness — "Share" shares nothing on Android
+- **File:** [`resources/views/mobapp/src/utils/mediaSave.ts`](resources/views/mobapp/src/utils/mediaSave.ts#L120)
+- **Line:** 120-123, 152, 163-166, 178-181, 212-215; used by `ImageViewerModal.tsx:122`, `VideoPlayerModal.tsx:195`, `MessageActionModal.tsx:277`
+- **Issue:** every share path is `Share.share({ url: localUri, title })`, and React Native's Android branch (`Libraries/Share/Share.js:102-117`) builds `{ title, message }` and drops `url`, so the chooser opens with an empty payload and no error, for the "Share" action and the "Share to App" fallback ("Save to Gallery" is unaffected). Traced against the RN source; not run on a device.
+- **Recommendation:** use `expo-sharing` (`Sharing.shareAsync(localUri)`) instead of `url`.
+- **Resolution:** ✅ FIXED — `mediaSave.ts` `shareFile()` shares a local file with `expo-sharing` (`Sharing.shareAsync`) and a remote link with `Share.share({message, title})`; the five former `Share.share({ url })` sites use it. `expo-sharing ~57.0.23` is a new runtime dependency (the install also bumped `@expo/config-plugins` 57.0.9 to 57.0.10 and `@expo/require-utils` 57.0.5 to 57.0.6 in the lock file). Tests: `resources/views/mobapp/tests/utils/mediaSave.test.ts`. Failed before the change: "Expected number of calls: 1 Received number of calls: 0' (shareAsync never called; old code used RN Share url) and 'TypeError: (0 , _mediaSave.buil..."; passes now.
+
+#### Finding #63
+
+- **Finding:** Performance — every read flush POSTs mark-as-read twice and broadcasts twice
+- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L770)
+- **Line:** 770-784 (`reportRead`); `contexts/MessagesContext.tsx:228-249` (the API call at :248)
+- **Issue:** `reportRead` calls `messagesApi.markAsRead(...)` and then `markConversationAsRead(...)`, which calls `messagesApi.markAsRead(...)` again (and the `hasNewer` branch does the same after its `.then`); the server is advance-only but on every call re-runs the remaining-unread count and re-broadcasts `UnreadCountUpdated` (only `MessagesRead` is guarded by `$advanced`). **Executed** (real `MessagesProvider` and hook): one flush → `markAsRead` calls `[[5,25],[5,25]]`, every 600 ms of scrolling; `useChatRoom.test.tsx` mocks the context, so its `toHaveBeenCalledTimes(1)` cannot see the second POST.
+- **Recommendation:** have `reportRead` call only `markConversationAsRead` and pass `remaining` from the API result (or make the context method local-only and keep the API call in one place; "Mark as read" in `MessagesScreen` then needs its own call).
+- **Resolution:** ✅ FIXED — One request per read flush: `reportRead` sends a single `markAsRead` and calls `markConversationAsRead(id, target, remaining|0)`, which posts only when no remaining count is given. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.markRead.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/contexts/MessagesContext.test.tsx`. Failed before the change: "markAsRead calls [[5,25],[5,25]] (real provider, double call re-created) and 'expect(markAsRead).not.toHaveBeenCalled() Received number of calls: 1"; passes now.
+
+#### Finding #64
+
+- **Finding:** Correctness — the inbox preview rewrites ordinary text into "Sent a file / photo / video / voice message" (the v1 #18 class)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/utils/messagePreview.ts`](resources/views/mobapp/src/module/employee/messages/utils/messagePreview.ts#L97)
+- **Line:** 97-135; `components/ConversationListItem.tsx:40`
+- **Issue:** `startsWith('photo:'|'image:'|'video:'|'audio:'|'voice:'|'file:'|'document:')` and `endsWith('.gif'|'.mp4'|'.mov')` replace the user's text with a placeholder, but the backend never sends those prefixes (it sends only "Sent a photo": `GetConversationsQuery.php:209`, `SendMessageHandler.php:338`, `DeleteMessageHandler.php:143`). **Executed:** "File: Q3 budget is due Friday" shows as "Sent a file"; "Video: you should watch this" as "Sent a video"; "please send scan.mov" as "Sent a video". `messagePreview.test.ts` covers only `hasDirectMessageHistory`.
+- **Recommendation:** delete the prefix and suffix branches, keep the exact placeholders and add tests.
+- **Resolution:** ✅ FIXED — `messagePreview.ts`: the `startsWith('photo:' ...)` and `endsWith('.gif' ...)` branches are deleted; only whole-text placeholders and attachment-only messages produce 'Sent a ...'. Tests: `resources/views/mobapp/tests/module/employee/messages/utils/messagePreview.test.ts`. Failed before the change: "Expected: 'File: Q3 budget is due Friday' Received: 'Sent a file"; passes now.
+
+#### Finding #65
+
+- **Finding:** Correctness — the markdown tokenizer eats mid-word underscores, asterisks and tildes
+- **File:** [`resources/views/mobapp/src/module/employee/messages/utils/markdownFormatter.ts`](resources/views/mobapp/src/module/employee/messages/utils/markdownFormatter.ts#L144)
+- **Line:** 144 (`TOKEN_REGEX`), 150-269; used at `components/MessageContent.tsx:277-278`
+- **Issue:** `_{1,2}[^_\n]+_{1,2}`, `\*{1,2}…` and `~{1,2}…` have no word-boundary condition. **Executed:** "open Q3_budget_final.xlsx" renders "Q3" + italic "budget" + "final.xlsx" (the file shown as "Q3budgetfinal.xlsx"); "my emp_id is john_doe_01" italicises "id is john"; "5 * 3 * 2" bolds " 3 "; "~/Documents and ~/Desktop" strikes through text. Stored text is intact; URLs are separate segments.
+- **Recommendation:** require a non-word character or line edge before the opening marker and after the closing one (for example `(?<![\w])_…_(?![\w])`, or a captured prefix group if lookbehind support is a concern).
+- **Resolution:** ✅ FIXED — `markdownFormatter.ts` `TOKEN_REGEX`: `*`, `_` and `~` need no letter or digit outside the marker and a non-space just inside it. Tests: `resources/views/mobapp/tests/module/employee/messages/utils/markdownFormatter.test.ts` (`Q3_budget_final.xlsx`, `john_doe_01`, `5 * 3 * 2`, `~/Documents`, `*bold*text`, `café_au_lait`). Failed before the change: "Expected 'plain:open Q3_budget_final.xlsx' Received 'plain:open Q3','italic:budget','plain:final.xlsx"; passes now.
+
+#### Finding #66
+
+- **Finding:** Reliability — a failed channel authorization leaves a room or the user channel permanently silent
+- **File:** [`resources/views/mobapp/src/services/realtime/echo.ts`](resources/views/mobapp/src/services/realtime/echo.ts#L193)
+- **Line:** 193-203, 33-64
+- **Issue:** the auth `customHandler` calls `callback(err, null)` on any failure; in pusher-js 8.6.0 (RN build) `Channel.subscribe()` on an auth error sets `subscriptionPending = false`, emits `pusher:subscription_error` and does not retry until the next socket (re)connect, and neither `echo.ts` nor `useChatRoom.ts` binds `pusher:subscription_error` or re-subscribes an existing channel. A transient 500, timeout or network blip on `POST api/broadcasting/auth/{connection}` while the socket stays connected kills live messages, typing, reactions and unread updates for that room or for `user.{id}` with no signal; the v1 #20 recovery covers init and reconnect, not this. Traced against the pusher-js source; not run against a real server.
+- **Recommendation:** let `EchoChannel` listen for `pusher:subscription_error` and retry with backoff (re-calling `pusher.subscribe`), and trigger a resync once subscribed.
+- **Resolution:** ✅ FIXED — `EchoChannel` binds `pusher:subscription_error` and retries with a backoff of 2 s doubling to 30 s, at most 6 attempts, reset on socket connect; a retried success runs the reconnect listeners so a screen can fetch what it missed. Tests: `resources/views/mobapp/tests/services/realtime/echo.test.ts`. Failed before the change: "Expected number of calls: 2 / Received number of calls: 1' (no re-subscribe)"; passes now.
+
+#### Finding #67
+
+- **Finding:** Correctness — `CustomizeGroupModal` wipes the typed name and selection whenever the parent re-renders
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/CustomizeGroupModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/CustomizeGroupModal.tsx#L79)
+- **Line:** 79-125; `pages/MessagesScreen.tsx:1506-1509`
+- **Issue:** the effect depends on `onClose`, which is a fresh inline arrow on every `MessagesScreen` render, and `MessagesScreen` re-renders on every context change including each `.UnreadCountUpdated` event (`MessagesContext.tsx:283-358`); each re-run schedules `setName(existingGroup.name || '')` and `setSelectedIds(...)` (or clears both for a new section). Input: the user types "Ops" and selects 2 channels; one message arrives anywhere in the workspace and the form resets.
+- **Recommendation:** remove `onClose` from the deps (use a ref) or key the reset on `visible` and `existingGroup?.id` only.
+- **Resolution:** ✅ FIXED — `CustomizeGroupModal` reset effect depends on `[visible, existingGroup?.id]` only; `onClose` and `existingGroup` are read through refs. Tests: `resources/views/mobapp/tests/module/employee/messages/components/CustomizeGroupModal.test.tsx`. Failed before the change: "Expected: 'Ops' Received:"; passes now.
+
+#### Finding #68
+
+- **Finding:** Correctness — `getEmployeeProfile` on the client always returns `null`
+- **File:** [`resources/views/mobapp/src/module/employee/messages/services/messages.api.ts`](resources/views/mobapp/src/module/employee/messages/services/messages.api.ts#L1021)
+- **Line:** 1021-1026; `components/ColleagueProfileDrawer.tsx:127-160`
+- **Issue:** `http.get` already returns the body `{success, data:{profile}}`; the code takes `(res).data || res` (the profile) and then `payload?.data`, which is `undefined`. **Executed:** `getEmployeeProfile -> null`, so the drawer's `.then(data => data && setProfileData(data))` never fires, and reporting manager and employment status never appear. Latent: if this is fixed, the effect falls back to `conversation.id` as an account id (:140-143) and shows another employee's profile, and the fetch has no stale-response guard.
+- **Recommendation:** `return res?.data ?? null`, drop the `conversation.id` fallback and ignore stale responses.
+- **Resolution:** ✅ FIXED — `getEmployeeProfile` returns the server's `data` object; `ColleagueProfileDrawer` drops the `conversation.id` fallback, ignores replies for a previously opened colleague, clears `profileData` when another colleague opens, and shows reporting manager, employment status, email and phone only when the server sent them (the invented `@zentrelink.com` email is gone). Tests: `resources/views/mobapp/tests/module/employee/messages/services/messages.api.test.ts`, `resources/views/mobapp/tests/module/employee/messages/components/ColleagueProfileDrawer.test.tsx`. Failed before the change: "Received: null' for the full profile body"; passes now.
+
+#### Finding #69
+
+- **Finding:** Correctness — Manage Channel loads only the first 30 members
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx#L144)
+- **Line:** 144-158, 378-383, 858, 1428; `app/Http/Controllers/employee/MessagesController.php:1741-1742, 1867-1874`
+- **Issue:** `getConversationMembers(channel.id)` sends no `page` or `limit`, the server defaults to 30 and `hasMore` is ignored; `member_count` is only sent for system channels. A 45-member channel shows "Members (30)", admins and members past row 30 cannot be removed or promoted, and the "Add members" exclusion set is built from those 30, so existing members are offered as addable (the server dedupes silently). The add list renders every colleague in a `ScrollView` `.map`, whereas `GroupDetailsDrawer` paginates. Rule: performance.md ("Data Pagination … more than a few dozen records").
+- **Recommendation:** reuse the `GroupDetailsDrawer` paging, use `totalMembers` and fetch ids for the exclusion set.
+- **Resolution:** ✅ FIXED — `ManageChannelModal` uses `useChannelMembers` (page and limit 30, `hasMore`, the server total) with 'Load more members', 'Members (N)' from the server total, an add-list exclusion built from every member id (pages of 100) and a virtualized add list. Tests: `resources/views/mobapp/tests/module/employee/messages/components/ManageChannelModal.test.tsx` (a 45-member channel). Failed before the change: "Unable to find an element with text: Members (45)"; passes now.
+
+#### Finding #70
+
+- **Finding:** Correctness — `GroupDetailsDrawer` member search and pagination state go wrong
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/GroupDetailsDrawer.tsx`](resources/views/mobapp/src/module/employee/messages/components/GroupDetailsDrawer.tsx#L236)
+- **Line:** 236-239, 323-334, 366-387
+- **Issue:** `fetchMembers` returns early when `isFetchingRef` is set, but the search effect has already stored `prevSearchRef = 'ab'`: typing "a" then "ab" while the first request is in flight drops the second fetch for good and the list keeps showing "a" results. After Add, `handleSaveAddMembers` replaces the list with the unfiltered first 30 and never resets `memberPage` or `hasMoreMembers`, so a user who had scrolled to page 2 requests page 3 and members 31-60 are skipped; the add-candidate exclusion again uses the partial list (:343).
+- **Recommendation:** use a request counter and ignore stale replies instead of a drop-if-busy guard, and reset the paging state after Add.
+- **Resolution:** ✅ FIXED — `GroupDetailsDrawer` member list uses `useChannelMembers` (a request counter and stale-reply guard replace the drop-if-busy flag; adding members reloads page 1 and resets paging). Tests: `resources/views/mobapp/tests/module/employee/messages/components/GroupDetailsDrawer.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/hooks/useChannelMembers.test.tsx`. Failed before the change: "Expected: 40, ObjectContaining {'search': 'ab'} (second fetch dropped)"; passes now.
+
+#### Finding #71
+
+- **Finding:** Correctness — the Message Requests screen classifies conversations by the word "external"
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/MessageRequestsScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/MessageRequestsScreen.tsx#L186)
+- **Line:** 186-194; `pages/MessagesMoreScreen.tsx:57-64`; `GetConversationsQuery.php:294`
+- **Issue:** for a DM, `role` is the colleague's job title, so anyone titled "External Relations Officer" lands in Requests with Accept / Decline; the More screen counts them without the archived filter while the DM chip and `MessagesScreen` count do not use this rule, so the counts disagree. A new text-based inbox classification of the v1 #18 class; Accept and Decline are local-only by design (spec G-4 / Q-7) and `refreshSilently` reverts them on focus.
+- **Recommendation:** drop the title test and decide requests from structure once the backend defines them.
+- **Resolution:** ✅ FIXED — New `utils/messageRequests.ts` `isMessageRequest` (structure only; the job-title 'external' test is deleted) is used by the Message Requests screen, the More screen and the inbox, so the three counts agree. Tests: `resources/views/mobapp/tests/module/employee/messages/utils/messageRequests.test.ts`, `resources/views/mobapp/tests/module/employee/messages/pages/MessageRequestsScreen.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesMoreScreen.test.tsx`. Failed before the change: "MessageRequestsScreen 'expect(received).toBeNull() Received: <Text>Dan Reyes</Text>"; passes now.
+
+#### Finding #72
+
+- **Finding:** Data integrity — saving a section whose name already exists replaces that section's channels on the server
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/MessagesScreen.tsx#L603)
+- **Line:** 603-609; `app/Handlers/Messages/SaveChannelSectionHandler.php:35-60, 86-90`
+- **Issue:** a new section posts `id: undefined` and the handler falls back to matching an existing section by name; items not in the new list are then soft-deleted. Input: a section "Ops" holds channels A and B and the user creates a new "Ops" with C: the server's "Ops" now holds only C while locally there are two "Ops" sections; after a refresh A and B are back in the default list, silently.
+- **Recommendation:** reject or auto-suffix a duplicate name on the client and return 409 from the handler.
+- **Resolution:** ✅ FIXED — Server: `SaveChannelSectionHandler` answers 409 when a new section's name is already used by the caller (the 'match by the new name' fallback is gone; id and `original_name` renames still work). Client: `handleSaveCustomGroup` refuses a duplicate local name before calling the API and restores the sections on a 409. Tests: `ChannelSectionsTest`, `resources/views/mobapp/tests/module/employee/messages/pages/MessagesScreen.test.tsx`. Failed before the change: "Expected response status code [409] but received 200."; passes now.
+
+#### Finding #73
+
+- **Finding:** Fabricated data — invented job titles and departments for colleagues without them
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/DirectMessageHoldModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/DirectMessageHoldModal.tsx#L67)
+- **Line:** 67-68, 174; `app/Queries/Messages/SearchMentionsQuery.php:112-113`; `GetConversationsQuery.php:186-187`
+- **Issue:** `colleagueJob = conversation.role || conversation.jobTitle || 'Team Member'` and `colleagueDept = conversation.department || 'Operations'` render "Team Member • Operations", and the server defaults `unit ?? 'Operations'`, `position ?? 'Staff'`, so an employee with no unit or position is shown in "Operations" in suggestions and DM headers. The same principle as v1 #24.
+- **Recommendation:** return null or empty and render nothing or "Not set".
+- **Resolution:** ✅ FIXED — Client `DirectMessageHoldModal` shows only a real role or job title and department (no 'Team Member' / 'Operations'); server `SearchMentionsQuery` returns `null` and `GetConversationsQuery` returns `''` for a missing unit or position. Tests: `MentionSearchVisibilityTest`, `ConversationListFieldsTest`, `resources/views/mobapp/tests/module/employee/messages/components/HoldModals.test.tsx`. Failed before the change: "Received: <Text>Team Member • Operations</Text>"; passes now.
+
+#### Finding #74
+
+- **Finding:** Performance — the Active Team strip mounts the whole directory and every open fetches it unpaged
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ActiveStoriesRow.tsx`](resources/views/mobapp/src/module/employee/messages/components/ActiveStoriesRow.tsx#L43)
+- **Line:** 43-45, 79-127; `pages/MessagesScreen.tsx:755-766, 842, 1019-1020`; `contexts/MessagesContext.tsx:84-98, 464-466`
+- **Issue:** the initial load and every pull-to-refresh fetch the whole unpaged `GET /recipients`, `storiesList` is not sliced and `ActiveStoriesRow` renders all of it in a plain horizontal `ScrollView`: with 500 employees, 500 touchables, avatars and image fetches when Messages opens (the Direct tab slices to 10 at :742). Traced; not profiled. Rule: performance.md ("Virtual Scrolling … hundreds of items", "Data Pagination").
+- **Recommendation:** cap the strip (`slice(0, 20)`) or use a `FlatList`, and take colleagues from a paginated endpoint.
+- **Resolution:** ✅ FIXED — `ActiveStoriesRow` renders at most 20 tiles (`MAX_STRIP_TILES`). The unpaged `GET /recipients` fetch itself is unchanged (the report asked for the cap or a paginated endpoint; the cap is what was applied). Test: `resources/views/mobapp/tests/module/employee/messages/components/ActiveStoriesRow.test.tsx` (a 500-colleague directory mounts at most 20 tiles). Failed before the change: "expect(received).toBeLessThanOrEqual(expected) Expected: <= 20 Received: 500"; passes now.
+
+#### Finding #75
+
+- **Finding:** Performance — `AppTopHeader` fires an extra dashboard request on every mount and focus
+- **File:** [`resources/views/mobapp/src/components/dashboard/AppTopHeader.tsx`](resources/views/mobapp/src/components/dashboard/AppTopHeader.tsx#L57)
+- **Line:** 57
+- **Issue:** `useDashboard()` fetches `GET /api/employee/dashboard` on mount and again through `useFocusEffect` on every focus; the header is mounted in `(tabs)/_layout.tsx:291` and `messages/index.tsx:90`, and Home calls `useDashboard()` too, so cold start and every return from a pushed screen send 2 dashboard requests instead of 1 (opening Messages adds another). The result is only a name and avatar fallback behind `useAuth().user`, which `AuthContext` now fills with `profile`; pull-to-refresh on Home does not update the header's copy.
+- **Recommendation:** drop `useDashboard()` from the header and use `user` from `useAuth()` only.
+- **Resolution:** ✅ FIXED — `AppTopHeader` no longer calls `useDashboard()`: name and avatar come from `useAuth().user`. Tests: `resources/views/mobapp/tests/components/dashboard/AppTopHeader.test.tsx` (no dashboard request on render). Failed before the change: "`Expected number of calls: 0 Received number of calls: 1` and `Expected: 'Employee' Received: 'Dashboard Name'`"; passes now.
+
+#### Finding #76
+
+- **Finding:** Maintainability — large dead code left in the change
+- **File:** [`resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx`](resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx#L54)
+- **Line:** 54-129; `utils/markdownFormatter.ts` (whole); `(tabs)/_layout.tsx:308`; `AppTopHeader.tsx:27-28`; `hooks/use-container-width.ts`
+- **Issue:** the Notifications screen (about 450 lines) always renders `[]` (:35): `handleRefresh` (:54-64) fires a haptic and a 600 ms spinner and fetches nothing, so pull-to-refresh looks like it worked, and `handleMarkAllAsRead`, `handleNotificationPress`, `getNotificationIcon` (5 type styles), the counters and `AppNotification` can never run on real data; the tab is hidden with `href: null` but the route still resolves (for example `zentrelink://notifications`); `AppTopHeader` still declares `notificationCount` and `onPressNotifications`, never destructured. A reachability pass leaves 513 of 959 declaration lines of `markdownFormatter.ts` unreachable (getStyledSegments 284-352, serializeToMarkdown 357-387, parseMarkdownToRanges 620-693, updateRangesOnTextChange 698-791, the code-block helpers 802-1084 and others; about 520 lines with comments, no tests), plus `parseMessageDeepLink` (`mentionParser.ts:976`), `messageGrouping.ts:55-58` (a branch for ids in (1e12, 2e12) that optimistic items no longer have) and `use-container-width.ts` (no consumer).
+- **Recommendation:** remove the screen, route, types, the `'notifications'` tab identifier, the `module/employee/index.ts` export and the two dead header props until a notifications API exists (or reduce it to a static empty state without the refresh simulation), and delete the unreachable code listed above.
+- **Resolution:** ✅ FIXED (traced) — dead code deleted: 23 unreachable declarations in `markdownFormatter.ts` (about 600 lines), the Notifications screen (`module/employee/notifications/`), its route and tab, `hooks/use-container-width.ts`, their barrel exports and the dead `notificationCount` / `onPressNotifications` props of `AppTopHeader`. No test (dead-code removal has no behavior); proof: `tsc --noEmit` is clean and the jest suites pass.
+
+#### Finding #77
+
+- **Finding:** Security — `README.md` publishes the GIPHY key and says it is built in
+- **File:** [`resources/views/mobapp/README.md`](resources/views/mobapp/README.md#L24)
+- **Line:** 24
+- **Issue:** verified: "A public demo key (`sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh`) is already provided". After the v1 #46 fix `GifPickerPanel.tsx:47-51` has no fallback, so the key is not provided; a developer following the README gets "GIF search is not set up" and a personal developer key stays in the repo (`git grep` finds it only in `README.md:24`, also in branch history, commit `f2f826c`).
+- **Recommendation:** delete the sentence and the key, state that `EXPO_PUBLIC_GIPHY_API_KEY` is required, and rotate the key at GIPHY.
+- **Resolution:** ✅ FIXED — `README.md` no longer contains the GIPHY key: it says `EXPO_PUBLIC_GIPHY_API_KEY` is required and that the GIF button is hidden without it. The key is still in git history (commit f2f826c): rotating it at GIPHY is a manual step for you. No test (documentation only).
+
+#### Finding #78
+
+- **Finding:** Maintainability — the oversized files are unchanged and the same member-management handlers are duplicated (v1 #44, still open)
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ManageChannelModal.tsx)
+- **Line:** whole files (`ConversationScreen.tsx` 4,102 lines, `MessageInputBar.tsx` 2,732, `MessagesSearchModal.tsx` 2,545, `ManageChannelModal.tsx` 1,980, `GroupDetailsDrawer.tsx` 1,938, `MessagesScreen.tsx` 1,790)
+- **Issue:** not worse than recorded in size; new duplication that belongs with it: near-verbatim handlers in `ManageChannelModal` and `GroupDetailsDrawer` (role toggle `ManageChannelModal.tsx:460-527` vs `GroupDetailsDrawer.tsx:389-446`; add-members `361-422` vs `337-387`; remove member `424-458` vs `448-489`; leave `ChannelHoldModal` 143-193 vs `GroupDetailsDrawer` 491-536), and four disagreeing channel-permission definitions (Finding #48). Rule: coding-standards.md ("Never duplicate helper functions or logic").
+- **Recommendation:** extract `useChannelMembers(conversationId)` (fetch, paginate, search, add, remove, promote) and `getChannelPermissions(channel, userId)` (creator, co-admin, default), then split the large files by responsibility.
+- **Resolution:** ❌ NOT FIXED — partial. Done: `hooks/useChannelMembers.ts` (fetch, paging, debounced search with a request counter, add, remove, promote and demote) and `utils/channelPermissions.ts getChannelPermissions()` replace the duplicated member handlers and the four disagreeing permission definitions in `ManageChannelModal`, `GroupDetailsDrawer` and `ChannelHoldModal` (`GroupDetailsDrawer` 1,938 to 1,786 lines; `ManageChannelModal` 1,980 to 2,081 after the new photo upload, error states and virtualized add list; `MoveChannelSectionModal` -79/+22). Not done: splitting the oversized files (not safe to do blind) and the confirm-Alert flows for role toggle, remove and leave, which stay duplicated because their texts and callbacks differ. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useChannelMembers.test.tsx` (13), `resources/views/mobapp/tests/module/employee/messages/utils/channelPermissions.test.ts` (10).
+
+#### Finding #79
+
+- **Finding:** Testing — mobile fixes, rollbacks and flows ship without tests
+- **File:** [`resources/views/mobapp/src/module/employee/messages`](resources/views/mobapp/src/module/employee/messages)
+- **Line:** whole module (absence); the only tests are `hooks/useChatRoom.test.tsx` (6) and `utils/messagePreview.test.ts` (4)
+- **Issue:** nothing covers `.MessageSent` own-echo matching (v1 #37), retry with the reused `clientId` and upload stash (#39), the pinned-id cache, its queue and logout clear (#38, a pure module), `buildSafeFilename` (#22, not exported), `createMessageDeepLinkRegex` (#36), the `restore_messages` rollbacks for edit, delete, pin and ticket, reducer merge and `newer_done` ordering, the `MessagesContext` fetch and unread logic, `ForwardMessageModal` sending attachments (#42), the approve flow alerting without a chat line, the stale-thread guard (#40), the scroll-retry bound (#41), a `MessageContent` flip between empty and non-empty text (#25), `hasCustomProfile`, the `AuthContext` profile merge, the `useTimeInOut` change, `ApplicationDetailModal`'s missing-field states (a test would have caught Finding #17), the composer (4,000-character rule, search modifiers, `serializeBlocksToMarkdown`) and every management flow; hook test 6 mocks the context and only reads to the window end, so it passes with Findings #12 and #63 present. Rule: testing.md ("A component or page: Component test: the states the spec defines, the main interaction, and role-based visibility"; "A bug fix: regression test").
+- **Recommendation:** add jest-expo tests, starting with the pure parts (regexes, preview, tokenizer, pinned cache, filename) and the hook rollbacks with the API mocked.
+- **Resolution:** ❌ NOT FIXED — partial. Eight new test files (66 tests, no production code changed), each mutation-checked by reverting a production line: `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.send.test.tsx`, `useChatRoom.ticketStatus.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/ForwardMessageModal.test.tsx`, `MessageContent.hooks.test.tsx`, `MessageInputBar.limit.test.tsx`, `MessagesSearchModal.modifiers.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/utils/markdownFormatter.serialize.test.ts`, `resources/views/mobapp/tests/module/employee/attendance/hooks/useTimeInOut.test.tsx`. With the tests added for the other findings this covers the report's list except the stale-thread guard (v1 #40) and the scroll-retry bound (v1 #41), which live in the 4,100-line `ConversationScreen` that cannot be rendered in a test.
+
+### LOW
+
+#### Finding #80
+
+- **Finding:** Configuration — `.env.example` documents keys nothing reads, and the timezone test fails if one is set
+- **File:** [`.env.example`](.env.example)
+- **Line:** `# DB_TIMEZONE=+08:00`, `MCP_INTERNAL_TOKEN=`; `tests/Unit/DatabaseTimezoneConfigTest.php:18-28`
+- **Suggestion:** after the v1 #15 fix `config/database.php` has no `timezone` key, so `DB_TIMEZONE` does nothing, and `MCP_INTERNAL_TOKEN` is referenced only in `.env.example` (AGENTS.md §3: never invent an env key). **Executed:** `DB_TIMEZONE=+08:00 vendor/bin/phpunit tests/Unit/DatabaseTimezoneConfigTest.php` fails with "null is identical to '+08:00'". Delete both keys and make test 1 assert `config('database.connections.mysql.timezone')` is null without an `env()` read.
+- **Resolution:** ✅ FIXED — `.env.example`: `# DB_TIMEZONE=+08:00` and `MCP_INTERNAL_TOKEN=` are deleted (nothing reads them). Test: `tests/Unit/DatabaseTimezoneConfigTest.php` asserts the mysql connection forces no session time zone and passes with `DB_TIMEZONE=+08:00` exported. Failed before the change: "DB_TIMEZONE=+08:00: 'Failed asserting that null is identical to '+08:00'."; passes now.
+
+#### Finding #81
+
+- **Finding:** Bug prevention — a double tap on "request to join" can return 500, and a join request can be resolved when it is no longer pending
+- **File:** [`app/Handlers/Messages/JoinChannelHandler.php`](app/Handlers/Messages/JoinChannelHandler.php#L55)
+- **Line:** 55-68; `app/Actions/Messages/ResolveJoinRequestAction.php:24-44`; `ApproveJoinRequestHandler.php:36-70`
+- **Suggestion:** (a) the approval branch does exists-then-insert on a table unique on `(conversation_id, account_id, status)`: two simultaneous first requests make the loser hit error 1062 and answer 500 (traced); absorb 1062 as `UpsertConversationMemberAction::insertRow` does. (b) **Executed:** approving a declined request adds the member (200) and declining an approved request returns 200 and flips the row to `declined` while the member row remains; only a creator or co-admin can do it and they can already add anyone, so there is no privilege gain, only an inconsistent audit state and opposite 200 answers for two admins resolving at once; update `… where status = 'pending'` and answer 409 when 0 rows change (the test `test_finding_5_approve_after_a_decline_and_decline_after_an_approve_both_work` asserts the current behavior as intended).
+- **Resolution:** ✅ FIXED — `JoinChannelHandler`: the pending request is a plain insert whose duplicate key (1062) is absorbed, so a double tap answers 'requested' and not 500; `ResolveJoinRequestAction::settle()` updates `where status = 'pending'` and throws 409 on 0 rows, used by `ApproveJoinRequestHandler` (claimed first, inside the transaction) and `DeclineJoinRequestHandler`. Tests: `JoinRequestRaceTest`. Failed before the change: "Expected response status code [200] but received 500."; passes now.
+
+#### Finding #82
+
+- **Finding:** Bug prevention — pin broadcasts before the commit, and neither toggle is locked or backed by a unique key
+- **File:** [`app/Handlers/Messages/TogglePinMessageHandler.php`](app/Handlers/Messages/TogglePinMessageHandler.php#L34)
+- **Line:** 34-85; `ToggleReactionHandler.php:55-81`
+- **Suggestion:** **executed:** in the pin handler `broadcast(MessagePinUpdated)` and the `RecordSystemEventAction` call run at transaction level 2 against a baseline of 1 (the reaction broadcast fires at level 1), contradicting the after-commit rule applied for v1 #10; both toggles read-then-write with no `lockForUpdate` and `message_reactions` has no unique `(message_id, account_id, emoji)`, so two concurrent identical toggles can insert two rows (traced) and the "Atomic Toggle" comment (`ToggleReactionHandler.php:50`) is inaccurate. Move the broadcast and system event to `DB::afterCommit`, lock the message row, add the unique index (16 + 1,020 bytes after the `utf8mb4_bin` migration) and absorb 1062.
+- **Resolution:** ✅ FIXED — `TogglePinMessageHandler` locks the message row and sends the pin event and the system event in `DB::afterCommit`; `ToggleReactionHandler` reads the message inside the transaction with `lockForUpdate` and absorbs a 1062; the new migration `2026_10_14_000001_add_unique_reaction_index_to_message_reactions_table.php` adds a unique `(message_id, account_id, emoji)` index and stops with a duplicate-group count instead of deleting anything. Tests: `PinAndReactionTest`, `MessageReactionsUniqueIndexMigrationTest`. Failed before the change: "Failed asserting that 2 is identical to 1.' (pin broadcast at level 2, baseline 1)"; passes now.
+
+#### Finding #83
+
+- **Finding:** Security — the YouTube branch of the link preview claims `youtube.com` for any URL containing a YouTube pattern
+- **File:** [`app/Queries/Messages/GetLinkPreviewQuery.php`](app/Queries/Messages/GetLinkPreviewQuery.php#L34)
+- **Line:** 34, 59
+- **Suggestion:** the regex runs on the whole URL, not the host: `https://evil.example/?u=youtube.com/watch?v=dQw4w9WgXcQ` yields a card with `domain: "youtube.com"` and a YouTube thumbnail whose tap target is evil.example. Match against the `parse_url` host (`youtube.com`, `www.youtube.com`, `m.youtube.com`, `youtu.be`) and set `domain` from the host.
+- **Resolution:** ✅ FIXED — `GetLinkPreviewQuery`: the YouTube card applies only to hosts in `YOUTUBE_HOSTS` (the host is checked before the pattern and the card's domain comes from the host). Tests: `LinkPreviewTest` (a URL that only mentions youtube.com, a look-alike host, a real YouTube URL). Failed before the change: "Unexpected request was recorded.' (oembed sent for https://evil.example/?u=youtube.com/...)"; passes now.
+
+#### Finding #84
+
+- **Finding:** Performance — no rate limit on `/link-preview` and `/upload`
+- **File:** [`routes/api/employee.php`](routes/api/employee.php#L80)
+- **Line:** 80-81
+- **Suggestion:** no `throttle` middleware anywhere in the messaging routes (only login has one); each distinct URL (cache key `md5(url)`) costs up to 4 hops × 4 s of a PHP worker plus a 24 h `cache` row and caches the degraded fallback card for 24 h after a transient failure. Add `->middleware('throttle:30,1')` to both routes and cache the fallback card for minutes only.
+- **Resolution:** ✅ FIXED — `routes/api/employee.php`: `throttle:30,1` on `POST /messages/upload` and `GET /messages/link-preview` (429 on the 31st request in a minute); `GetLinkPreviewQuery` caches a degraded fallback card for 300 s and a real preview for 86,400 s. Tests: `RouteThrottleTest`, `LinkPreviewTest`. Failed before the change: "Expected response status code [429] but received 200.' (link-preview) / 'received 422' (upload)"; passes now.
+
+#### Finding #85
+
+- **Finding:** Correctness — LIKE wildcards in user input match everything, and an array `q` answers 500 with raw exception text
+- **File:** [`app/Queries/Messages/SearchMessagesQuery.php`](app/Queries/Messages/SearchMessagesQuery.php#L238)
+- **Line:** 238-257, 443-451; `SearchMentionsQuery.php:84-88, 127, 150, 232`; `ParseSearchSyntaxAction.php:36`
+- **Suggestion:** **executed:** `q=_` and `q=%` match every visible message (21 of 21, none containing those characters) and every person in mention search (all values are bound, so no injection); `GET /search?q[]=x` returns 500 `{"message":"Array to string conversion"}` (the pattern v1 #28 removed elsewhere). Escape `\ % _` with `addcslashes($q, '\\%_')` and cast with `is_string` in `ParseSearchSyntaxAction::execute`.
+- **Resolution:** ✅ FIXED — LIKE wildcards are escaped (`addcslashes($q, '\\%_')`) in `SearchMessagesQuery` and `SearchMentionsQuery`, and `ParseSearchSyntaxAction` accepts `q` and `query` only as strings (array values are ignored), so `q[]=x` answers an empty 200 and not a 500 with exception text. Tests: `SearchWildcardTest`, `MentionSearchVisibilityTest`, `tests/Unit/ParseSearchSyntaxArrayTest.php`. Failed before the change: "Expected response status code [200] but received 500.' (`q[]=x`), underscore/percent/backslash searches returned arrays that differed from the sing..."; passes now.
+
+#### Finding #86
+
+- **Finding:** Correctness — the free-text `@First` fallback adds a second, different person to a mention
+- **File:** [`app/Actions/Messages/ResolveMentionsAction.php`](app/Actions/Messages/ResolveMentionsAction.php#L587)
+- **Line:** 587-639, merged at 50-76
+- **Suggestion:** **executed:** accounts "Maria Santos" (1) and "Maria Clara" (2); a structured mention targets Clara with text `@Maria Clara please review`; the result is `[Clara user_ids=[2], Santos user_ids=[1]]` because the regex stops at the first whitespace and `fullname LIKE %Maria% ->first()` picks an arbitrary Maria (a bare `@ma` resolves to the first account containing "ma"). Skip the text fallback for any `@name` span already covered by a structured user mention and require a unique match.
+- **Resolution:** ✅ FIXED — `ResolveMentionsAction`: text tokens inside a structured user mention's span are skipped, and the by-name fallback adds a user only for a unique exact nickname or full-name match (ambiguous or partial matches add nobody). Tests: `MentionFallbackTest` (6). Failed before the change: "6 of 7 tests red on the old code, first: 'a structured mention is not joined by another person with the same first name"; passes now.
+
+#### Finding #87
+
+- **Finding:** Correctness — the pinned list reports wrong `read` and `threadCount`
+- **File:** [`app/Queries/Messages/GetPinnedMessagesQuery.php`](app/Queries/Messages/GetPinnedMessagesQuery.php#L42)
+- **Line:** 42
+- **Suggestion:** **executed:** a pinned message I sent, read by another member and holding a reply, returns `read=false, threadCount=0` in the pinned list but `read=true, threadCount=1` in the main list, because the call passes `$maxOtherReadId = 0` and `$threadStat = null`. Compute `maxOtherReadId` (as `GetThreadRepliesQuery` does) and `threadStatsFor($ids)` once for the pinned page.
+- **Resolution:** ✅ FIXED — `GetPinnedMessagesQuery` computes `maxOtherReadId` (`GetMessagesQuery::maxOtherReadId()`) and `threadStatsFor()` once per page. Tests: `PinnedListFieldsTest` (same read flag and reply count as the main list; a fixed query count). Failed before the change: "the pinned list reported a message another member read as unread' (read=false, threadCount 0 vs 1)"; passes now.
+
+#### Finding #88
+
+- **Finding:** Performance — `select *` of the wide `vw_accounts_details` where a few columns are used
+- **File:** [`app/Queries/Messages/SearchMentionsQuery.php`](app/Queries/Messages/SearchMentionsQuery.php#L42)
+- **Line:** 42, 80-95; `SearchMessagesQuery.php:236-263`; `ResolveMentionsAction.php:106-112, 292, 627-633`
+- **Suggestion:** the view carries salary, TIN, SSS, PhilHealth, Pag-IBIG, bank account and passport, and each request runs `select * from vw_accounts_details where status = ?` to read id, name, position, unit and picture. Add `->select('id','fname','lname','nickname','fullname','position','unit','profile','pos_id','unit_id')` and use `Account::select('id','fname','lname','pic')` in `messageLinkMention`. Rule: performance.md ("Column Selectivity").
+- **Resolution:** ✅ FIXED — Narrow selects: `ResolveMentionsAction` (`EMPLOYEE_NAME_COLUMNS`, `LINKED_AUTHOR_COLUMNS`), `SearchMentionsQuery` and `SearchMessagesQuery` read the 10 columns they use of `vw_accounts_details`, never salary, tin, sss, philhealth, hdmf, bank or passport columns. Tests: `ResolveMentionsMembersTest`, `MentionSearchVisibilityTest`, `SearchHitsVisibilityTest`. Failed before the change: "'select * from `vw_accounts_details` where `status` != ? and (`fullname` LIKE ? ...' does not match PCRE pattern /^select\s+\*\s+from/i' and ''' en..."; passes now.
+
+#### Finding #89
+
+- **Finding:** Maintainability — dead and duplicated code in the backend messaging classes
+- **File:** [`app/Http/Controllers/employee/MessagesController.php`](app/Http/Controllers/employee/MessagesController.php#L34)
+- **Line:** 34-38 (imports of `AppOvertime`, `AppLeave`, `AppOfficialBusinessTrip`, `AppChangeShift`, `AppAdjustment` never used), 2100, 2105 (`Schema::hasTable('message_reactions'|'message_attachments')` inside the chunk loop); `GetMessagesQuery.php:114, 793-802, 448`
+- **Suggestion:** both tables are created by master migrations, so the guards add two metadata queries per 500-message chunk and would silently skip cleanup if they ever returned false (v1 #27 rationale); `GetMessagesQuery` has an unused `$minBeforeId`, an unused `formatMessageTime`, and a `$msg->updated_at->diffInSeconds($msg->created_at) > 1` branch that is never true under Carbon 3 (**executed**: `diffInSeconds` returned -300 for a later `updated_at`); `stripCodeBlocks` exists in two diverging copies (`GetConversationsQuery.php:314`, `GetMessagesQuery.php:804`) and the avatar URL logic three times (`resolveAvatarUrl` against `asset('assets/images/profile/'.$pic)` in `GetConversationsQuery.php:188, 299` and `SearchMentionsQuery.php:114`). Delete the dead lines and imports and use `resolveAvatarUrl` everywhere (rule: duplicate-prevention.md rule 3).
+- **Resolution:** ✅ FIXED — Dead and duplicated code removed: the unused `AppOvertime`, `AppLeave`, `AppOfficialBusinessTrip`, `AppChangeShift`, `AppAdjustment` and `Schema` imports and two `Schema::hasTable` guards (`MessagesController`, `DropConversationHandler`); `$minBeforeId`, `formatMessageTime()` and the never-true `diffInSeconds` branch in `GetMessagesQuery`; the copies of the avatar and code-block helpers in `GetConversationsQuery` and `SearchMentionsQuery` now call `GetMessagesQuery::resolveAvatarUrl()` and `stripCodeBlocks()`. One intentional output difference: the list preview no longer collapses runs of spaces and tabs, only newlines. Tests: `ConversationLifecycleTest`, `MessageEditedFlagTest`, `ConversationListFieldsTest`. Failed before the change: "Failed asserting that true is false.' (formatMessageTime still defined; the three flag tests are characterization and pass before and after)"; passes now.
+
+#### Finding #90
+
+- **Finding:** Security — the Android manifest requests media and location-from-photos permissions the code never uses
+- **File:** [`resources/views/mobapp/app.json`](resources/views/mobapp/app.json#L55)
+- **Line:** 55-60
+- **Suggestion:** the `expo-media-library` plugin adds `ACCESS_MEDIA_LOCATION` (`isAccessMediaLocationEnabled: true`, :59) and, by default granularity, `READ_MEDIA_IMAGES` / `VIDEO` / `AUDIO`, `WRITE_EXTERNAL_STORAGE` and `READ_MEDIA_VISUAL_USER_SELECTED` (`plugin/build/withMediaLibrary.js:26-40`), but the only consumer (`utils/mediaSave.ts:66-100`) just saves a downloaded file (`saveToLibraryAsync`); a Play Console declaration risk for a save-only feature. Remove `isAccessMediaLocationEnabled`, set `granularPermissions: []` and use `requestPermissionsAsync(true)` on iOS.
+- **Resolution:** ✅ FIXED — `app.json`: `expo-media-library` options are `granularPermissions: []` with no `isAccessMediaLocationEnabled`, and the resolved Android permissions no longer contain `ACCESS_MEDIA_LOCATION` or `READ_MEDIA_*` (`RECORD_AUDIO` stays); `mediaSave.ts` asks for write-only photo access on iOS (`requestPermissionsAsync(true)`) and for no permission on Android. Tests: `resources/views/mobapp/tests/app.json.test.ts`, `resources/views/mobapp/tests/utils/mediaSave.test.ts`. Failed before the change: "Expected: true Received: called with 0 arguments"; passes now.
+
+#### Finding #91
+
+- **Finding:** Correctness — substring heuristics silently blank avatars
+- **File:** [`resources/views/mobapp/src/hooks/use-initial-profile.ts`](resources/views/mobapp/src/hooks/use-initial-profile.ts#L56)
+- **Line:** 56-77; `app/Queries/Messages/GetMessagesQuery.php:401-421`
+- **Suggestion:** `hasCustomProfile` runs `includes('mock')` and `includes('placeholder')` on the whole value and `endsWith('default.png')` matches `my_default.png`; the backend returns absolute `asset(...)` URLs with the host, so a host such as `https://mock-hrms.example.com/...` or a file named `mockup.jpg` turns every avatar into initials with no error, and `resolveAvatarUrl` (`GetMessagesQuery.php:401-421`) hides any photo whose filename contains "mock" or "placeholder" (for example `hammock.png`). Compare only the last path segment with an exact set (`default.webp`, `default.png`, `default.jpg`) and drop the substring tests.
+- **Resolution:** ✅ FIXED — The last path segment (query string ignored) is compared with `default.webp`, `default.png` and `default.jpg`, replacing the `mock` and `placeholder` substring tests in `GetMessagesQuery::resolveAvatarUrl` and in the client's `use-initial-profile.ts hasCustomProfile`. Tests: `AvatarUrlResolutionTest`, `resources/views/mobapp/tests/hooks/use-initial-profile.test.ts`. Failed before the change: "Failed asserting that null is not null.' (hammock.png hidden)"; passes now.
+
+#### Finding #92
+
+- **Finding:** Correctness — copied deep links use a scheme the app does not register
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageActionModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageActionModal.tsx#L200)
+- **Line:** 200-201; `components/AnnouncementHoldModal.tsx:92`, `MoveChannelSectionModal.tsx:137`, `GroupDetailsDrawer.tsx:575-596`; `app.json:8`
+- **Suggestion:** the clipboard gets `hrms://channel/<c>/message/<m>` ("Share direct channel deep link") but the registered schemes are `zentrelink` (`app.json:8`) and `zentrelink_core_hrms` (`AndroidManifest.xml:29`) and there is no `channel` route: outside this app the link opens nothing; it works only when pasted back into the composer, where the parser recognizes `hrms|testing_application|app` (`mentionParser.ts:5`; `testing_application` is a leftover test scheme). Use the registered scheme (and teach the parser) or relabel the action "Copy message reference".
+- **Resolution:** ✅ FIXED — Copied links use the registered `zentrelink://` scheme: `mentionParser` accepts it beside the old ones, `MessageActionModal`, `AnnouncementHoldModal`, `GroupDetailsDrawer` and `MoveChannelSectionModal` build links with it (`utils/channelLink.ts buildChannelLink`), and `MessageContent` gives such a URL no link preview. Tests: `resources/views/mobapp/tests/module/employee/messages/utils/mentionParser.test.ts`, `resources/views/mobapp/tests/module/employee/messages/components/MessageActionModal.test.tsx`, `HoldModals.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/utils/channelLink.test.ts`, `resources/views/mobapp/tests/module/employee/messages/components/GroupDetailsDrawer.test.tsx`, `MessageContent.test.tsx`. Failed before the change: "Expected: '45' Received: undefined' (zentrelink://message/45) and a plain segment instead of message_link"; passes now.
+
+#### Finding #93
+
+- **Finding:** Maintainability — the GIF entry stays visible without a key and the flag meant to hide it has no consumer
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx#L2406)
+- **Line:** 2406-2433; `components/GifPickerPanel.tsx:50-51, 106-110`
+- **Suggestion:** with no `EXPO_PUBLIC_GIPHY_API_KEY` the GIF button opens a panel that tells the end user to "Set EXPO_PUBLIC_GIPHY_API_KEY and restart the app" with a Retry that re-runs the same no-op; `IS_GIF_SEARCH_CONFIGURED` is exported "so callers can hide their GIF entry point" and nothing imports it. Hide the GIF button and the drawer tab when `!IS_GIF_SEARCH_CONFIGURED` (the search terms also go to a third party, `api.giphy.com`: a product decision).
+- **Resolution:** ✅ FIXED — `MessageInputBar` renders the GIF button only when `IS_GIF_SEARCH_CONFIGURED` (exported by `GifPickerPanel`). Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageInputBar.test.tsx` (GIF entry point). Failed before the change: "expect(screen.queryByLabelText('Choose a GIF')).toBeNull() received the GIF button View"; passes now.
+
+#### Finding #94
+
+- **Finding:** Bug prevention — composer state edge cases: an empty code block shows Send, picked code mentions are never reset, side effects run inside `setBlocks` updaters
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx`](resources/views/mobapp/src/module/employee/messages/components/MessageInputBar.tsx#L283)
+- **Line:** 283-289, 1704, 1744; 1713-1723, 222-231; 514-931, 1199-1577
+- **Suggestion:** (a) `hasMessageContent` counts every `code` block (`b.type === 'code' || …`), so toggling the code-block button on an empty composer shows Send and hides the mic, while `serializeBlocksToMarkdown` skips empty code and `handleTriggerSend` returns at `!fullMessage` with no feedback; require `b.text.trim()` for code blocks (also in `hasContent()`). (b) `codeMentions` is cleared only on the uncontrolled path, in `clear()` and when editing, and `ConversationScreen` is controlled and never calls `clear()`, so after a message with a picked `@John` in a code block a later literal `@John` in a code block is highlighted and extracted as a real mention (`markdownFormatter.ts:122-129`) and John is notified without being picked (`ThreadModal` calls `clear()`); also `setCodeMentions([])` in the `!value` branch of the sync effect. (c) The pasted-message-link branch runs `setPendingQuotePreview`, `messagesApi.getMessageDetail(...)`, `updateFocusedBlockId` and `requestAnimationFrame` inside the `setBlocks` updater (:641-734), and `applyToggle` creates timers inside `setBlocks((latest) => …)` (:1555), while the same file says twice that updaters "must not set parent state" and "can run twice" (:270-272, :1783-1785); no StrictMode is configured, so the effect today is low; compute the next blocks from the closure like `replaceMention` (:1785-1789) and fire the request and timers after `setBlocks`.
+- **Resolution:** ✅ FIXED — `MessageInputBar`: `blocksHaveContent()` ignores an empty code block, `setCodeMentions([])` runs when the value empties, the message-link paste branch is computed outside the `setBlocks` updater (request, preview and focus fire once), and `handleToggleCodeBlock` computes the next blocks from the closure. The `#channel` and channel-link branches still run focus calls inside their updater and were left as they are. Tests: `resources/views/mobapp/tests/module/employee/messages/components/MessageInputBar.test.tsx`. Failed before the change: "expect(screen.queryByLabelText('Send')).toBeNull() received Send; getMentions() Expected Array [] Received [{display_name:'John',mention_text:'@Joh..."; passes now.
+
+#### Finding #95
+
+- **Finding:** Resource lifecycle — the voice recorder is not released on unmount, and a short recording leaks in the thread composer
+- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useAudioRecorder.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useAudioRecorder.ts#L75)
+- **Line:** 75-124; `components/ThreadModal.tsx:595-597`
+- **Suggestion:** `startRecording` sets `allowsRecording: true` and the only reset is in `stopAndGetRecording` / `cancelRecording`; neither `ConversationScreen` nor `ThreadModal` calls `cancelRecording` on unmount (grep), so leaving mid-recording leaves the audio mode in record mode (on iOS it routes later playback to the earpiece) and orphans the cache file; `ThreadModal.handleVoiceReply` returns on `durationMillis < 300` without `discardRecordingFile`, unlike `ConversationScreen.tsx:1714-1716`. Add an unmount effect that calls `cancelRecording` and discard in the thread path.
+- **Resolution:** ✅ FIXED (equivalent change) — the unmount release lives in the shared hook instead of an effect in each consumer: `useAudioRecorder.releaseRecording()` (stop, discard the file, reset `allowsRecording` to false, each step attempted on its own) runs from an unmount effect, which covers `ConversationScreen` and `ThreadModal`; `ThreadModal.handleVoiceReply` discards a recording under 300 ms. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useAudioRecorder.test.tsx`, `resources/views/mobapp/tests/module/employee/messages/components/ThreadModal.test.tsx`. Failed before the change: "Expected number of calls: 1 / Received number of calls: 0' (recorder.stop on unmount), cancel with a throwing stop never reset the mode; ThreadModa..."; passes now.
+
+#### Finding #96
+
+- **Finding:** Correctness — restoring an archived channel ignores the response and can re-archive it
+- **File:** [`resources/views/mobapp/src/module/employee/messages/components/ArchivedChannelsModal.tsx`](resources/views/mobapp/src/module/employee/messages/components/ArchivedChannelsModal.tsx#L88)
+- **Line:** 88-108
+- **Suggestion:** the archive endpoint is a toggle: if another device already restored the channel, Restore re-archives it, the code ignores `res.is_archived` and shows "Channel Restored" with the API's default text "Channel archive status updated" (`refreshSilently` then corrects the list); `ManageChannelModal.tsx:555-562` uses the response correctly. Use the response value (ideally the server accepts an explicit target state).
+- **Resolution:** ✅ FIXED — `ArchivedChannelsModal` restore uses `res.is_archived`: 'Channel Restored' only when the channel is no longer archived, otherwise 'Channel Still Archived' and it stays in the list. Tests: `resources/views/mobapp/tests/module/employee/messages/components/ArchivedChannelsModal.test.tsx`. Failed before the change: "Expected: not 'Channel Restored', Anything (alert announced a restore for a channel the server reports as archived)"; passes now.
+
+#### Finding #97
+
+- **Finding:** Bug prevention — rollback snapshots overwrite newer state
+- **File:** [`resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts`](resources/views/mobapp/src/module/employee/messages/hooks/useChatRoom.ts#L565)
+- **Line:** 565-579 (`restore_messages`); callers :1769, :1831, :1931-1934, :1940, :1991; reaction rollback :1712
+- **Suggestion:** `restore_messages` replaces the whole message with the copy taken before the optimistic change, so anything that changed during the request is lost until a refetch, even on a successful ticket approval (which reuses the same action): another member reacts to an approval card while the approval is in flight and the card is replaced by the snapshot, the reaction gone, and `reactionVersionRef` still records the dropped version. Roll back only the fields the action touched (text and edited; pin flags; ticket status) or re-merge with the current message.
+- **Resolution:** ✅ FIXED — `restore_messages` takes the fields to restore and puts back only those on a message that is still present (a removed one is re-inserted whole); `toggleReaction`'s rollback is skipped when a newer server snapshot moved the message's reaction version. Tests: `resources/views/mobapp/tests/module/employee/messages/hooks/useChatRoom.messageActions.test.tsx`. Failed before the change: "reaction lost, 'expect(card.reactions.map(...)).toEqual([['👍',1]]) Received []' (shown by temporarily restoring the whole-message replace; reaction..."; passes now.
+
+#### Finding #98
+
+- **Finding:** Resource leak — the generation guard in `echo.ts` leaves an unguarded `setupPusher`
+- **File:** [`resources/views/mobapp/src/services/realtime/echo.ts`](resources/views/mobapp/src/services/realtime/echo.ts#L101)
+- **Line:** 101-129 (unguarded `this.setupPusher(config)` at :107; the guard at :119 protects only the retry scheduling); `disconnect()` :281-292
+- **Suggestion:** if logout (`destroyEcho` → `disconnect`) happens while the config fetch is in flight, the resumed attempt builds a Pusher on the torn-down instance: an idle websocket and reconnect timers nobody references, and it re-fills `cachedConfig`. Add `if (generation !== this.generation) return;` before `setupPusher`. Narrow window (login followed at once by logout, or a slow network).
+- **Resolution:** ✅ FIXED — `echo.ts`: `if (generation !== this.generation) return;` right after the config await (before `setupPusher`) and before `setupFallback` in the catch. Tests: `resources/views/mobapp/tests/services/realtime/echo.test.ts`. Failed before the change: "Expected length: 0 / Received length: 1' on FakePusher.instances (shown by temporarily removing the guards)"; passes now.
+
+#### Finding #99
+
+- **Finding:** Bug prevention — the `AuthContext` profile-sync effect makes a duplicate request and has an unguarded continuation
+- **File:** [`resources/views/mobapp/src/contexts/AuthContext.tsx`](resources/views/mobapp/src/contexts/AuthContext.tsx#L156)
+- **Line:** 156-178
+- **Suggestion:** for a user with no photo `hydrateAuth` has just called `getAccount()` and set `user.profile = null`, so the `[token, user]` effect calls `/api/account` again on every cold start and login; the continuation has no cancel flag and does not check the token, so its `setUser(updatedUser)` and the un-awaited `SecureStorageService.setUser(...)` can run after `logout()` cleared storage (it cannot loop, and the post-logout write needs a logout inside the request's flight time). Derive `profile` once from the hydrate or login result and drop the effect, or add `let cancelled` plus a token check and await or catch the storage write.
+- **Resolution:** ✅ FIXED — `AuthContext`: the `[token, user]` profile-sync effect (a second `GET /api/account` on every cold start) is deleted; `hydrateAuth`, `login`, `loginWithBiometrics` and `setSession` derive profile, avatar and pic from the responses they already have. Tests: `resources/views/mobapp/tests/contexts/AuthContext.test.tsx`. Failed before the change: "Expected number of calls: 1 Received number of calls: 2' and (logout during the second request) user 'Received: {'avatar': 'ana.png', ..., 'profile..."; passes now.
+
+#### Finding #100
+
+- **Finding:** Testing — `ConversationListQueryCostTest` asserts generated SQL text
+- **File:** [`tests/Feature/Messages/ConversationListQueryCostTest.php`](tests/Feature/Messages/ConversationListQueryCostTest.php#L128)
+- **Line:** 128-186
+- **Suggestion:** it matches backtick-quoted names, `pivot_conversation_id`, the alias `count(*) as cnt`, `group by \`conversation_id\``, the `in (?,?…)` slot count and `when N then` thresholds, so a behavior-preserving refactor (an alias rename, `withCount`, a join) breaks it; the behavioral assertions (unread values) are already in the same test. Keep the relative query-count assertions and the unread values and drop the SQL-shape checks.
+- **Resolution:** ✅ FIXED — `ConversationListQueryCostTest` no longer asserts generated SQL text (backtick names, `pivot_conversation_id`, `count(*) as cnt`, `group by`, slot counts, `when N then`): it keeps the relative query-count tests and the unread-value assertions, and the members-columns test became a payload test (no email, empid or password hash leaves the list). Failed before the change: "probe of the pre-fix GetConversationsQuery (git 51ddc284, run from a temporary copy under a different class name, then deleted): 24 queries for 9 c..."; passes now.
+
+#### Finding #101
+
+- **Finding:** Bug prevention — the reply target of a voice message is cleared only after the upload finishes
+- **File:** [`resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx`](resources/views/mobapp/src/module/employee/messages/pages/ConversationScreen.tsx#L1710)
+- **Line:** 1710-1744
+- **Suggestion:** `await sendMessage('', [voiceAttachment], replyParam, …)` resolves only after upload and POST (`useChatRoom.ts:1458-1634`), and only then calls `setReplyingTo(null)` from a stale closure: meanwhile the composer still shows "Replying to X" so a text sent during the upload quotes X again, and a reply target picked in the meantime is wiped on completion. Capture `replyParam` and call `setReplyingTo(null)` before `sendMessage`, as `handleSend` does (:1477-1480).
+- **Resolution:** ✅ FIXED (traced) — `handleStopAndSendVoice` captures `replyParam` and clears the reply target before `await sendMessage(...)`. No test: the voice path is a closure inside the 4,100-line `ConversationScreen`, which needs a recorder and the whole room hook.
 
 ### INFO
 
-- **Observation:** Specification clarification required: `role_access` 1 and 2 may edit any non-system channel, including a private channel they are not in, and can set `is_private = false`, which makes its history visible to every employee (`MessagesController.php:1354-1405`; spec §4.7 and assumption A-3). Whether administrators should be able to change the privacy of channels they cannot see needs a product decision. The spec is not modified.
-- **Observation:** Cross-reference: Finding #7 (manager-only channel names in search results) conflicts with the manager-channel rule of the spec (§6.1 rule 1) and was not caught by `verify.md` run v4, which covered the scoped search only. Re-run `/webkit-verify T00001` after it is fixed.
-- **Observation:** Pre-existing (reported by the backend reviewer, not re-traced): `getEmployeeProfile` returns any account's email and phone to any employee.
-- **Observation:** Reported by reviewers but not confirmed, so not listed as findings: the message-row `React.memo` comparator being defeated by changing callback identities (not profiled), side effects inside `setState` updaters in `MessageInputBar`, large modals always mounted, a duplicate `/read` POST per cursor advance, Echo being recreated after logout, `useAudioRecorder` pollers, and about 600 unused lines in `markdownFormatter.ts`.
-- **Observation:** One reviewer claim did not reproduce and was dropped: that a reaction makes an unedited message show as edited.
-- **Observation:** Decided design, not reported: thread read positions live only in the cache (spec Decision 7); any viewer may pin a message (assumption A-6).
-- **Observation:** Visual and theme issues are covered by `design-review.md` (run v4) and are not repeated here.
-- **Observation:** Not reviewed: in the backend, `BroadcastAuthController` and the 16 migrations were read only for index and constraint facts; query plans were not run (no `EXPLAIN` on realistic data). In the mobile app roughly half of the 58 messaging files were not read in full: `ManageChannelModal` (lint only), `GroupDetailsDrawer` from line 564, `MessageActionModal` from line 480, `MessagesSearchModal` outside lines 86-295 and 436-805, `ChatInputBar` from line 560, `CreateChannelModal` outside 225-420, `MessageAttachment` outside 380-570, `ForwardMessageModal` from 240, `MessagesMoreScreen`, `MessageRequestsScreen`, `ChatToolsDrawer`, `ColleagueProfileDrawer`, `MoveChannelSectionModal`, `CustomizeGroupModal`, the hold modals, `ArchivedChannelsModal`, `EmojiPickerPanel`, `MessageQuoteCard`, `ImageViewerModal`, `VideoPlayerModal`, `NewChatModal`, `MessageFab`, the headers and `ChatStreamSkeleton`; outside messaging only the diff of `AppTopHeader`, `BottomSheetModal`, `TimePickerModal` and the render of `ApplicationDetailModal`. No device or profiler run was possible.
+- **Observation:** V1 re-check result (47 findings). **36 CONFIRMED CLOSED**, each followed through the code: v1 #1, #2, #4, #5, #6, #7, #8, #9, #10, #12, #13, #14, #15, #16, #18, #20, #21, #22, #24, #25, #27, #28, #29, #30, #32, #33, #34, #35, #38, #40, #41, #42, #43, #45, #46, #47 (for #38, #42, #43 and #46 the closing code is traced; the rest were also executed). **REOPENED in part (7):** v1 #3 → Findings #32 and #33; v1 #11 → #8; v1 #17 → #55 and #61 (and the fix introduced #14); v1 #19 → #12 (and #13); v1 #36 → #49; v1 #37 → #52; v1 #39 → #41. **Still open (4):** v1 #23 (below), v1 #26 → #47, v1 #31 → #48 (worse than recorded), v1 #44 → #78. The manager-portal approval logic moved into `ProcessApprovalDecisionHandler` is **identical** to master's closure body (`diff -w` on 147 lines, and executed through `/api/manager/approveRequest`: single approve, 2-tier 403/409/422, batch, repeat 409).
+- **Observation:** v1 #23 stays partly open and waits for a decision: the fabricated coordinates are gone and the punch sends `null` (`useTimeInOut.ts:54, 219-220`), but `expo-location` is in neither `package.json` nor `app.json` so native never reads a position, there is no "location unavailable" flag (`attendance.api.ts` forwards only `type`, `device_id`, `timestamp`, `latitude`, `longitude`), `gpsStatus` starts as `'simulated'` while the pill reads "GPS Active" (`HardwareTrustPill.tsx:98-101`) and a punch with no location shows "Office Verified" (`TwinTelemetryCards.tsx:75-77`, unchanged file): the fake coordinates were replaced by a fake verification label. Pre-existing on `origin/main`, not this change: the invented shift "National Heroes Day (Regular Holiday)" and the cutoff "Aug 16 - Aug 31, 2026" (`useTimeInOut.ts:156-169`), the same mock holiday in `attendance.api.ts:32-66`, and canned payroll figures in `ai/hooks/useChatbot.ts:195-197`.
+- **Observation:** Specification clarification required: (a) whether an archived channel or DM must be read-only on the server (today only the mobile UI states it; no check in Send, Edit, Reaction or Pin; Finding #58); (b) `@all` / `@here` / `@channel` are offered to every member of any non-direct conversation, including General, with no permission or confirmation (`SearchMentionsQuery.php:174-215`, `ResolveMentionsAction.php:163-175`, AC-42 / AC-43); (c) spec §3 and §4 say `deleteMessage` is a soft delete ("keeps its row") but `DeleteMessageHandler` hard-deletes and a root delete also deletes other people's replies, reactions and attachment files irrecoverably; (d) the 2 s replay window (Finding #41); (e) §4.7 / AC-79 lets `role_access` 1 and 2 set `is_private` or `requires_approval` on a system channel, which hides General from anyone without a member row, and (v1 INFO) lets them edit a private channel they cannot see and set `is_private = false`; (f) `togglePin` and `toggleReaction` are allowed for any reader of a public channel or announcement, including non-members, who also trigger `message_pinned` system events (AC-89); (g) AC-67 (reading an announcement as a non-member writes no row) together with §4.5 means a non-member's announcement badge can never clear (executed); (h) other members' edits and deletes are not broadcast (`app/Events/Messages` has no such event) and `since_id` returns only new messages, so edits, deletes, pins and thread counts changed by others while the room is open or the app is backgrounded appear only after reopening (AC-106); (i) what "online" means (last-activity window?) and what a message request is (G-4 / Q-7); (j) after a join the unread count starts at the whole history (`unreadCount = 40` after joining a channel with 40 messages; spec §849 says the badge starts counting only after the join); (k) may a co-admin remove the Lead Admin (Finding #25); (l) the client caps attachments at 50 MB (`attachmentPicker.ts:8`) while Q-1 says the server allows 100 MB and any type; (m) the spec G-7 text is stale: `getMessages`, `getConversation` and search now apply the manager-only gate through `visibleTo`, only `SearchMentionsQuery` lacks it.
+- **Observation:** Pre-existing (not caused by this diff): `POST /api/manager/approveRequest` has no role middleware beyond `auth:sanctum` and the handler's empty-approvers fallback authorizes any authenticated user (preserved by the move; the chat path is protected by `IsCurrentApproverAction`); `getEmployeeProfile` returns any account id's email and phone to any employee (the status, manager and the `reportingManager` logic are new); `getUnreadCount` still calls `Cache::remember` once per conversation and counts raw `messages` without `->visible()`; `markThreadAsRead` (`MessagesController.php:688-746`) has no membership check and broadcasts `MessagesRead` for a non-member previewing a public channel; uploaded files in `storage/messages/<uuid>.<ext>` are served by the web server with no authorization (capability URLs), with no per-user quota and no orphan cleanup; `NSAllowsArbitraryLoads: true` and `usesCleartextTraffic: true` in `app.json`; `console.warn('...', err)` prints `ApiError.original` including the `Authorization: Bearer …` header to device logs (`axiosInterceptors.ts:13`), and module-level caches (`messageDetailMemoryCache`, `_linkPreviewCache`) are never cleared on logout; `Message::scopeVisible` hides any row whose text equals "This message was deleted." or "You deleted this message" (a user can send exactly that text and it reaches live clients but never appears in a list, search or unread count); admin is defined in three places that differ (`IsChannelAdminAction`, `getConversationMembers` :1790, `updateConversation` :1219); thread read positions live only in the cache (30-day TTL); `getConversationMembers` paginates with no `ORDER BY`; `utils/clipboard.ts:68` returns `success || true`; `app/axios/http.ts` `get` drops sibling keys of a `params` key; the outer repository shows `M docker/nginx/default.conf.template` which belongs to neither branch.
+- **Observation:** Other notes: unrelated scope also bundled in the mobile branch (the global theme re-skin and `scripts/generate-accent-ramp.js`, which "generates" the ramp but only prints it, the AI chat Clipboard swap to `@/utils/clipboard` (a valid fix), the filing modal props, the portrait lock with `"orientation": "default"` in `app.json`, the new `ApplicationDetailModal`); `AppTopHeader`, `BottomSheetModal` (the mount-state machine works; `set-state-in-effect` at :211 and a missing dependency at :232 are benign) and the dependency delta were checked and found sound (8 runtime dependencies added, none bumped, 255 lock packages from registry.npmjs.org with integrity; `expo-image-picker` is the only one used without its plugin, Finding #18; `@react-native-community/netinfo` is required by the pusher-js React Native build); the jest additions are dev-only and `moduleNameMapper "^@/(.*)$": "<rootDir>/src/$1"` matches `tsconfig`; mobile ESLint is red module-wide (149 errors, 82 warnings, about 77 of them one React-Compiler rule on the `useRef(new Animated.Value()).current` idiom and about 9 on Reanimated shared-value writes: judged compiler-lint false positives, none a real bug; `MessagesContext.tsx:270` is the one new `set-state-in-effect`); `useChatRoom.ts` `sendMessage` is missing three dependencies (the known warning): `initialAvatar` is frozen at the render when `initialName` last changed and a stale `null` can replace a row's real avatar after the first send from a search-opened channel (cosmetic, self-heals); the resync fires on `connected` before the private channels re-subscribe (a message created in between is missed by both) and has no debounce (about 3 requests per foreground or reconnect); `fetchNewerPage` mirrors the server's hard-coded `limit(50)` in `GetMessagesQuery.php:76`, and `since_id` returns `has_more = false` for a full page while `around_id&limit=10` returns 11 messages; `utils/linkParser.ts` loads `https://www.google.com/s2/favicons?domain=…` and `img.youtube.com` for every shared link, so link domains from private chats go to a third party; `seen_at` comes from `conversation_members.updated_at`, which a role change also touches (`UpdateMemberRoleHandler.php:69-70`); the `messages_is_pinned_index` and `messages_pinned_by_index` indexes are used by no query and EXPLAIN on 200k rows picks `messages_conversation_id_index`, not the composite `messages_thread_listing_index` named in its comment, and `conversations.status` is never written to 0 (drop hard-deletes); the `routes/api.php:61-65` comment and the `ToggleReactionHandler` comment (SQL cannot compare emoji) are stale; 133 of 145 Feature tests skip silently (exit 0) when no `_test` database is configured and `.github/workflows/deploy.yml` runs no tests, and the test methods are named `test_finding_N_…` after a review document that this run replaces; always-mounted overlays (`ThreadModal`, `GroupDetailsDrawer` 1.9k lines, `MessagesSearchModal` 2.5k lines and others) re-execute on every composer keystroke because `inputText` lives in `ConversationScreen` (not profiled); `useDashboard()` runs per screen (two requests per conversation open, the app-wide pattern); `ChatToolsDrawer` HR templates contain fixed dates ("June 15 shift", "June 12", :57-63) and `onInjectTemplate` replaces the whole draft; `ThreadModal` passes no `onSelectGif`, so a GIF in a thread is inserted as a raw Giphy URL in the text; `InlineChatVideo.tsx:145-152` autoplays a failed video (muted) behind its error overlay, and the `activeInlineVideoId` / `onToggleInlineVideo` plumbing is dead after the v1 #43 fix; `isThreadLoading` is one shared flag whose earlier request's `.finally` can clear a later one (:2188, :2279); while `hasNewer` is true the "Latest" pill scrolls to the loaded window's newest message, not the real newest.
+- **Observation:** Not reviewed: backend: `SendMessageHandler` lines 1-140 and 296-396 and `DeleteMessageHandler` lines 1-140 were read in full only by the controller reviewer; `BroadcastAuthController` and `routes/channels.php` were read for their hunks; nothing ran against a websocket, no `EXPLAIN` or production-size data (a 250k-row synthetic table and a 1,500-account database were used), no concurrency run (the toggle and join-request races are traced), no mutation testing (the mutation checks cited in v1 resolutions were not re-run), the production PHP version is unknown. Mobile: `markdownFormatter.ts` lines 1-28, 285-405 and 625-1075 were judged by static reachability only; the JSX and style blocks of `MessagesSearchModal` (2188-2545), `AnnouncementHoldModal` (330-657), `DirectMessageHoldModal` (300-604), `MessageActionModal` (978-1181), `CreateChannelModal` (730-980, 1110-1170, 1280-1420), `MoveChannelSectionModal`, `CustomizeGroupModal`, `ColleagueProfileDrawer` (640-740, 760-800, 840-end), `ArchivedChannelsModal` 300-473, `NewChatModal` 200-362, `MessageFab` 130-340, `MessagesMoreScreen` 140-560, `ChatStreamSkeleton`, `ForwardMessageModal` 330-594, `InlineChatVideo` 330-480, `MessageQuoteCard` 420-669, `ChatAudioBubble` 260-499, `VideoPlayerModal` 260-495, `ImageViewerModal` 200-361, `SystemEventRow` 140-261, `MessageThreadPreview` 110-325, `MessageSeenReceipt` 100-205, `BottomSheetModal` 1-149 and 420-end and `useChatKeyboard` layout logic were skimmed or grepped, not read line by line; accessibility, Hermes behavior, React render counts and any device, simulator or native build (the iOS camera abort, Android share and permissions, the ReDoS timing on Hermes) were not checked.
 
 ---
 
 ## Positive Feedback
 
-- `GetLinkPreviewQuery` pins the resolved IP (`CURLOPT_RESOLVE`), re-validates every redirect hop, caps the body at 1 MB and handles CGNAT and IPv4-mapped IPv6 addresses.
-- `UploadAttachmentHandler` derives the stored extension from the sniffed MIME type and a whitelist, stores under a UUID name, and never accepts `svg`, `html` or `php`.
-- `UpsertConversationMemberAction` absorbs only MySQL error 1062, and the read position advances with one conditional `UPDATE`, so overlapping reads cannot move it back; the unique-member migration stops on existing duplicates instead of deleting rows.
-- `Conversation::scopeVisibleTo` groups its `OR` conditions correctly (no row leaks across them) and `SendMessageHandler` answers 404 for an invisible conversation so an id's existence is not confirmed; `client_id` replay protection runs under a lock.
-- The mobile chat reducer separates confirmed and pending messages by `clientId`, and `mergeConfirmed` / `mergeReadReceipts` return the same reference when nothing changed, which removed a re-render loop.
-- The inverted list arms pagination only after the first drag and keeps a fixed-height history footer, preventing chain-loading and scroll jumps; the thread-reply flow reconciles the optimistic row by server id and offers Retry on failure.
-- Channel sections are strictly scoped by `account_id`; the Echo client takes its configuration from the server and holds no secrets; link opening allows only http(s) through `WebBrowser`.
+- `ProcessApprovalDecisionHandler` was extracted verbatim from the manager controller (`diff -w` identical over 147 lines) and is shared by the chat card and the portal, so both enforce the same transaction, `lockForUpdate`, pay-period lock and tier-by-tier rules; the chat path adds the stricter `IsCurrentApproverAction`, and failures keep the portal's status codes and messages.
+- Attachment handling is layered: an issued-path regex plus existence on send, disk-only containment on delete with a `stillUsed` reference check, and the same `deleteAttachmentFile` reused after commit by `dropConversation`; the upload extension comes from the sniffed MIME type against an allow-list with no svg, html or php.
+- `UpsertConversationMemberAction` absorbs only MySQL error 1062 and `advanceReadPositions` moves read positions with one guarded `UPDATE`; the unique-member migration checks for duplicates before any DDL, reports a count, is idempotent through `hasIndex()` and its `down()` works (all 16 branch migrations ran and rolled back over a master-state database).
+- `DisposableDatabaseTestCase` checks the database name for `_test` before `migrate:fresh` (133 tests skipped and 0 tables were created against a non-`_test` name); the security tests use real endpoints with unique sentinel strings and check the database and the broadcast, so a wrong implementation could not pass; the suite passed three times in random order and under three timezones.
+- `SearchMessagesQuery` filters the final id set through `visibleTo`, returns the identical empty shape for "not found" and "not allowed" (no existence oracle in search), binds all user input and clamps `limit`; `GetConversationsQuery` needs a constant number of queries per list.
+- The chat reducer keeps confirmed and pending messages in separate lists and `mergeConfirmed` returns the same array when nothing changed (this prevents the pagination re-render loop); `echo.ts` init clears the memoised promise on failure, retries with bounded backoff that resets on success, bumps a generation on `disconnect` and returns an unsubscribe from `onReconnect`, and the fake-socket tests fail on the old behavior.
+- The pinned-id cache is user-scoped, written through a serialized queue and cleared by `clearSession`; `InlineChatVideo` shows a poster, starts muted and plays one video at a time with its listener cleaned up; `GroupDetailsDrawer`'s member list is a real `FlatList` with paging and debounced server-side search; route params are validated (`tab` / `filter` allow-list, `Number(params.id) || 0` with redirect).
 
 ---
 
@@ -469,31 +982,17 @@ This change is not mergeable: it carries four CRITICAL security defects, includi
 
 ### FIX REQUIRED
 
-**Fix before merge:**
+**Fix before merge (HIGH findings still open after fix pass v2.1):**
 
-1. Finding #1 — validate attachment paths on send and remove the `storage_path`/`public_path` unlink branches.
-2. Finding #2 — require the `reply_to_id` parent to belong to the conversation.
-3. Finding #3 — resolve linked messages and channels only when visible to the sender and to each viewer.
-4. Finding #4 — return `id`, name and avatar for members, not `Account` models.
-5. Finding #5 — fix the join-request unique key and wrap approve/decline in a transaction.
-6. Finding #6 — apply `GeneralAccessAction` in the conversation channel callback.
-7. Finding #7 — build `getRecipients` and the search channel list from `Conversation::visibleTo`.
-8. Finding #8 — restrict member add, remove and drop to `type = channel`.
-9. Finding #9 — route chat approvals through the shared, transactional approval Handler.
-10. Finding #10 — broadcast after commit and compute unread counts in one query.
-11. Finding #11 — resolve mentions once per message and skip texts without a trigger.
-12. Finding #12 — clamp `limit` and paginate thread replies and pinned messages.
-13. Finding #13 — remove the N+1 and over-fetch from the conversation list.
-14. Finding #14 — remove the migration's seeded groups.
-15. Finding #15 — remove the global session time zone (or confirm the production zone).
-16. Finding #16 — roll back and stop confirming when approval fails.
-17. Finding #17 — let API errors propagate, show retry, and revert optimistic state.
-18. Finding #18 — decide DM visibility structurally, not from text.
-19. Finding #19 — add loading of newer messages for the unread jump.
-20. Finding #20 — retry realtime initialisation and resync after foreground or reconnect.
-21. Finding #21 — stop refetching conversations, count and directory on every event.
-22. Finding #22 — sanitise attachment names before building file paths.
-23. Finding #23 — stop submitting simulated GPS coordinates.
-24. Finding #24 — remove the fabricated notifications or load real ones.
+1. Finding #5 — decide: end a removed or departed member's live subscription (terminate the sockets on remove, leave, drop, privacy flip and deactivation), or stop broadcasting full payloads on the shared channel, or record the accepted risk in the spec.
+2. Finding #9 — settle the web client: send `is_thread_broadcast` from the web `messages.api.ts` or record the web messenger as retired (the back-fill migration is done).
+
+**Still open, below the merge gate (MEDIUM):** #43 (move the non-messaging changes to their own ticket or accept them in the spec), #47 (finish thinning `MessagesController`), #78 (split the oversized mobile files), #79 (tests for the stale-thread guard and the scroll-retry bound).
+
+**Closed in fix pass v2.1:** 95 of 101, among them #1 (CRITICAL) and #2–#4, #6–#8, #10–#23 (HIGH). The 5 traced and 5 equivalent closures should be re-read by the next `/webkit-code-review` run; the findings are in the Resolution lines above.
 
 <!-- Run history -->
+- v1 — 2026-10-13 — initial — CHANGES REQUIRED
+- v1.1 — 2026-10-14 — fix pass: 20 of the 23 MEDIUM and LOW findings named were fixed; CRITICAL and HIGH not touched — CHANGES REQUIRED (after fix pass v1.1)
+- v1.2 — 2026-10-14 — fix pass: #1–#22 and #24 closed (CRITICAL and HIGH), #23 partly done; #26, #31, #44 still open — CHANGES REQUIRED (after fix pass v1.2)
+- v2 — 2026-10-14 — full re-review after fix passes v1.1 and v1.2: 101 findings (1 CRITICAL, 22 HIGH, 56 MEDIUM, 22 LOW) — CHANGES REQUIRED

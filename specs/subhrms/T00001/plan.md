@@ -170,7 +170,7 @@
   - **Depends on:** TASK-09
   - **Done when:** `grep -n "updateOrInsert\|conversation_members')->insert" app/Http/Controllers/employee/MessagesController.php` shows only the two helpers; `php -l app/Http/Controllers/employee/MessagesController.php` passes.
 
-- [ ] **TASK-11 — Remove the unused search-engine dependencies**
+- [x] **TASK-11 — Remove the unused search-engine dependencies**
   - **Files:** `config/scout.php` (Modify — delete the file); `composer.json` (changed by the user command of §9 row 1)
   - **Change:** Delete `config/scout.php`. Search does not use Scout (spec Decision 6). The user removes `laravel/scout` and `meilisearch/meilisearch-php` with the command in §9 row 1; `/webkit-implement` does not run it.
   - **Covers:** G-13, Decision 6
