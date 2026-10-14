@@ -1,596 +1,646 @@
-# Spec — Centralized HRMS Notification System
+# Feature Specification — Centralized HRMS Notification Center and Settings
 
-> **Ticket:** `T00002` (subhrms) — this file is `.agents/specs/subhrms/T00002/specs.md`; branch `T00002`.
-> **Kind:** Greenfield / Centralized Infrastructure — Centralized real-time notification engine for SubHRMS across attendance, filings, approvals, HR lifecycle events, Timekeeping processing, Payroll processing, Payslip release, announcements, birthdays, and workplace messaging.
-> **Portal:** **employee** & **global** (`/api/employee/notifications/...` & `/api/notifications/...` routes, `resources/views/mobapp/src/module/employee/notifications` and `resources/views/web/src/module/employee/notifications`).
-> **Version:** v2 — 2026-10-02 — Expanded to include HR lifecycle events (Incident Reports, Disciplinary Actions, Movements, Events), Timekeeping processing alerts (Cutoff locks, Duty Roster publishing, Resolution disputes, Leave Conversion), and Payroll events (Payslip releases, 13th month, Loans, Retroactive Pay, Service Charges, Tax 2316).
-> **Route:** `/(app)/notifications` (mobile screen) & `/api/employee/notifications` (API endpoints).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [laravel-standards.md](../../rules/laravel-standards.md).
-> **System Awareness:** Models: `Notification` (created), `NotificationPreference` (created), `Account` (reused), `Conversation` (reused), `Announcement` (reused), `PayrollRunDetail` (reused), `PayPeriod` (reused), `AppLeave` (reused), `AppOvertime` (reused), `AppAdjustment` (reused), `AppChangeShift` (reused), `AppOfficialBusinessTrip` (reused), `IncidentReport` (reused), `DisciplinaryActionModel` (reused), `DutyRoster` / `RosterDraft` (reused), `LeaveConversionRequest` (reused); Tables: `notifications` (created), `notification_preferences` (created), `accounts` (reused); Routes: `routes/api/employee.php` (`api/employee/notifications/*`, created) & `routes/channels.php` (reused `user.{userId}`); New migration: yes (`notifications`, `notification_preferences`).
+## Metadata
 
----
-
-## 1. Purpose
-
-Currently, notifications in the HRMS are fragmented or hardcoded into UI stubs (such as `notificationCount={3}` in `AppTopHeader.tsx`). While `T00001` established foundational WebSocket broadcasting infrastructure (Pusher/Reverb switching via `BroadcastAuthController` and per-user private channel `user.{userId}` in `routes/channels.php`), there is no centralized, persistent notification backend or unified inbox interface.
-
-This specification establishes the **Centralized HRMS Notification System** for SubHRMS:
-1. **Central Inbox & Activity Center**: A unified notification center on both Mobile (`resources/views/mobapp`) and Web (`resources/views/web`) displaying real-time events categorized into Attendance, Applications/Approvals, HR Lifecycle & Disciplinary Updates, Timekeeping Operations & Schedules, Payroll Processing & Released Payslips, Announcements, Birthdays, Messaging, and System alerts.
-2. **Event-Driven Decoupled Architecture**: HRMS domain modules (HR, Timekeeping, Payroll, Attendance, Leave, Approvals, Messaging, Announcements) dispatch clean business events without managing notification UI or WebSocket sockets directly.
-3. **Persist-Before-Broadcast Guarantees**: Every notification is safely persisted in MySQL within database transaction boundaries before emitting real-time Pusher/Reverb events over `private-user.{idacct}`.
-4. **Active-Audience & Permission-Aware Resolution**: Automatic resolution of recipients based on dynamic organizational hierarchies, approver matrices, active employment status (filtering out resigned/inactive users for `@all` and `General` channel notifications), and targeted department/unit visibility.
-5. **Smart De-duplication & Coalescing**: Built-in deduplication keys preventing multi-device echoes or queue replay duplicates, and intelligent coalescing for rapid burst events (e.g. multiple emoji reactions).
-6. **Deep Linking**: Structured metadata payload enabling one-tap navigation directly to specific payslips, timekeeping schedules, leave requests, attendance logs, approval queues, announcement sheets, or conversation threads.
+| Field | Value |
+| --- | --- |
+| Project Name | SubHRMS |
+| Ticket Number | T00002 |
+| Feature Name | Centralized HRMS Notification Center and Settings |
+| Created Date | 2026-10-14 |
+| Specification Version | 2.1 |
+| Status | In Review |
 
 ---
 
-## 2. Design Decisions (Pros & Cons)
+## 1. Overview
 
-### Decision 1: Storage Architecture — SubHRMS-Native Structured Schema vs. Laravel Default Polymorphic Table
-
-**Option A — SubHRMS-Native Structured Table (`notifications` with `idacct`, explicit columns & JSON `data`) (Recommended)**
-- Uses standard SubHRMS conventions: `id` (bigint auto-increment), `idacct` (indexed integer matching `Account->id`), `type` (varchar e.g. `payroll.payslip_released`), `category` (varchar enum), `title`, `body`, `priority` (`low`, `normal`, `high`, `critical`), `actor_idacct`, `resource_type`, `resource_id`, `data` (json), `read_at` (timestamp null), `status` (tinyint `1=active`, `0=deleted`).
-- No foreign key constraints (`->foreign()`), index only per SubHRMS standards.
-
-| Pros | Cons |
-|---|---|
-| 100% compliant with SubHRMS standards (`idacct`, no foreign constraints, `status` soft delete). | Does not use Laravel's default `Illuminate\Notifications\DatabaseNotification` UUID schema out of the box. |
-| Extremely fast indexing and querying for user-scoped lists, category filtering, unread counts, and priority sorting. | Requires custom Eloquent model and Query/Handler classes (standard in this repo). |
-| Clean JSON payload support for deep-linking arguments and actor snapshot data. | None. |
-
-**Option B — Laravel Default `notifications` Migration (`UUID` primary key, `notifiable_type`, `notifiable_id`, polymorphic text `data`)**
-- Standard Laravel `php artisan notifications:table`.
-
-| Pros | Cons |
-|---|---|
-| Uses built-in `$user->notifications()` relation. | Violates SubHRMS database standards (uses UUIDs instead of bigint IDs, foreign-like constraints, lacks structured category/priority columns). |
-| Standard Laravel boilerplate. | Slow to filter by category or priority because all metadata is trapped in a generic JSON blob without column-level indexes. |
-
-**Recommendation:** **Option A**. Follows SubHRMS database standards and provides high-performance filtering.
+- **What is being built:** A centralized, multi-channel notification engine, unified notification inbox, and comprehensive notification settings interface for SubHRMS across all user roles and portals (Employee, Manager, HR, Timekeeping, Payroll, and Admin), unifying in-app notifications, WebSocket real-time alerts, push notifications, and scheduled reminders with unified UX concepts across Web and Mobile.
+- **Problem it solves:** SubHRMS notification handling is fragmented: UI headers display hardcoded static mocks (`notifications` mock array in `HeaderBarComponets.vue` and `notificationCount={3}` in `AppTopHeader.tsx`), domain modules (Leaves, Overtime, Timekeeping, Payroll, HR lifecycle) perform backend writes without dispatching unified user alerts, approvers miss time-sensitive filings, and users have zero control over notification channels or reminder preferences. Furthermore, payroll processing completion is conflated with payslip availability, missing attendance alerts lack schedule awareness, and chat muting risks accidentally silencing critical compliance notices.
+- **Why this feature exists:** Employees, managers, timekeepers, HR staff, and payroll officers need immediate, role-aware visibility into actionable requests, filing deadlines, payroll releases, attendance discrepancies, disciplinary notices, and company updates, backed by an authoritative in-app inbox, schedule-aware reminder engines, and configurable user preferences that preserve statutory compliance delivery.
 
 ---
 
-### Decision 2: Realtime Dispatch Strategy — Transaction-Committed Broadcast vs. Unchecked Broadcast
+## 2. Objective
 
-**Option A — `DB::afterCommit` Triggered Broadcast via `NotificationCreated` Event (Recommended)**
-- Notification is inserted into the database. Upon successful transaction commit (`DB::afterCommit(...)`), the `NotificationCreated` event is dispatched implementing `ShouldBroadcastNow`.
-- Client receives the WebSocket message only when the notification is guaranteed to exist in MySQL.
+### Main Goals
 
-| Pros | Cons |
-|---|---|
-| Complete consistency: avoids race conditions where a mobile client receives a WebSocket event and immediately calls `GET /api/employee/notifications` before MySQL commits. | Slight delay of a few milliseconds until the enclosing DB transaction finishes. |
-| Robust error handling: WebSocket broadcast failures (Pusher rate limit / network glitch) are caught in a `try/catch` and logged without rolling back critical HR transactions (e.g. Leave Approval or Payslip Release). | Requires wrapping dispatch in `DB::afterCommit` or firing after handler commit. |
+1. **Centralized Notification Engine**: Implement an event-driven notification dispatch pipeline (`App\Actions\Notifications\CreateNotificationAction`, `CreateBatchNotificationsAction`) adhering to the SubHRMS "persist-before-broadcast" pattern, ensuring notifications are safely committed to MySQL before emitting real-time WebSocket events.
+2. **Unified Notification Center (Web & Mobile Parity)**: Deliver a conceptually identical in-app notification center across Web (`resources/views/web`) and Mobile (`resources/views/mobapp`) sharing the same design language, category tabs, priority indicators, relative timestamps, dismissal gestures, and one-tap deep-linking navigation.
+3. **Comprehensive Notification Settings & Mandatory Compliance Guard**: Implement user-configurable notification preferences allowing fine-grained toggling of delivery channels (In-App, Push, Email) across functional categories, while strictly enforcing mandatory delivery for statutory notices (Disciplinary Actions, NTEs, Incident Reports), ensuring workplace chat muting never suppresses critical HR or operational alerts.
+4. **Intelligent Attendance & Filing Eligibility Engine**: Deploy scheduled reminder commands (`hrms:check-missing-attendance`, `hrms:notify-filing-deadlines`, `hrms:notify-birthdays-anniversaries`, `hrms:notify-pending-approvals`) that rigorously evaluate employee shift schedules, approved leaves, holidays, rest days, official business trips, and grace periods before emitting alerts.
+5. **Decoupled Payroll Lifecycle & Role-Grounded Delivery**: Strictly decouple internal payroll processing completion notifications (sent exclusively to Payroll/HR staff) from employee payslip release notifications (sent to individual employees only when payslips are released), enforcing active employment status (`status = 1`) and permission-scoped recipient routing across all 6 portals.
 
-**Option B — Direct Broadcast Inside Business Handlers Before DB Commit**
-- Fires broadcast immediately when the business method is called.
+### Expected Outcome
 
-| Pros | Cons |
-|---|---|
-| Minimal lines of code. | Severe race condition: client fetches notifications upon socket event and receives 404 or missing item because the DB transaction has not committed. |
-| | If the DB transaction rolls back, phantom notifications were already sent to the user's phone. |
+Users log into any portal on Web or Mobile and immediately see their live unread notification count. Tapping the bell icon opens a consolidated inbox where notifications are grouped by category (Applications & Approvals, Attendance & Timekeeping, Payroll & Compensation, Announcements, HR Notices, Messages, and System Alerts) with identical card anatomy, color accents, and priority visual hierarchy on both Web and Mobile. Users can mark individual items or all items as read, dismiss alerts, or tap an item to navigate directly to the relevant payslip, request approval screen, attendance dispute, or conversation. In Settings, users customize notification channels and reminder lead times according to their preferences without compromising mandatory alerts.
 
-**Recommendation:** **Option A**. Mandatory "Persist-Before-Broadcast" pattern ensures total data integrity.
+### Success Criteria
 
----
-
-### Decision 3: Batch Notification Dispatch for Bulk Releases (e.g. Payslips, Announcements, Cutoff Reminders)
-
-**Option A — Chunked Bulk Database Insert with Asynchronous Broadcast Queue (Recommended)**
-- When releasing payslips for 1,000 employees in `ReleasePayslipsHandler`, notifications are inserted in chunks of 100 with timestamps and dedicated `dedup_key`.
-- Real-time broadcasts are dispatched via queue workers or immediate broadcast chunks without tying up the HTTP request thread.
-
-| Pros | Cons |
-|---|---|
-| High scalability: releases for thousands of employees complete within sub-second DB transactions. | Requires bulk insertion method in `CreateNotificationAction::executeMany(...)`. |
-| Prevents memory exhaustion and HTTP timeouts during company-wide payroll closing. | None. |
-
-**Option B — Iterative Loop Dispatched Synchronously Inside Controller**
-- Loops over 1,000 records calling individual insert and WebSocket socket calls.
-
-| Pros | Cons |
-|---|---|
-| Straightforward single-record reuse. | Extremely slow on bulk releases; risks HTTP 504 gateway timeout during payroll closing. |
-
-**Recommendation:** **Option A**. Efficient batching keeps bulk payroll releases fast and resilient.
+| ID | Criterion | Target | Measured By |
+| --- | --- | --- | --- |
+| SC-01 | Unread badge accuracy | 100% synchronization | Automated feature test comparing `Notification::where('idacct', $id)->unread()->count()` with WebSocket payload and API response |
+| SC-02 | Persist-before-broadcast guarantee | 0 phantom broadcasts | Automated test verifying that DB transaction rollbacks emit zero WebSocket messages |
+| SC-03 | Bulk dispatch performance | < 1,500 ms for 1,000 employees | Benchmark test executing `CreateBatchNotificationsAction::execute()` for company-wide payslip release |
+| SC-04 | Attendance reminder eligibility precision | 0 false-positive reminders | Automated test verifying that employees on approved leave, holidays, rest days, or official business trips receive no missing attendance alerts |
+| SC-05 | Mandatory notification enforcement | 0 suppressed compliance notices | Automated test asserting that disabling all preference toggles cannot suppress `hr.disciplinary_action` or `hr.incident_report` |
+| SC-06 | Endpoint response latency | p95 < 250 ms | Benchmark of `GET /api/notifications` with 20,000 historical rows |
+| SC-07 | Web and Mobile Concept Parity | 100% feature & visual parity | Verification that Web and Mobile share identical category filters, card tokens, status pills, and settings matrix |
 
 ---
 
-### Decision 4: Messaging Notification Coalescing & Suppression Strategy
+## 3. Background and Motivation
 
-**Option A — Context-Aware Suppression with Redis/Cache-Throttled Reaction Coalescing (Recommended)**
-- **Active Chat Suppression**: If the recipient has an active WebSocket session in the specific conversation (`presence` or active channel state), in-app notification toasts are suppressed to avoid visual spam.
-- **Reaction Coalescing**: Rapid reactions on the same message within a 3-minute window update a single notification record ("Jane Smith, Mark and 2 others reacted 👍 to your message") rather than inserting 4 separate rows.
-- **Mention Prioritization**: Direct mentions (`@John Doe`) and group mentions (`@PayrollTeam`) always bypass suppression and deliver with high priority.
+### System Audit & Existing Implementation Discovery
 
-| Pros | Cons |
-|---|---|
-| Prevents notification fatigue and inbox flooding during active discussions. | Requires checking cache/session state and updating existing unread reaction notification if within window. |
-| Clean, professional UX matching modern workplace platforms like Slack and Teams. | Small extra logic in `CreateNotificationAction`. |
+Inspection of the SubHRMS codebase reveals the current baseline across frontend, backend, database, and domain events:
 
-**Option B — Raw Unthrottled Notifications for Every Single Action**
-- Inserts a separate notification for every emoji reaction, message, and comment.
+1. **Frontend Notification Discovery**:
+   - Web: `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` lines 287–291 hardcodes `notifications = ref([{ id: 1, title: 'Leave Request', ... }])` and computes `unreadCount` purely from local memory. "View all notifications" links to `href="#"`.
+   - Mobile: `resources/views/mobapp/src/components/AppTopHeader.tsx` renders a static `notificationCount={3}` bell button with no backend binding or notification screen.
+2. **Broadcasting & Real-Time Discovery (T00001)**:
+   - `routes/channels.php` registers `user.{userId}` on both `pusher` and `reverb` connections, authorized via Sanctum `(int) $user->id === (int) $userId`.
+   - `BroadcastAuthController.php` provides dynamic connection configuration (`/api/broadcasting/config`).
+   - Web (`resources/views/web/src/app/echo.ts`) and Mobile (`resources/views/mobapp/src/services/realtime/echo.ts`) have working Laravel Echo instances listening to messaging events, but no notification channel listeners exist.
+3. **Database & Schema Discovery**:
+   - Zero notification tables exist in `database/migrations/`.
+   - `Account.php` includes `use Illuminate\Notifications\Notifiable;`, but Laravel's default polymorphic database notification table is absent.
+4. **Domain Event Discovery**:
+   - `ReleasePayslipsHandler.php` updates `payroll_run_details.released_at` but dispatches no notification.
+   - `AttendanceController.php` records biometric and web time-in/out without notifying users.
+   - `ApproverMatrix.php` and `IsCurrentApproverAction.php` define the multi-tier approval hierarchy, but approvals and submissions emit no alerts to applicants or approvers.
+   - `Announcement.php` stores announcements, read tracking exists in `announcement_reads`, but authors cannot notify target employee audiences.
 
-| Pros | Cons |
-|---|---|
-| Simpler code. | Quickly floods the database and user inbox with dozens of trivial reaction alerts. |
+### Current Limitations & Gap Analysis
 
-**Recommendation:** **Option A**. Delivers a refined, professional user experience without spam.
+| HRMS Module | Existing Implementation | Discovered Gap / Missing Requirement | Required System Recommendation |
+| --- | --- | --- | --- |
+| **Employee Applications** (`AppLeave`, `AppOvertime`, `AppAdjustment`, `AppChangeShift`, `AppOfficialBusinessTrip`) | Handlers insert application rows with approver tier matrices in `approvers` JSON. | Applicants receive no confirmation or approval/rejection notice. Approvers are never alerted when their tier becomes active. | Implement approval chain event notifications routing to current active tier approver and applicant upon decision. |
+| **Attendance & Timelogs** (`timelogs`, `timesheet`) | Timelogs captured via biometric sync or web portal. | No alerts for missing time-in or time-out. No reminders when incomplete logs prevent cutoff closing. | Implement schedule-aware missing time-in/out engine verifying shift, rest days, holidays, leaves, and OBT before alerting. |
+| **Payroll Processing vs. Payslip Release** (`payroll_period`, `PayrollRun`, `PayrollRunDetail`, `ReleasePayslipsHandler`) | `PayPeriod` tracks `pay_process_status`. `ReleasePayslipsHandler` sets `released_at`. | Processing completion is conflated with payslip availability; employees are not alerted when payslips actually release. | Strictly decouple: notify Payroll Officers on processing completion; notify employees ONLY when `ReleasePayslipsHandler` releases payslips. |
+| **Timekeeping Operations** (`payroll_period`, `TimesheetProcessingController`, `DutyRosterController`) | Periods locked and rosters published via controllers. | Employees not notified of published rosters or cutoff locks. Timekeepers not notified of cutoff disputes. | Notify unit employees upon roster publish and cutoff lock; notify timekeepers of pending cutoff disputes. |
+| **Announcements** (`announcements`, `announcement_reads`) | Announcements created in HR portal with company/unit scoping. | No push or in-app notification when urgent company announcements are published. | Batch dispatch `announcement.created` to active targeted employees (`status = 1`). |
+| **HR & Disciplinary** (`DisciplinaryActionModel`, `IncidentReport`, `EmpMovementController`) | HR issues NTEs and incident reports into tables. | Employees receive no immediate notification of critical disciplinary filings or status changes. | Dispatch high/critical priority notices; enforce mandatory delivery so users cannot mute them. |
+| **Birthdays & Anniversaries** (`accounts.bdate`, `vw_accounts_details.hire_date`) | Data exists in employee masterlist. | No automated greetings or milestone celebrations. | Scheduled daily cron generating greetings, with user privacy opt-out controls. |
+| **Messaging** (`messages`, `conversations`) | Real-time chat exists via Pusher/Reverb. | Lacks reaction coalescing, chat presence suppression, and dedicated notification inbox entries. | Add reaction coalescing (3-min window) and suppress toasts when user is active in conversation. |
+| **User Settings** | No notification preference controls exist. | Users cannot configure delivery channels, set DND hours, or opt out of non-critical reminders. | Dedicated Notification Settings page with master controls, reminder frequencies, and category matrix. |
 
----
+### Technical Reason for Architecture
 
-### Decision 5: Mobile App Real-Time Connection Architecture (`resources/views/mobapp`)
-
-**Option A — Global App-Level Notification Provider & Hook (`useNotifications`) (Recommended)**
-- A React Context / Hook instantiated in `resources/views/mobapp/src/contexts/NotificationContext.tsx` and exposed via `useNotifications()`.
-- Subscribes to `private-user.${idacct}` upon login using the existing `Echo` instance (`resources/views/mobapp/src/services/realtime/echo.ts` or dynamically configured via `/api/broadcasting/config`).
-- Maintains global unread count state in memory, updates `AppTopHeader` badge in real-time, displays native in-app banners/haptics for incoming high-priority alerts, and invalidates list queries seamlessly.
-
-| Pros | Cons |
-|---|---|
-| Global availability: Unread badge in top navbar updates regardless of which tab the employee is currently viewing. | Requires establishing the subscription once at root auth layout. |
-| Single persistent WebSocket listener: no redundant duplicate subscriptions across screens. | Must be cleaned up on logout. |
-
-**Option B — Screen-Only Listener (Subscribed only when NotificationsScreen is open)**
-- Listens to WebSocket events only while the notifications screen is mounted.
-
-| Pros | Cons |
-|---|---|
-| Simple local component state. | Top navbar badge cannot update while the user is on Dashboard, Timesheet, or Profile. Defeats real-time notification requirement. |
-
-**Recommendation:** **Option A**. Global context is required for live navbar badge and background socket updates.
-
----
-
-## 2.5 Acceptance Criteria
-
-| # | Given | When | Then |
-|---|-------|------|------|
-| **AC-1** | Authenticated employee `idacct=101` | An HR manager approves their leave application (`AppLeave` `id=45`) | `notifications` table has a new record with `idacct=101`, `type='leave.approved'`, `category='approval'`, `resource_type='leave'`, `resource_id=45`, `read_at=NULL`, and a real-time `NotificationCreated` event is broadcast on `private-user.101`. |
-| **AC-2** | Authenticated employee `idacct=101` with 2 unread notifications | A new notification is generated for `idacct=101` | A `NotificationCountUpdated` event is broadcast with `unread_count=3`; Mobile app header badge immediately reflects `3` without manual refresh. |
-| **AC-3** | Authenticated employee `idacct=101` viewing the mobile notification list | `GET /api/employee/notifications?page=1&per_page=20` is requested | Returns HTTP 200 with paginated notifications, latest first, containing `actor`, `resource`, `data`, `priority`, `category`, and `is_read=false/true`. |
-| **AC-4** | Authenticated employee `idacct=101` with unread notification `id=500` | `POST /api/employee/notifications/500/read` is requested | Returns HTTP 200 with `{"success": true}`, sets `read_at=now()`, and broadcasts updated `unread_count` on `private-user.101`. |
-| **AC-5** | Authenticated employee `idacct=101` with unread notification `id=500` belonging to employee `idacct=102` | `POST /api/employee/notifications/500/read` is requested | Returns HTTP 403 Forbidden with `{"message": "Unauthorized access to notification."}`, and `read_at` remains unchanged. |
-| **AC-6** | Authenticated employee `idacct=101` with 5 unread notifications | `POST /api/employee/notifications/read-all` is requested | Returns HTTP 200 with `{"success": true, "marked_count": 5}`, all active notifications for `idacct=101` have `read_at` set, and `unread_count=0` is broadcast. |
-| **AC-7** | Authenticated manager `idacct=202` | An employee submits an Overtime filing (`AppOvertime` `id=78`) requiring their approval | `notifications` table creates an item for `idacct=202` with `type='overtime.submitted'`, `category='approval'`, `priority='high'`, linking to `resource_type='overtime'`, `resource_id=78`. |
-| **AC-8** | Inactive/resigned employee `idacct=303` (`status=0`) | An HR announcement is published for `@all` active employees | `idacct=303` is excluded from the resolved recipient list and receives no notification in database or broadcast. |
-| **AC-9** | Scheduled daily birthday command `hrms:notify-birthdays` runs on `2026-10-02` | Employee `idacct=105` has birthday matching `10-02` | Generates a `birthday.today` notification for configured team members with `priority='low'`, preventing duplicate creation if already run on the same date. |
-| **AC-10** | Employee receives a direct message mention `@John Doe` in a channel | Message is sent via `SendMessageHandler` | Generates a `message.mention` notification for John Doe with `category='mention'`, `priority='high'`, and `data.conversation_id` set for deep-linking. |
-| **AC-11** | Payroll Officer closes and releases payslips in `ReleasePayslipsHandler` for Pay Period `id=12` | `ReleasePayslipsHandler::execute(['period_id' => 12])` runs | Generates a `payroll.payslip_released` notification for each employee in that run with `category='payroll'`, `priority='normal'`, `resource_type='payslip'`, `resource_id=$detail->id`, and links to the payslip detail view. |
-| **AC-12** | Timekeeping supervisor locks period in `TimesheetProcessingController` | Timekeeping cutoff lock is engaged | Generates `timekeeping.period_locked` notification to employees in that unit reminding them of cutoff lock. |
-| **AC-13** | Unit manager publishes a new shift roster in `DutyRosterController` | Schedule is set to published status | Generates `timekeeping.duty_roster_published` notification for all employees scheduled in that roster with `resource_type='duty_roster'`. |
-| **AC-14** | HR issues a Disciplinary Action or Notice to Explain (NTE) to employee `idacct=101` | Record created in `DisciplinaryActionController` | Generates `hr.disciplinary_action` notification with `category='hr'`, `priority='critical'`, linking to the disciplinary action inquiry screen. |
-| **AC-15** | HR files an Incident Report involving employee `idacct=101` | Incident report is submitted in `IncidentReportController` | Generates `hr.incident_report` notification with `category='hr'`, `priority='high'`, linking to `resource_type='incident_report'`. |
-| **AC-16** | HR publishes an official Company Event in `ActivityorEventController` | Event is scheduled | Generates `hr.company_event` notification with `category='announcement'`, linking to `resource_type='company_event'`. |
-| **AC-17** | Employee submits an attendance dispute in `ResolutionCenterController` | Dispute is resolved / status changed | Generates `timekeeping.dispute_resolved` notification to the filing employee with the updated resolution status. |
-| **AC-18** | Year-end leave monetization is processed in `LeaveConversionController` | Leave conversion request is approved/credited | Generates `timekeeping.leave_conversion_processed` notification with total monetized days and net credit amount. |
-| **AC-19** | Annual 13th Month Pay is processed and released in `ProcessYearEndHandler` | 13th month batch is released | Generates `payroll.13th_month_released` notification with `resource_type='13th_month_pay'`. |
-| **AC-20** | Retroactive salary adjustment is computed in `ProcessPayrollHandler` | Payroll run with retro pay is released | Generates `payroll.retroactive_pay` notification detailing the retro differential amount added to their current payslip. |
-| **AC-21** | Monthly Service Charge share is credited in `PayrollServiceChargeController` | Service charge distribution is finalized | Generates `payroll.service_charge_credited` notification detailing the distributed amount. |
-| **AC-22** | Annual BIR Form 2316 tax certificate is generated in `BirTaxController` | Tax 2316 is published for employee review | Generates `payroll.tax_2316_available` notification with `resource_type='bir_2316'`. |
-| **AC-23** | Mobile client taps a notification with `resource_type='payslip'` and `resource_id=980` | Tapping notification item on mobile UI | Automatically marks notification as read and navigates to `/(app)/payslip?id=980` or `/(app)/profile`. |
-| **AC-24** | Mobile client taps a notification with `resource_type='duty_roster'` | Tapping notification item on mobile UI | Automatically marks notification as read and navigates to `/(app)/(tabs)/timekeeping`. |
-| **AC-25** | Database transaction fails during leave approval or payroll closing | An exception is thrown during execution | No phantom notification record is created, and no WebSocket broadcast is emitted. |
-| **AC-26** | WebSocket service (Pusher/Reverb) is temporarily offline | A leave approval or payslip release succeeds in MySQL | Operation completes successfully (HTTP 200), notification is safely saved in MySQL, broadcast failure is logged to Laravel log without failing the API response. |
-| **AC-27** | Mobile app is offline during notification creation | Mobile app reconnects to the network | Fetches `GET /api/employee/notifications/count` and `GET /api/employee/notifications`, restoring accurate unread count and full notification history. |
+SubHRMS follows strict architectural rules ([project-profile.md](../../rules/project-profile.md)):
+- No foreign keys (`->foreign()`), relationship columns are `id`-prefixed (`idacct`), soft deletes use `status` columns (`1=active`, `0=deleted`).
+- Thin controllers delegate to `app/Queries/<Domain>/` for reads and `app/Handlers/<Domain>/` or `app/Actions/<Domain>/` for writes.
+- Returning raw JSON responses without API Resources.
+- Standard Laravel polymorphic notification tables (`notifications` with UUIDs and JSON blobs) violate these repository conventions, prevent efficient column-level indexing, and degrade query performance on high-volume user notification queries. A dedicated, structured schema native to SubHRMS is required.
 
 ---
 
-## 3. Database
+## 4. Scope
 
-### 3.1 New Tables
+### Included
 
-#### Table: `notifications`
-Stores all in-app notifications across all modules. Adheres strictly to SubHRMS conventions (indexed integer account IDs, `idacct`, `status` soft delete, no foreign key constraints).
+1. **Database Schema**: Migrations creating `notifications`, `notification_settings`, and `notification_preferences` following SubHRMS conventions (`idacct`, indexes, `status` soft deletes).
+2. **Backend Domain Architecture**:
+   - Core Actions: `CreateNotificationAction`, `CreateBatchNotificationsAction`, `BroadcastNotificationAction`, `ResolveNotificationRecipientsAction`, `CheckMissingAttendanceAction`.
+   - Core Handlers: `MarkNotificationReadHandler`, `MarkAllNotificationsReadHandler`, `DismissNotificationHandler`, `UpdateNotificationSettingsHandler`, `UpdateNotificationPreferencesHandler`.
+   - Core Queries: `GetNotificationsQuery`, `GetNotificationCountQuery`, `GetNotificationSettingsQuery`.
+   - Domain Broadcast Events: `NotificationCreated` and `NotificationCountUpdated` on `PrivateChannel("user.{$idacct}")`.
+3. **Decoupled Payroll Events**:
+   - `payroll.processing_completed` & `payroll.processing_failed` for Payroll Officers / HR Admins.
+   - `payroll.payslip_released` strictly for Employees when `ReleasePayslipsHandler` executes.
+4. **Schedule-Aware Attendance Eligibility Engine**:
+   - `hrms:check-missing-attendance` evaluating shift assignments, rest days, holidays, leaves, OBT, and punch records.
+5. **Role-Specific Recipient Routing**:
+   - Scoped routing for Employee, Manager, HR, Timekeeping, Payroll, and Admin portals.
+6. **Mandatory Delivery Policy**:
+   - Statutory compliance categories (`is_mandatory = 1`) locked against muting or disabling.
+7. **Unified Web and Mobile Design System Parity**:
+   - Web: Dynamic navbar bell dropdown in `HeaderBarComponets.vue`, full Notification Center at `/notifications`, Notification Settings at `/settings/notifications`.
+   - Mobile: Dynamic header bell in `AppTopHeader.tsx`, `NotificationContext`, Notification Center at `/(app)/notifications`, Notification Settings at `/(app)/settings/notifications`.
+   - Shared card anatomy, priority border accents, category icon color tokens, and one-tap deep linking.
 
-```sql
-CREATE TABLE `notifications` (
-  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `idacct` INT UNSIGNED NOT NULL COMMENT 'Recipient account ID (Account.id)',
-  `type` VARCHAR(80) NOT NULL COMMENT 'Stable event type, e.g. payroll.payslip_released, leave.approved, attendance.time_in, hr.disciplinary_action',
-  `category` VARCHAR(40) NOT NULL COMMENT 'attendance, leave, overtime, official_business, change_shift, attendance_adjustment, approval, hr, timekeeping, payroll, announcement, birthday, message, mention, system',
-  `title` VARCHAR(255) NOT NULL COMMENT 'Notification headline',
-  `body` TEXT NOT NULL COMMENT 'Notification text/preview',
-  `priority` VARCHAR(20) NOT NULL DEFAULT 'normal' COMMENT 'low, normal, high, critical',
-  `actor_idacct` INT UNSIGNED NULL COMMENT 'Account ID of the person who triggered the event (null if system)',
-  `resource_type` VARCHAR(60) NULL COMMENT 'leave, overtime, attendance, payslip, duty_roster, incident_report, disciplinary_action, conversation, announcement, etc.',
-  `resource_id` BIGINT UNSIGNED NULL COMMENT 'ID of the related entity',
-  `data` JSON NULL COMMENT 'Structured payload for deep linking and extra context',
-  `dedup_key` VARCHAR(120) NULL COMMENT 'Unique key preventing duplicates within time windows',
-  `read_at` TIMESTAMP NULL DEFAULT NULL COMMENT 'When the notification was marked as read',
-  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '1 = active, 0 = deleted',
-  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  INDEX `idx_notifications_idacct_status_read` (`idacct`, `status`, `read_at`),
-  INDEX `idx_notifications_category` (`category`),
-  INDEX `idx_notifications_type` (`type`),
-  INDEX `idx_notifications_created_at` (`created_at`),
-  INDEX `idx_notifications_dedup` (`dedup_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+### Not Included
 
-#### Table: `notification_preferences`
-Stores user notification delivery preferences (in-app, push, email).
-
-```sql
-CREATE TABLE `notification_preferences` (
-  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `idacct` INT UNSIGNED NOT NULL COMMENT 'Account ID (Account.id)',
-  `category` VARCHAR(40) NOT NULL COMMENT 'attendance, hr, timekeeping, payroll, leave, approvals, announcements, messages, birthdays, all',
-  `channel_in_app` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = enabled, 0 = disabled',
-  `channel_push` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = enabled, 0 = disabled',
-  `channel_email` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = enabled, 0 = disabled',
-  `created_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_account_category` (`idacct`, `category`),
-  INDEX `idx_notif_pref_account` (`idacct`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-```
+- External Mobile OS Push Server (APNs/FCM background server gateway) — delivery flags and preferences are modeled and persisted, but dispatching raw Apple/Google APNs/FCM payloads is deferred to `T00004` (Mobile Push Infrastructure).
+- Third-party SMS notifications — deferred due to SMS gateway billing requirements.
+- Biometric hardware firmware notifications — physical device LCD display prompts remain managed by biometric SDKs.
 
 ---
 
-## 4. Backend
+## 5. User Flow
 
-### 4.1 Models (`app/Models/`)
+### Flow 1 — Viewing and Interacting with Notifications (Employee / Web & Mobile)
 
-1. **`App\Models\Notification`**:
-   - `$table = 'notifications'`
-   - `$fillable = ['idacct', 'type', 'category', 'title', 'body', 'priority', 'actor_idacct', 'resource_type', 'resource_id', 'data', 'dedup_key', 'read_at', 'status']`
-   - `$casts = ['id' => 'integer', 'idacct' => 'integer', 'actor_idacct' => 'integer', 'resource_id' => 'integer', 'data' => 'array', 'read_at' => 'datetime', 'status' => 'integer']`
-   - Scope: `scopeActive($query)` -> `where('status', 1)`
-   - Scope: `scopeUnread($query)` -> `whereNull('read_at')`
-   - Relation: `actor()` -> `belongsTo(Account::class, 'actor_idacct', 'id')`
-   - Relation: `recipient()` -> `belongsTo(Account::class, 'idacct', 'id')`
+**Entry point:** Clicking/tapping the Bell icon in top navigation bar (`HeaderBarComponets.vue` on Web, `AppTopHeader.tsx` on Mobile).
 
-2. **`App\Models\NotificationPreference`**:
-   - `$table = 'notification_preferences'`
-   - `$fillable = ['idacct', 'category', 'channel_in_app', 'channel_push', 'channel_email']`
-   - `$casts = ['idacct' => 'integer', 'channel_in_app' => 'boolean', 'channel_push' => 'boolean', 'channel_email' => 'boolean']`
+| Step | User Action | System Behavior | Expected Result |
+| --- | --- | --- | --- |
+| 1 | User clicks/taps Bell icon. | Requests `GET /api/notifications?per_page=10` and displays dropdown (Web) or opens Notification Center (Mobile). | Inbox displays latest notifications, unread items highlighted with teal dot, relative time, priority accent, and category icon. |
+| 2 | User views category tabs (Web or Mobile). | Taps category pill (e.g., `Payroll & Payslips`). | List immediately filters to payroll items without full page reload. |
+| 3 | User clicks a specific notification (e.g., Payslip Released). | Calls `POST /api/notifications/{id}/read` in background and navigates to `resource_type` destination (`/payslip?id=980`). | Notification item marks as read, unread count decrements by 1 on navbar, and user lands on target screen. |
+| 4 | User clicks "Mark all as read". | Calls `POST /api/notifications/read-all`. Updates all active notifications for user. | All badges clear to 0, all items reflect read status, and `NotificationCountUpdated` broadcasts `unread_count = 0`. |
+| 5 | User dismisses an item (swipe left on Mobile, click trash on Web). | Calls `DELETE /api/notifications/{id}`. | Notification item is soft-deleted (`status = 0`) and animated out of view. |
 
-### 4.2 Actions & Services (`app/Actions/Notifications/`)
+**Failure paths:**
+- Step 1, network offline: UI displays cached notifications with an offline indicator badge.
+- Step 3, target entity cancelled/deleted: Notification marks read; user navigates to module list with toast: "The requested record is no longer available."
 
-1. **`CreateNotificationAction`** (`app/Actions/Notifications/CreateNotificationAction.php`):
-   - Signature: `public static function execute(int $idacct, string $type, string $category, string $title, string $body, array $options = []): ?Notification`
-   - Validates user preferences (`notification_preferences` check for `channel_in_app`).
-   - Validates `dedup_key` within time window (prevents duplicate triggers).
-   - Inserts into `notifications`.
-   - Uses `DB::afterCommit(...)` to dispatch `NotificationCreated` and `NotificationCountUpdated` events to ensure transaction consistency.
-   - Catches socket errors gracefully in `try/catch` to avoid failing caller transactions.
+### Flow 2 — Manager Actionable Pending Approval Alert (Manager / Web & Mobile)
 
-2. **`CreateBatchNotificationsAction`** (`app/Actions/Notifications/CreateBatchNotificationsAction.php`):
-   - Signature: `public static function execute(array $recipients, string $type, string $category, string $title, string $body, array $options = []): int`
-   - Bulk inserts in chunks of 100 for high-volume broadcasts (e.g. `ReleasePayslipsHandler`, `AnnouncementController`, `DutyRosterController`).
-   - Dispatches per-user unread badge update broadcasts after transaction commit.
+**Entry point:** Subordinate submits a Leave or Overtime application.
 
-3. **`BroadcastNotificationAction`** (`app/Actions/Notifications/BroadcastNotificationAction.php`):
-   - Emits `App\Events\Notifications\NotificationCreated` and `App\Events\Notifications\NotificationCountUpdated` on `new PrivateChannel("user.{$idacct}")`.
+| Step | User Action | System Behavior | Expected Result |
+| --- | --- | --- | --- |
+| 1 | Subordinate submits Leave request `id=55`. | `TKApplicationController` invokes `CreateNotificationAction` for the lowest pending approver tier resolved from `ApproverMatrix`. | Notification created for Manager `idacct=202` with `type='approval.pending'`, `priority='high'`, `is_actionable=1`. |
+| 2 | Manager is browsing HRMS. | WebSocket event `NotificationCreated` arrives on `private-user.202`. | Toast alert appears; navbar bell count increments from 0 to 1. |
+| 3 | Manager clicks notification. | Calls `POST /api/notifications/{id}/read` and navigates to approval screen (`/manager/approvals?id=55`). | Approval view opens with application details and Approve/Decline actions. |
+| 4 | Manager approves the application. | `ApprovalRequestController` updates tier status and notifies subordinate `leave.approved`. Actionable state of notification `id` updates to `action_state='resolved'`. | Subordinate receives instant alert that their leave was approved. Manager's notification shows resolved checkmark. |
 
-4. **`ResolveNotificationRecipientsAction`** (`app/Actions/Notifications/ResolveNotificationRecipientsAction.php`):
-   - Resolves target recipients based on active employment status (`status = 1`), department IDs, unit IDs, position IDs, and hierarchical approval matrices (`ApproverMatrix` / `ApproverList`).
+**Failure paths:**
+- Step 4, another sub-approver already approved: When manager opens screen, UI displays "This request has already been acted upon by another approver."
 
-### 4.3 Queries & Handlers (`app/Queries/Notifications/` & `app/Handlers/Notifications/`)
+### Flow 3 — Configuring Notification Preferences & Mandatory Guard (All Roles / Web & Mobile)
 
-1. **`GetNotificationsQuery`** (`app/Queries/Notifications/GetNotificationsQuery.php`):
-   - Fetches paginated notifications for `$user->id`.
-   - Supports filters: `unread_only` (bool), `category` (string, e.g. `payroll`, `hr`, `timekeeping`, `approval`, `announcement`, `messages`).
-   - Formats relative time, actor avatar/name, category badge tokens, and deep-link payload.
+**Entry point:** User profile menu → Account Settings → Notification Settings (`/settings/notifications` on Web, `/(app)/settings/notifications` on Mobile).
 
-2. **`GetNotificationCountQuery`** (`app/Queries/Notifications/GetNotificationCountQuery.php`):
-   - Computes total unread count: `Notification::active()->where('idacct', $user->id)->unread()->count()`.
+| Step | User Action | System Behavior | Expected Result |
+| --- | --- | --- | --- |
+| 1 | User navigates to Notification Settings. | Calls `GET /api/notifications/settings`. | Screen renders Master Controls, Reminder Preferences, Privacy Opt-Outs, and Category Channel Matrix. |
+| 2 | User mutes workplace chat notifications. | Sets Messaging category channels to disabled (`channel_in_app: false`). | Chat notifications are silenced. Operational and compliance notifications remain completely unaffected. |
+| 3 | User attempts to toggle OFF in-app alerts for "HR & Disciplinary Notices". | UI verifies `is_mandatory === true`. | Toggle is locked with a Shield icon and tooltip: "Mandatory compliance notification." If sent via API, returns HTTP 422. |
+| 4 | User enables Do-Not-Disturb (DND) from 22:00 to 07:00. | Sends `PUT /api/notifications/settings` with `dnd_enabled: true`, `dnd_start_time: '22:00'`, `dnd_end_time: '07:00'`. | During DND window, non-critical push/sound alerts are suppressed while in-app notifications record silently. |
 
-3. **`MarkNotificationReadHandler`** (`app/Handlers/Notifications/MarkNotificationReadHandler.php`):
-   - Marks a single notification as read: `where('id', $id)->where('idacct', $user->id)->update(['read_at' => now()])`.
-   - Dispatches `NotificationCountUpdated` broadcast.
+**Failure paths:**
+- Step 3, API bypass attempt: Server returns HTTP 422 with `{"message": "This notification category is mandatory for compliance and cannot be disabled."}`.
 
-4. **`MarkAllNotificationsReadHandler`** (`app/Handlers/Notifications/MarkAllNotificationsReadHandler.php`):
-   - Marks all active unread notifications for `$user->id` as read.
-   - Dispatches `NotificationCountUpdated` with `unread_count = 0`.
+### Flow 4 — Scheduled Missing Attendance Reminder Engine (System)
 
-5. **`DeleteNotificationHandler`** (`app/Handlers/Notifications/DeleteNotificationHandler.php`):
-   - Soft-deletes a notification (`status = 0`).
+**Entry point:** Automated cron scheduler running `php artisan hrms:check-missing-attendance`.
 
-### 4.4 Real-Time Events (`app/Events/Notifications/`)
+| Step | User Action | System Behavior | Expected Result |
+| --- | --- | --- | --- |
+| 1 | Cron triggers command at 09:30 AM. | Executes `CheckMissingAttendanceAction`. Loads active employees (`status = 1`). | Iterates across active employees scheduled for morning shifts. |
+| 2 | System evaluates Employee `105`. | Checks `ResolveShiftForDateAction`. Shift starts at 08:30 AM (grace period 30m expired at 09:00 AM). | Confirms employee has a scheduled workday today. |
+| 3 | System verifies exclusions. | Checks `Holiday`, `AppLeave`, and `AppOfficialBusinessTrip`. | Verifies employee is NOT on holiday, NOT on approved leave, and NOT on official business. |
+| 4 | System inspects attendance. | Checks `timelogs` and `timesheet` for `$date`. | Confirms NO time-in record exists. |
+| 5 | System checks deduplication. | Checks `notifications` for `dedup_key = 'missing_time_in_105_2026-10-14'`. | Confirms no alert generated yet today. |
+| 6 | System emits reminder. | Inserts row into `notifications` (`type='timekeeping.missing_time_in'`) and broadcasts to `private-user.105`. | Employee receives real-time reminder: "Missing Time-In: You have not logged in for your 8:30 AM shift. Please time in or file an adjustment." |
 
-1. **`NotificationCreated`** (`app/Events/Notifications/NotificationCreated.php`):
-   - Implements `ShouldBroadcastNow`.
-   - Channel: `PrivateChannel("user.{$idacct}")`.
-   - Broadcast Name: `NotificationCreated`.
-   - Payload:
-     ```json
-     {
-       "id": 12345,
-       "type": "payroll.payslip_released",
-       "category": "payroll",
-       "title": "Payslip Released",
-       "body": "Your payslip for Oct 01 - Oct 15, 2026 is now available.",
-       "priority": "normal",
-       "actor": {
-         "id": 1,
-         "name": "Payroll Department",
-         "avatar_url": null
-       },
-       "resource": {
-         "type": "payslip",
-         "id": 980
-       },
-       "data": {
-         "pay_period_id": 12,
-         "pay_period_name": "Oct 01 - Oct 15, 2026",
-         "cycle": "regular",
-         "net_pay": 24500.00
-       },
-       "read_at": null,
-       "created_at": "2026-10-02T09:30:00+08:00"
-     }
-     ```
-
-2. **`NotificationCountUpdated`** (`app/Events/Notifications/NotificationCountUpdated.php`):
-   - Implements `ShouldBroadcastNow`.
-   - Channel: `PrivateChannel("user.{$idacct}")`.
-   - Broadcast Name: `NotificationCountUpdated`.
-   - Payload:
-     ```json
-     {
-       "unread_count": 5
-     }
-     ```
-
-### 4.5 Controllers & Routes
-
-#### Controller: `app/Http/Controllers/employee/NotificationsController.php`
-- `index(Request $request)` -> returns `response()->json(GetNotificationsQuery::execute($request))`
-- `count(Request $request)` -> returns `response()->json(GetNotificationCountQuery::execute($request))`
-- `markAsRead(Request $request, int $id)` -> returns `response()->json(MarkNotificationReadHandler::execute($request, $id))`
-- `markAllAsRead(Request $request)` -> returns `response()->json(MarkAllNotificationsReadHandler::execute($request))`
-- `destroy(Request $request, int $id)` -> returns `response()->json(DeleteNotificationHandler::execute($request, $id))`
-
-#### Route Registration in `routes/api/employee.php`:
-```php
-// Notifications Management
-Route::prefix('notifications')->group(function () {
-    Route::get('/', [NotificationsController::class, 'index']);
-    Route::get('/count', [NotificationsController::class, 'count']);
-    Route::post('/read-all', [NotificationsController::class, 'markAllAsRead']);
-    Route::post('/{id}/read', [NotificationsController::class, 'markAsRead']);
-    Route::delete('/{id}', [NotificationsController::class, 'destroy']);
-});
-```
+**Failure paths:**
+- Step 3, employee is on approved leave or rest day: Excluded by engine; zero reminders generated.
 
 ---
 
-## 5. Domain Event Inventory & Notification Catalog
+## 6. Functional Requirements
 
-The following is the exhaustive catalog of system events that trigger centralized notifications:
+### FR-01 — Centralized Notification Dispatch Engine
+- **Requirement ID:** FR-01
+- **Description:** Provide centralized backend actions (`CreateNotificationAction` and `CreateBatchNotificationsAction`) that validate user preferences, enforce deduplication keys, persist notification records to MySQL, and dispatch real-time WebSocket broadcasts via `DB::afterCommit`.
+- **Expected Behavior:** Input accepts `idacct`, `type`, `category`, `title`, `body`, `priority`, `actor_idacct`, `resource_type`, `resource_id`, `data`, and `dedup_key`. If user preference has disabled the target channel (and category is not mandatory), dispatch is skipped. Broadcast errors are caught and logged without aborting caller database transactions.
+- **Verified by:** AC-01, AC-02, AC-25, AC-26
 
-### 5.1 Payroll Events (`category: 'payroll'`)
-| Event Type | Trigger Origin | Title | Body Example | Priority | Resource Type | Deep Link Route |
-|---|---|---|---|---|---|---|
-| `payroll.payslip_released` | `ReleasePayslipsHandler` | Payslip Released | "Your payslip for period Oct 01 - Oct 15, 2026 is now available." | `normal` | `payslip` | `/(app)/payslip?id={id}` |
-| `payroll.13th_month_released` | `ProcessYearEndHandler` | 13th Month Pay Available | "Your 13th month pay computation has been released." | `normal` | `13th_month_pay` | `/(app)/payslip?type=13th_month` |
-| `payroll.retroactive_pay` | `ProcessPayrollHandler` | Retroactive Pay Credited | "A retroactive salary differential has been added to your payroll." | `normal` | `payslip` | `/(app)/payslip?id={id}` |
-| `payroll.service_charge_credited` | `PayrollServiceChargeController` | Service Charge Credited | "Your monthly service charge share (₱3,250.00) has been credited." | `normal` | `payslip` | `/(app)/payslip?id={id}` |
-| `payroll.loan_deduction_notice` | `PayrollEntriesController` | Loan Deduction Applied | "SSS Salary Loan deduction of ₱1,200.00 applied to current payroll." | `low` | `loan` | `/(app)/profile` |
-| `payroll.tax_2316_available` | `BirTaxController` | BIR Form 2316 Ready | "Your annual Certificate of Compensation Payment/Tax Withheld (Form 2316) is ready." | `normal` | `bir_2316` | `/(app)/profile` |
+### FR-02 — Real-Time WebSocket Broadcasting
+- **Requirement ID:** FR-02
+- **Description:** Broadcast real-time notification events over private user channels (`private-user.{idacct}`) using Pusher/Reverb.
+- **Expected Behavior:** Two events emitted: `NotificationCreated` (carrying complete notification object) and `NotificationCountUpdated` (carrying updated `unread_count`). Only the authenticated account matching `{idacct}` may subscribe.
+- **Verified by:** AC-02, AC-27, AC-28
 
-### 5.2 Timekeeping & Duty Roster Events (`category: 'timekeeping'`)
-| Event Type | Trigger Origin | Title | Body Example | Priority | Resource Type | Deep Link Route |
-|---|---|---|---|---|---|---|
-| `timekeeping.cutoff_reminder` | Cron / TK Scheduler | Cutoff Approaching | "Timekeeping cutoff closes today at 5:00 PM. Please file all pending requests." | `high` | `timekeeping` | `/(app)/apply` |
-| `timekeeping.period_locked` | `TimesheetProcessingController` | Cutoff Period Locked | "Timekeeping period Oct 01 - Oct 15 has been locked for payroll processing." | `normal` | `timekeeping` | `/(app)/(tabs)/timekeeping` |
-| `timekeeping.duty_roster_published` | `DutyRosterController` | Schedule Published | "A new duty roster has been published for your unit (Oct 16 - Oct 31)." | `normal` | `duty_roster` | `/(app)/(tabs)/timekeeping` |
-| `timekeeping.dispute_resolved` | `ResolutionCenterController` | Attendance Dispute Resolved | "Your attendance dispute for Sept 28 has been resolved by Manager Jane." | `normal` | `attendance_dispute` | `/(app)/requests` |
-| `timekeeping.leave_conversion_processed` | `LeaveConversionController` | Leave Credits Monetized | "Your leave conversion request for 5.0 SL days has been approved." | `normal` | `leave_conversion` | `/(app)/requests` |
+### FR-03 — Notification Retrieval and Category Filtering
+- **Requirement ID:** FR-03
+- **Description:** Provide a paginated REST API endpoint allowing authenticated users to fetch their notifications with optional filtering by category, read status, and priority.
+- **Expected Behavior:** `GET /api/notifications` returns paginated records scoped strictly to `auth()->user()->id`, sorted newest first. Supports query parameters: `page` (default 1), `per_page` (default 20, max 100), `category`, `unread_only` (0/1), and `priority`.
+- **Verified by:** AC-03, AC-29
 
-### 5.3 HR & Employee Lifecycle Events (`category: 'hr'`)
-| Event Type | Trigger Origin | Title | Body Example | Priority | Resource Type | Deep Link Route |
-|---|---|---|---|---|---|---|
-| `hr.incident_report` | `IncidentReportController` | Incident Report Notice | "You have been tagged in Incident Report #IR-2026-012." | `high` | `incident_report` | `/(app)/requests` |
-| `hr.disciplinary_action` | `DisciplinaryActionController` | Official HR Notice | "A Notice to Explain (NTE) has been issued for your acknowledgment." | `critical` | `disciplinary_action` | `/(app)/requests` |
-| `hr.company_event` | `ActivityorEventController` | Company Activity | "Upcoming Event: Annual Company Townhall on October 25." | `low` | `company_event` | `/(app)/announcements` |
-| `hr.emp_movement` | `EmpMovementController` | Employment Status Update | "Congratulations! Your employment status has been updated to Regular." | `high` | `profile` | `/(app)/(tabs)/profile` |
-| `hr.separation_milestone` | `EmployeeSeparationController` | Clearance Milestone | "IT Department has signed off on your clearance checklist." | `normal` | `clearance` | `/(app)/requests` |
+### FR-04 — Read and Dismissal State Management
+- **Requirement ID:** FR-04
+- **Description:** Allow users to mark individual notifications as read, mark all notifications as read, and soft-delete/dismiss notifications.
+- **Expected Behavior:** `POST /api/notifications/{id}/read` sets `read_at = now()`. `POST /api/notifications/read-all` sets `read_at = now()` for all unread records of the user (optionally scoped to a `category`). `DELETE /api/notifications/{id}` sets `status = 0`. Both read actions broadcast updated `NotificationCountUpdated`. Attempting to read another user's notification returns HTTP 403 Forbidden.
+- **Verified by:** AC-04, AC-05, AC-06, AC-30
 
-### 5.4 Attendance & Filings (`categories: 'attendance', 'leave', 'overtime', 'approval'`)
-| Event Type | Trigger Origin | Title | Body Example | Priority | Resource Type | Deep Link Route |
-|---|---|---|---|---|---|---|
-| `attendance.time_in` | `AttendanceController::record` | Timed In | "You successfully timed in at 8:02 AM." | `low` | `attendance` | `/(app)/time-in-out` |
-| `attendance.time_out` | `AttendanceController::record` | Timed Out | "You successfully timed out at 5:31 PM." | `low` | `attendance` | `/(app)/time-in-out` |
-| `leave.submitted` | `AppLeave` filing | Leave Request Submitted | "Your leave request for Oct 10 has been submitted for approval." | `normal` | `leave` | `/(app)/requests` |
-| `leave.approved` | `AppLeave` approval | Leave Approved | "Your leave request for Oct 10 has been approved by Jane Smith." | `normal` | `leave` | `/(app)/requests` |
-| `leave.rejected` | `AppLeave` rejection | Leave Request Rejected | "Your leave request for Oct 10 was rejected by Jane Smith." | `high` | `leave` | `/(app)/requests` |
-| `approval.pending` | Application submissions | Pending Approval | "John Doe submitted a leave request that requires your approval." | `high` | `approval` | `/(app)/requests?filter=pending` |
+### FR-05 — Global and Category Notification Settings
+- **Requirement ID:** FR-05
+- **Description:** Provide APIs and database backing for users to configure global delivery options and per-category channel preferences (In-App, Push, Email).
+- **Expected Behavior:** `GET /api/notifications/settings` returns master settings (DND schedule, reminder lead times, privacy flags) and per-category channel states. `PUT /api/notifications/settings` updates master settings. `PUT /api/notifications/preferences/{category}` updates category channel toggles. Mandatory categories reject disable requests with HTTP 422.
+- **Verified by:** AC-07, AC-08, AC-31
 
-### 5.5 Announcements, Birthdays & Messaging (`categories: 'announcement', 'birthday', 'message', 'mention'`)
-| Event Type | Trigger Origin | Title | Body Example | Priority | Resource Type | Deep Link Route |
-|---|---|---|---|---|---|---|
-| `announcement.created` | `AnnouncementController` | New Announcement | "HR published a new announcement: Holiday Operations Schedule." | `normal` | `announcement` | `/(app)/announcements` |
-| `birthday.today` | Daily cron `hrms:notify-birthdays` | Birthday Greeting | "Today is John Doe's birthday! 🎉" | `low` | `birthday` | `/(app)/(tabs)/messages` |
-| `message.received` | `SendMessageHandler` | Direct Message | "Jane Smith sent you a message." | `normal` | `conversation` | `/(app)/conversation?id={id}` |
-| `message.mention` | `ResolveMentionsAction` | Mentioned in Chat | "Jane Smith mentioned you in #general." | `high` | `conversation` | `/(app)/conversation?id={id}` |
+### FR-06 — Application and Approval Workflow Notifications
+- **Requirement ID:** FR-06
+- **Description:** Notify applicants and approvers across all request types: Leave (`AppLeave`), Overtime (`AppOvertime`), Official Business (`AppOfficialBusinessTrip`), Attendance Adjustment (`AppAdjustment`), and Change Shift (`AppChangeShift`).
+- **Expected Behavior:**
+  - On submission: Notify the current active approver tier resolved by `ApproverMatrix` with `type='approval.pending'`, `is_actionable=1`.
+  - On tier approval: Notify the next approver tier; if final tier, notify applicant with `type='<module>.approved'`.
+  - On rejection: Notify applicant with `type='<module>.rejected'`, including approver's reason.
+  - On cancellation: If pending, notify current approvers that the request was cancelled.
+- **Verified by:** AC-01, AC-09, AC-10, AC-11
 
----
+### FR-07 — Decoupled Payroll Lifecycle: Processing Completion vs. Payslip Release
+- **Requirement ID:** FR-07
+- **Description:** Strictly decouple internal payroll processing completion notifications from employee payslip release notifications.
+- **Expected Behavior:**
+  - **Internal Payroll Processing Completed**: When a payroll run computation finishes (`pay_process_status = 1`), dispatch `payroll.processing_completed` strictly to Payroll Officers and HR Administrators. Employees receive ZERO notifications.
+  - **Payroll Processing Failed/Warning**: When payroll computation encounters calculation errors or unlinked accounts, dispatch `payroll.processing_failed` strictly to Payroll Officers.
+  - **Payslip Officially Released**: When `ReleasePayslipsHandler::execute` runs, dispatch `payroll.payslip_released` to individual employees whose payslips have `released_at` set. Notification body must NEVER expose gross/net compensation amounts or sensitive figures in previews. Deep links directly to `/payslip?id={id}`.
+- **Verified by:** AC-12, AC-13, AC-14, AC-32, AC-43, AC-44
 
-## 6. Frontend (`resources/views/mobapp`)
+### FR-08 — Timekeeping and Shift Roster Notifications
+- **Requirement ID:** FR-08
+- **Description:** Notify employees and supervisors regarding duty roster publishing, cutoff period locking, attendance adjustments, and attendance disputes.
+- **Expected Behavior:**
+  - Publishing duty roster (`DutyRosterController`) dispatches `timekeeping.duty_roster_published` to all assigned employees.
+  - Period locking (`TimesheetProcessingController`) dispatches `timekeeping.period_locked`.
+  - Attendance dispute resolution (`AttendanceDispute`) dispatches `timekeeping.dispute_resolved`.
+- **Verified by:** AC-15, AC-16, AC-17
 
-### 6.1 Module Structure
+### FR-09 — Missing Attendance Eligibility & Reminder Engine
+- **Requirement ID:** FR-09
+- **Description:** Automatically detect and notify active employees who have missed their scheduled time-in or time-out, applying comprehensive schedule eligibility rules.
+- **Expected Behavior:** Scheduled command `hrms:check-missing-attendance` executes daily. An employee is alerted for missing time-in ONLY if: (1) `status = 1`, (2) resolved shift via `ResolveShiftForDateAction` is not Rest Day (`idshift !== 1`, `code !== 'REST'`), (3) date is not a holiday in `Holiday`, (4) no approved leave in `AppLeave`, (5) no approved official business trip in `AppOfficialBusinessTrip`, (6) shift start time + grace period (default 30m) has elapsed, (7) no time-in recorded in `timelogs` or `timesheet`, and (8) not already notified today (`dedup_key = 'missing_time_in_{idacct}_{date}'`). Missing time-out evaluates shift end time + grace period for employees who have timed in. Auto-resolves if employee subsequently logs in or files an adjustment.
+- **Verified by:** AC-18, AC-19, AC-20, AC-33, AC-34
 
-```text
-resources/views/mobapp/src/module/employee/notifications/
-├── api/
-│   └── notifications.api.ts
-├── components/
-│   ├── NotificationItem.tsx
-│   ├── NotificationCategoryTabs.tsx
-│   ├── NotificationEmptyState.tsx
-│   └── NotificationHeaderActions.tsx
-├── hooks/
-│   └── useNotifications.ts
-├── pages/
-│   └── NotificationsScreen.tsx
-├── types/
-│   └── types.notifications.ts
-└── index.ts
-```
+### FR-10 — Filing and Cutoff Deadline Reminders
+- **Requirement ID:** FR-10
+- **Description:** Alert employees and managers regarding approaching pay period cutoffs and pending filing deadlines.
+- **Expected Behavior:** Scheduled command `hrms:notify-filing-deadlines` checks active `PayPeriod` records approaching `period_end`. Dispatches `timekeeping.cutoff_reminder` to employees with unfiled attendance exceptions or pending draft applications at 24 hours and 4 hours before lock.
+- **Verified by:** AC-21, AC-34
 
-### 6.2 TypeScript Contracts (`types.notifications.ts`)
+### FR-11 — HR Lifecycle and Statutory Disciplinary Notices
+- **Requirement ID:** FR-11
+- **Description:** Deliver urgent, mandatory notifications for Notice to Explain (NTE), Disciplinary Actions, Incident Reports, Employee Movements, and Clearance Milestones.
+- **Expected Behavior:**
+  - `DisciplinaryActionController` dispatches `hr.disciplinary_action` with `priority='critical'`.
+  - `IncidentReportController` dispatches `hr.incident_report` with `priority='high'`.
+  - `EmpMovementController` dispatches `hr.emp_movement` upon regularization or promotion.
+  - Disciplinary notifications cannot be disabled in user preferences.
+- **Verified by:** AC-08, AC-22, AC-23
 
-```typescript
-export type NotificationPriority = 'low' | 'normal' | 'high' | 'critical';
+### FR-12 — Announcements and Company Townhalls
+- **Requirement ID:** FR-12
+- **Description:** Broadcast announcements created in `AnnouncementController` to targeted employee audiences (company-wide, specific units, or specific departments).
+- **Expected Behavior:** Creating an active announcement dispatches `announcement.created` in batches of 100 to all eligible active employees. Resigned or inactive employees (`status != 1`) are excluded.
+- **Verified by:** AC-24, AC-35
 
-export type NotificationCategory =
-  | 'attendance'
-  | 'leave'
-  | 'overtime'
-  | 'official_business'
-  | 'change_shift'
-  | 'attendance_adjustment'
-  | 'approval'
-  | 'rejection'
-  | 'status_update'
-  | 'hr'
-  | 'timekeeping'
-  | 'payroll'
-  | 'announcement'
-  | 'birthday'
-  | 'message'
-  | 'mention'
-  | 'system';
+### FR-13 — Birthdays and Work Anniversaries
+- **Requirement ID:** FR-13
+- **Description:** Dispatch daily milestone greetings for employee birthdays and work anniversaries, respecting privacy preferences.
+- **Expected Behavior:** Scheduled command `hrms:notify-birthdays-anniversaries` runs at 08:00 AM daily. Matches `bdate` (month-day) and `hire_date` (month-day). Dispatches `birthday.today` and `anniversary.milestone`. If employee has set `birthday_privacy_opt_out = 1`, the notification is suppressed.
+- **Verified by:** AC-36, AC-37
 
-export interface NotificationActor {
-  id: number;
-  name: string;
-  avatar_url?: string | null;
-}
+### FR-14 — Workplace Messaging Notification Coalescing & Suppression
+- **Requirement ID:** FR-14
+- **Description:** Provide notification integration for chat direct messages, channel mentions, and thread replies with intelligent suppression and coalescing.
+- **Expected Behavior:** Mentions (`@user`, `@channel`, `@all`) generate `message.mention` with `priority='high'`. Direct messages generate `message.received`. If recipient is currently active in the specific conversation channel, in-app notification toasts are suppressed. Rapid emoji reactions within a 3-minute window coalesce into a single notification record. Chat muting never silences operational or compliance categories.
+- **Verified by:** AC-38, AC-39, AC-40
 
-export interface NotificationResource {
-  type: string;
-  id: number;
-}
-
-export interface AppNotification {
-  id: number;
-  idacct: number;
-  type: string;
-  category: NotificationCategory;
-  title: string;
-  body: string;
-  priority: NotificationPriority;
-  actor?: NotificationActor | null;
-  resource?: NotificationResource | null;
-  data?: Record<string, any> | null;
-  read_at: string | null;
-  is_read: boolean;
-  created_at: string;
-  time_ago: string;
-}
-
-export interface NotificationListResponse {
-  data: AppNotification[];
-  current_page: number;
-  last_page: number;
-  total: number;
-  unread_count: number;
-}
-```
-
-### 6.3 Mobile Screen Layout & Interactions (`NotificationsScreen.tsx`)
-
-1. **Header**:
-   - Title: `Notifications`
-   - Unread Count Pill: `🔔 4 unread`
-   - Action: `Mark all as read` button
-2. **Filter Tabs**:
-   - `All` | `Unread` | `Payroll & Payslips` | `Approvals` | `Timekeeping` | `HR & Announcements` | `Messages`
-3. **Item Visuals (`NotificationItem.tsx`)**:
-   - Category-specific icons:
-     - `payroll`: Banknote / Wallet icon with green theme accent.
-     - `timekeeping` / `attendance`: Clock / Calendar icon with cyan/blue accent.
-     - `hr`: Shield / Award / UserCheck icon with purple/indigo accent.
-     - `approval`: CheckCircle / AlertCircle icon with amber accent.
-     - `announcement`: Megaphone icon with orange accent.
-     - `birthday`: PartyPopper icon with festive gold accent.
-     - `message` / `mention`: MessageSquare / AtSign icon with blue accent.
-   - Unread dot on left edge.
-   - Priority accent border for `critical` (red/amber).
-   - Relative time format (`5m ago`, `2h ago`, `Yesterday`).
-   - Swipe actions: swipe right to toggle read state; swipe left to delete.
-4. **Deep-Link Navigator**:
-   - Tapping an item triggers `notifications.api.markAsRead(item.id)` and immediately resolves route:
-     - `payslip` -> `router.push('/(app)/payslip?id=' + item.resource.id)`
-     - `duty_roster` / `timekeeping` -> `router.push('/(app)/(tabs)/timekeeping')`
-     - `leave` / `overtime` / `requests` -> `router.push('/(app)/requests?id=' + item.resource.id)`
-     - `conversation` -> `router.push('/(app)/conversation?id=' + item.data.conversation_id)`
-     - `announcement` -> Opens announcement modal.
+### FR-15 — Web & Mobile Notification Center UI/UX Parity
+- **Requirement ID:** FR-15
+- **Description:** Implement responsive, accessible notification center components on Web (Vue 3 / PrimeVue) and Mobile (React Native / Expo) sharing identical visual concepts, category tabs, priority borders, and layout hierarchy.
+- **Expected Behavior:**
+  - **Shared Visual Hierarchy**: Both platforms share identical category icons, priority accent borders (`critical`: red, `high`: amber, `normal`: default), unread indicator dots, and relative timestamp formatting.
+  - **Web**: Dropdown menu in `HeaderBarComponets.vue` with live unread badge; dedicated full page at `/notifications` with category tabs (`All`, `Approvals`, `Attendance`, `Payroll`, `Announcements`, `HR`, `Messages`), priority badges, and deep-link routing.
+  - **Mobile**: Bell button in `AppTopHeader.tsx` displaying live unread pill badge; screen at `/(app)/notifications` with identical category tabs, pull-to-refresh, swipe-to-dismiss, and one-tap deep linking.
+- **Verified by:** AC-02, AC-03, AC-41, AC-42
 
 ---
 
-## 7. Business Rules & Edge Cases
+## 7. Role-Specific Recipient Routing Matrix
 
-### 7.1 Non-Functional & Failure-Mode Checklist
+The system enforces role and portal-scoped recipient routing so users receive only relevant notifications matching their actual permissions:
 
-| Category | Specification Response |
-|---|---|
-| **Authorization** | Every notification endpoint is protected by `auth:sanctum`. A user can only fetch, read, or delete notifications where `idacct === auth()->user()->id`. Accessing another user's notification ID returns HTTP 403 Forbidden `{"message": "Unauthorized access to notification."}`. |
-| **Concurrency / double-submit** | Tapping "Mark as read" or "Mark all as read" multiple times concurrently is idempotent (`UPDATE notifications SET read_at = now() WHERE read_at IS NULL`). UI disables buttons while request is in-flight. |
-| **Idempotency on retries** | `dedup_key` column on `notifications` table prevents duplicate insertion for identical business events re-dispatched via queue retries within short time windows (e.g. `payslip_{pay_period_id}_{idacct}`). |
-| **Error response shape & status codes** | Unauthenticated: HTTP 401 `{"message": "Unauthenticated."}`. Validation error: HTTP 422 `{"message": "The given data was invalid.", "errors": {...}}`. Forbidden: HTTP 403 `{"message": "Unauthorized access to notification."}`. Not Found: HTTP 404 `{"message": "Notification not found."}`. Server error: HTTP 500 `{"message": "Failed to process notification."}`. Raw API responses via `response()->json(...)`. |
-| **Input validation boundaries** | Query parameters for list pagination: `per_page` integer between 1 and 100 (default 20). `page` integer >= 1. `category` string validated against valid category list or rejected with 422. Path parameter `id` validated as positive unsigned integer. |
-
----
-
-## 8. Build Order
-
-1. **Database Migration**:
-   - Create `database/migrations/2026_10_02_000001_create_notifications_and_preferences_tables.php`.
-   - Run migration in container.
-2. **Backend Models & Events**:
-   - Create `app/Models/Notification.php` and `app/Models/NotificationPreference.php`.
-   - Create `app/Events/Notifications/NotificationCreated.php` and `app/Events/Notifications/NotificationCountUpdated.php`.
-3. **Backend Actions, Queries & Handlers**:
-   - Create `app/Actions/Notifications/CreateNotificationAction.php`, `CreateBatchNotificationsAction.php`, and `BroadcastNotificationAction.php`.
-   - Create `app/Queries/Notifications/GetNotificationsQuery.php` and `GetNotificationCountQuery.php`.
-   - Create `app/Handlers/Notifications/MarkNotificationReadHandler.php`, `MarkAllNotificationsReadHandler.php`, and `DeleteNotificationHandler.php`.
-4. **Backend Controller & Routes**:
-   - Create `app/Http/Controllers/employee/NotificationsController.php`.
-   - Register endpoints in `routes/api/employee.php`.
-5. **Domain Event Wiring**:
-   - **Payroll**: Hook into `ReleasePayslipsHandler.php` (payslip release), `ProcessYearEndHandler.php` (13th month), `PayrollServiceChargeController.php`, `BirTaxController.php`.
-   - **Timekeeping**: Hook into `TimesheetProcessingController.php` (cutoff lock), `DutyRosterController.php` (roster publish), `ResolutionCenterController.php` (dispute resolutions), `LeaveConversionController.php`.
-   - **HR**: Hook into `IncidentReportController.php`, `DisciplinaryActionController.php`, `ActivityorEventController.php`, `EmpMovementController.php`.
-   - **Attendance & Filings**: Hook into `AttendanceController.php`, `AppLeave` / `AppOvertime` / `AppAdjustment` approval handlers.
-   - **Messaging**: Hook into `SendMessageHandler.php` and `ResolveMentionsAction.php`.
-   - **Birthdays**: Create scheduled command `app/Console/Commands/NotifyBirthdaysCommand.php`.
-6. **Frontend Mobile Implementation (`resources/views/mobapp`) - Gate 1 (Design-First)**:
-   - Create TypeScript types in `src/module/employee/notifications/types/types.notifications.ts`.
-   - Build `NotificationItem.tsx`, `NotificationCategoryTabs.tsx`, `NotificationEmptyState.tsx`, and `NotificationsScreen.tsx` with mock data.
-   - Create route file `src/app/(app)/notifications.tsx`.
-   - Connect `AppTopHeader.tsx` bell press to `router.push('/(app)/notifications')`.
-7. **Frontend Mobile Wiring - Gate 2 (Live API & Realtime Echo)**:
-   - Create `src/module/employee/notifications/api/notifications.api.ts`.
-   - Create `useNotifications.ts` hook integrating live REST endpoints and `Echo.private('user.' + user.id)`.
-   - Verify unread count badge and live notification feed updates.
+| Notification Category & Event | Employee | Manager / Approver | HR Personnel | Timekeeper | Payroll Staff | System Admin |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `leave.submitted` / `overtime.submitted` | Applicant confirmation | **Active Tier Approver** | — | — | — | — |
+| `leave.approved` / `overtime.approved` | **Applicant** | Next Tier / Final Approver | — | — | — | — |
+| `leave.rejected` / `overtime.rejected` | **Applicant** | Approver record | — | — | — | — |
+| `timekeeping.missing_time_in` / `out` | **Assigned Employee** | Escalated if unresolved > 24h | — | — | — | — |
+| `timekeeping.duty_roster_published` | **Scheduled Unit Employees** | Unit Manager | — | Unit Timekeeper | — | — |
+| `timekeeping.cutoff_reminder` | **Employees with unfiled exceptions** | Subordinate pending summary | — | Timekeeping team | — | — |
+| `timekeeping.period_locked` | Unit Employees | Unit Managers | HR team | **Timekeeping team** | Handover to Payroll | — |
+| `payroll.processing_completed` | ❌ **NOT SENT** | — | HR Admin | — | **Payroll Officers** | — |
+| `payroll.processing_failed` | ❌ **NOT SENT** | — | HR Admin | — | **Payroll Officers** | IT Support |
+| `payroll.payslip_released` | **Individual Recipient** | — | — | — | Release confirmation | — |
+| `payroll.13th_month_released` | **Individual Recipient** | — | — | — | Release confirmation | — |
+| `hr.disciplinary_action` (NTE) | **Accused Employee** | Subordinate Manager | **HR Issuer** | — | — | Legal/Admin |
+| `hr.incident_report` | **Tagged Parties** | Unit Manager | **HR Safety/Security** | — | — | — |
+| `hr.emp_movement` (Regularization) | **Promoted Employee** | Direct Manager | **HR Operations** | — | Payroll (for rate adjustment) | — |
+| `announcement.created` | **Target Audience Employees** | Target Managers | Author confirmation | — | — | — |
+| `birthday.today` / `anniversary.milestone` | **Colleagues / Team** | Department Head | — | — | — | — |
+| `system.biometric_sync_failed` | — | — | — | Unit Timekeeper | — | **System Admin** |
+| `system.queue_worker_down` | — | — | — | — | — | **System Admin** |
 
 ---
 
-## 9. Out of Scope (Future Specs)
+## 8. Non Functional Requirements
 
-- External OS Push Notifications (FCM / APNs via Expo Push Server) — backend `notification_preferences` table is designed to support this cleanly in subsequent phase.
-- Granular email notification digest delivery.
-- Complex notification analytics dashboard for HR admins.
+| ID | Category | Requirement | Target / Limit |
+| --- | --- | --- | --- |
+| NFR-01 | Security | Authorization and IDOR protection on every endpoint; all actions scoped to `auth()->user()->id`. | 0 unauthorized accesses; 403 Forbidden on foreign IDs |
+| NFR-02 | Performance | List endpoint retrieval response time under high concurrency with indexed keys. | p95 < 250 ms with 20,000 historical rows |
+| NFR-03 | Scalability | Bulk notification insertion during payroll releases or company-wide announcements. | 1,000 notifications inserted and queued within 1,500 ms |
+| NFR-04 | Maintainability | Strict adherence to SubHRMS conventions: Query/Handler/Action pattern, `idacct`, no foreign keys, `status` soft delete. | 100% compliance; zero `app/Domain/` references |
+| NFR-05 | Reliability | Persist-before-broadcast guarantee and transaction safety. Broadcast failures must never abort caller DB transactions. | 100% transaction safety; 0 phantom broadcasts |
 
 ---
 
-## 10. Definition of Done
+## 9. Technical Design
 
-- [ ] Every row in the **Acceptance Criteria** table passes (`AC-1` … `AC-27`).
-- [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed and verified.
-- [ ] `notifications` and `notification_preferences` tables created following SubHRMS database standards (`idacct`, no foreign key constraints, `status` soft delete).
-- [ ] Real-time WebSocket broadcasting verified on `private-user.{idacct}` channel for both Pusher and Reverb connections.
-- [ ] Mobile app notification center screen (`/(app)/notifications`) implemented with full deep-linking support for Payslips, Attendance, Requests, HR Memos, and Messaging.
-- [ ] Dynamic unread badge in mobile header (`AppTopHeader.tsx`) reflects live unread count.
-- [ ] No open findings from adversarial verification (`verify.md`).
-- [ ] No open `CRITICAL`/`HIGH` findings from diff review (`code-review.md`).
+### Architecture
 
-<!-- Changelog -->
-- v1 — 2026-10-02 — initial complete specification grounded in SubHRMS architecture and T00001 real-time inspection.
+- **Where it fits:** SubHRMS Backend (`app/Actions/Notifications/`, `app/Handlers/Notifications/`, `app/Queries/Notifications/`, `app/Models/`, `app/Events/Notifications/`), Web Frontend (`resources/views/web/src/module/employee/notifications/`), and Mobile Frontend (`resources/views/mobapp/src/module/employee/notifications/`).
+- **Pattern followed:** SubHRMS Thin Controller + Query/Handler/Action pattern ([project-profile.md](../../rules/project-profile.md)).
+- **Reference implementation:** `app/Handlers/Payroll/ReleasePayslipsHandler.php` (for batch DB transactions), `app/Actions/Messages/ResolveMentionsAction.php` (for mention parsing and WebSocket broadcasts), `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` (for web navbar header integration).
+
+| Component | Status | Path |
+| --- | --- | --- |
+| `Notification` model | New | `app/Models/Notification.php` |
+| `NotificationSetting` model | New | `app/Models/NotificationSetting.php` |
+| `NotificationPreference` model | New | `app/Models/NotificationPreference.php` |
+| `CreateNotificationAction` | New | `app/Actions/Notifications/CreateNotificationAction.php` |
+| `CreateBatchNotificationsAction` | New | `app/Actions/Notifications/CreateBatchNotificationsAction.php` |
+| `BroadcastNotificationAction` | New | `app/Actions/Notifications/BroadcastNotificationAction.php` |
+| `ResolveNotificationRecipientsAction` | New | `app/Actions/Notifications/ResolveNotificationRecipientsAction.php` |
+| `CheckMissingAttendanceAction` | New | `app/Actions/Notifications/CheckMissingAttendanceAction.php` |
+| `GetNotificationsQuery` | New | `app/Queries/Notifications/GetNotificationsQuery.php` |
+| `GetNotificationCountQuery` | New | `app/Queries/Notifications/GetNotificationCountQuery.php` |
+| `GetNotificationSettingsQuery` | New | `app/Queries/Notifications/GetNotificationSettingsQuery.php` |
+| `MarkNotificationReadHandler` | New | `app/Handlers/Notifications/MarkNotificationReadHandler.php` |
+| `MarkAllNotificationsReadHandler` | New | `app/Handlers/Notifications/MarkAllNotificationsReadHandler.php` |
+| `DismissNotificationHandler` | New | `app/Handlers/Notifications/DismissNotificationHandler.php` |
+| `UpdateNotificationSettingsHandler` | New | `app/Handlers/Notifications/UpdateNotificationSettingsHandler.php` |
+| `UpdateNotificationPreferencesHandler` | New | `app/Handlers/Notifications/UpdateNotificationPreferencesHandler.php` |
+| `NotificationsController` | New | `app/Http/Controllers/global/NotificationsController.php` |
+| `NotificationCreated` event | New | `app/Events/Notifications/NotificationCreated.php` |
+| `NotificationCountUpdated` event | New | `app/Events/Notifications/NotificationCountUpdated.php` |
+| `CheckMissingAttendanceCommand` | New | `app/Console/Commands/CheckMissingAttendanceCommand.php` |
+| `NotifyFilingDeadlinesCommand` | New | `app/Console/Commands/NotifyFilingDeadlinesCommand.php` |
+| `NotifyBirthdaysCommand` | New | `app/Console/Commands/NotifyBirthdaysCommand.php` |
+| `NotifyPendingApprovalsCommand` | New | `app/Console/Commands/NotifyPendingApprovalsCommand.php` |
+| Web Navbar Bell & Dropdown | Extended | `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` |
+| Web Notification Center Page | New | `resources/views/web/src/module/employee/notifications/pages/NotificationsPage.vue` |
+| Web Notification Settings Page | New | `resources/views/web/src/module/employee/notifications/pages/NotificationSettingsPage.vue` |
+| Mobile Navbar Bell Button | Extended | `resources/views/mobapp/src/components/AppTopHeader.tsx` |
+| Mobile Notification Screen | New | `resources/views/mobapp/src/module/employee/notifications/pages/NotificationsScreen.tsx` |
+| Mobile Notification Settings | New | `resources/views/mobapp/src/module/employee/notifications/pages/NotificationSettingsScreen.tsx` |
+| Mobile Notification Context | New | `resources/views/mobapp/src/contexts/NotificationContext.tsx` |
+
+### Unified Web & Mobile Visual Concept Specification
+
+To ensure a 100% consistent concept and mental model across both Web and Mobile platforms:
+
+1. **Shared Category Hierarchy & Color Tokens**:
+   - `applications_approvals`: Amber / Orange accent (`#F59E0B`), FileCheck / CheckSquare icon.
+   - `timekeeping_attendance`: Cyan / Blue accent (`#06B6D4`), Clock / Calendar icon.
+   - `payroll_compensation`: Emerald / Green accent (`#10B981`), Banknote / Wallet icon.
+   - `announcements_company`: Orange / Red accent (`#F97316`), Megaphone icon.
+   - `hr_lifecycle`: Indigo / Purple accent (`#6366F1`), Shield / UserCheck icon.
+   - `birthdays_anniversaries`: Gold / Festive accent (`#EAB308`), PartyPopper / Cake icon.
+   - `messaging_conversations`: Sky / Blue accent (`#0EA5E9`), MessageSquare / AtSign icon.
+   - `system_alerts`: Crimson / Red accent (`#EF4444`), AlertTriangle / Server icon.
+
+2. **Shared Card Anatomy (`NotificationItem`)**:
+   - **Left Indicator**: Circular unread badge dot (`#0D9488` teal).
+   - **Border Accent**:
+     - `priority = critical`: 3px solid red left border (`#EF4444`) with subtle crimson background tint.
+     - `priority = high`: 3px solid amber left border (`#F59E0B`).
+     - `priority = normal`: Clean border matching standard container.
+   - **Content Section**:
+     - Line 1: Category badge + Priority pill (if High/Critical) + Relative time string (`5m ago`, `2h ago`).
+     - Line 2: Notification Title (Semi-bold, text-slate-900 / dark:text-white).
+     - Line 3: Notification Body preview (text-slate-600 / dark:text-slate-300, max 2 lines truncated).
+     - Line 4 (Optional): Action state pill (`Pending Action` in amber, `Resolved` in green, `Expired` in gray).
+   - **Interaction**:
+     - Web: Hover reveals mark-read checkmark and dismiss trash icon. Click triggers deep link.
+     - Mobile: Swipe right to toggle read state; swipe left to dismiss/delete. Tap triggers deep link.
+
+3. **Shared Category Filter Tabs**:
+   - Tabs on Web and Filter Pills on Mobile share exact order:
+     `All` | `Approvals & Requests` | `Attendance & Timekeeping` | `Payroll & Payslips` | `Announcements` | `HR Notices` | `Messages`
+
+4. **Shared Notification Settings Structure**:
+   - Section 1: **Master Controls** (In-App toggle, Push toggle, Email toggle, DND Schedule).
+   - Section 2: **Scheduled Reminders** (Missing attendance toggle, Filing deadline reminder lead hours: 24h/12h/4h).
+   - Section 3: **Privacy Controls** (Birthday visibility opt-out, Anniversary visibility opt-out).
+   - Section 4: **Category Channel Matrix** (In-App, Push, Email toggles per category, with mandatory categories locked with a Shield icon).
+
+### Backend Endpoints
+
+| Method | Route | Route Name | Handler | Access |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/notifications` | `notifications.index` | `NotificationsController@index` | `auth:sanctum` (All roles) |
+| `GET` | `/api/notifications/count` | `notifications.count` | `NotificationsController@count` | `auth:sanctum` (All roles) |
+| `POST` | `/api/notifications/{id}/read` | `notifications.read` | `NotificationsController@markAsRead` | `auth:sanctum` (All roles) |
+| `POST` | `/api/notifications/read-all` | `notifications.read_all` | `NotificationsController@markAllAsRead` | `auth:sanctum` (All roles) |
+| `DELETE` | `/api/notifications/{id}` | `notifications.destroy` | `NotificationsController@destroy` | `auth:sanctum` (All roles) |
+| `GET` | `/api/notifications/settings` | `notifications.settings.show` | `NotificationsController@getSettings` | `auth:sanctum` (All roles) |
+| `PUT` | `/api/notifications/settings` | `notifications.settings.update` | `NotificationsController@updateSettings` | `auth:sanctum` (All roles) |
+| `PUT` | `/api/notifications/preferences/{category}` | `notifications.preferences.update` | `NotificationsController@updatePreference` | `auth:sanctum` (All roles) |
+
+### Database Tables & Migrations
+
+- **`notifications`**: `id` (bigint auto-increment), `idacct` (int unsigned, indexed), `type` (varchar 80, indexed), `category` (varchar 40, indexed), `title` (varchar 255), `body` (text), `priority` (varchar 20 default 'normal'), `actor_idacct` (int unsigned nullable, indexed), `resource_type` (varchar 60 nullable), `resource_id` (bigint unsigned nullable, indexed), `data` (json nullable), `dedup_key` (varchar 120 nullable, indexed), `is_actionable` (tinyint 1 default 0), `action_state` (varchar 20 nullable), `read_at` (timestamp nullable), `status` (tinyint default 1), `created_at`, `updated_at`.
+- **`notification_settings`**: `id` (bigint auto-increment), `idacct` (int unsigned unique), `dnd_enabled` (tinyint 1 default 0), `dnd_start_time` (time default '22:00:00'), `dnd_end_time` (time default '07:00:00'), `email_notifications_enabled` (tinyint 1 default 1), `push_notifications_enabled` (tinyint 1 default 1), `in_app_notifications_enabled` (tinyint 1 default 1), `reminder_missing_attendance` (tinyint 1 default 1), `reminder_filing_deadlines` (tinyint 1 default 1), `reminder_lead_hours` (int unsigned default 4), `birthday_privacy_opt_out` (tinyint 1 default 0), `anniversary_privacy_opt_out` (tinyint 1 default 0), `status` (tinyint default 1), timestamps.
+- **`notification_preferences`**: `id` (bigint auto-increment), `idacct` (int unsigned), `category` (varchar 40), `channel_in_app` (tinyint 1 default 1), `channel_push` (tinyint 1 default 1), `channel_email` (tinyint 1 default 0), `is_mandatory` (tinyint 1 default 0), `status` (tinyint default 1), timestamps, unique key `(idacct, category)`.
+
+---
+
+## 10. Implementation Plan
+
+Defined in [`plan.md`](./plan.md) in this ticket folder: the file-by-file task list (Preparation → Backend → Frontend → Validation) that `/webkit-implement` executes. The plan cites this spec's IDs and adds no requirement; where the two disagree, this spec wins.
+
+---
+
+## 11. Acceptance Criteria
+
+| ID | Covers | Given | When | Then |
+| --- | --- | --- | --- | --- |
+| AC-01 | FR-01, FR-06 | Subordinate `idacct=101` submits Leave application `AppLeave` `id=45` | Subordinate clicks Submit Application | Notification record is created for primary approver `idacct=202` with `type='approval.pending'`, `category='applications_approvals'`, `resource_type='leave'`, `resource_id=45`, `priority='high'`, `is_actionable=1`. |
+| AC-02 | FR-02, FR-15 | Authenticated user `idacct=101` with 2 unread notifications | A new notification is inserted for `idacct=101` | `NotificationCreated` and `NotificationCountUpdated` events broadcast on `private-user.101`. Web and mobile header badge updates to `3` without manual page reload. |
+| AC-03 | FR-03 | Authenticated user `idacct=101` with 30 notifications | `GET /api/notifications?page=1&per_page=20` is requested | Returns HTTP 200 with 20 items ordered latest first, `meta.unread_count`, `meta.total=30`, and `meta.last_page=2`. |
+| AC-04 | FR-04 | User `idacct=101` has unread notification `id=500` | `POST /api/notifications/500/read` is requested | Returns HTTP 200 with `{"success": true}`, sets `read_at = now()`, and broadcasts updated unread count. |
+| AC-05 | FR-04, NFR-01 | User `idacct=101` attempts to read notification `id=600` belonging to `idacct=102` | `POST /api/notifications/600/read` is requested | Returns HTTP 403 Forbidden with `{"message": "Unauthorized access to notification."}`, and record `read_at` remains unchanged. |
+| AC-06 | FR-04 | User `idacct=101` has 5 unread notifications | `POST /api/notifications/read-all` is requested | Returns HTTP 200 with `{"success": true, "marked_count": 5}`, all 5 records set `read_at`, and unread count broadcasts `0`. |
+| AC-07 | FR-05 | User `idacct=101` | `GET /api/notifications/settings` is requested | Returns HTTP 200 containing master settings object (DND times, reminder toggles) and array of category preference objects. |
+| AC-08 | FR-05, FR-11 | User `idacct=101` | `PUT /api/notifications/preferences/hr_lifecycle` with `channel_in_app=false` | Returns HTTP 422 Unprocessable Entity with `{"message": "This notification category is mandatory for compliance and cannot be disabled."}`, and preference remains enabled. |
+| AC-09 | FR-06 | Manager `idacct=202` approves Leave application `id=45` | Manager clicks Approve in Approval portal | Notification record created for applicant `idacct=101` with `type='leave.approved'`, `category='applications_approvals'`, `title='Leave Request Approved'`, linking to `/requests?id=45`. |
+| AC-10 | FR-06 | Manager `idacct=202` declines Leave application `id=45` with remarks "Understaffed" | Manager clicks Decline | Notification record created for applicant `idacct=101` with `type='leave.rejected'`, `priority='high'`, body containing the reason, linking to `/requests?id=45`. |
+| AC-11 | FR-06 | Applicant `idacct=101` cancels pending Overtime application `id=78` | Applicant clicks Cancel Application | Notification created for approver `idacct=202` with `type='overtime.cancelled'`, and previous pending approval notification updates `action_state='expired'`. |
+| AC-12 | FR-07 | Payroll Officer releases payslips for period `id=12` | `ReleasePayslipsHandler::execute(['period_id' => 12])` runs | `CreateBatchNotificationsAction` creates notification for each employee in run with `type='payroll.payslip_released'`, `category='payroll_compensation'`, `resource_type='payslip'`. |
+| AC-13 | FR-07, NFR-01 | Payslip notification is created for employee with salary ₱35,000 | Record is inspected in database and WebSocket payload | Notification `body` reads "Your payslip for period Oct 01 - Oct 15, 2026 is now available." Zero salary, deduction, or net pay figures are contained in notification title, body, or WebSocket preview. |
+| AC-14 | FR-07 | Year-end 13th-month pay is released via `ProcessYearEndHandler` | Year-end batch releases | Notification created with `type='payroll.13th_month_released'`, `category='payroll_compensation'`, linking to payslip view with `type=13th_month`. |
+| AC-15 | FR-08 | Unit Manager publishes duty roster in `DutyRosterController` | Schedule roster published | Generates `timekeeping.duty_roster_published` notification for all employees scheduled in that roster with `resource_type='duty_roster'`. |
+| AC-16 | FR-08 | Timekeeping supervisor locks cutoff in `TimesheetProcessingController` | Cutoff period locked | Generates `timekeeping.period_locked` notification to employees in that unit. |
+| AC-17 | FR-08 | Attendance dispute `id=14` is resolved by supervisor | Dispute marked resolved in `ResolutionCenterController` | Generates `timekeeping.dispute_resolved` notification to the filing employee. |
+| AC-18 | FR-09 | Active employee `idacct=105` scheduled for 08:30 AM shift on a regular workday with no timelog | Cron `hrms:check-missing-attendance` runs at 09:30 AM | Generates `timekeeping.missing_time_in` notification for `idacct=105` with `dedup_key='missing_time_in_105_2026-10-14'`. |
+| AC-19 | FR-09 | Employee `idacct=106` is on approved Sick Leave for today | Cron `hrms:check-missing-attendance` runs at 09:30 AM | Excluded by eligibility engine: zero missing attendance notifications generated for `idacct=106`. |
+| AC-20 | FR-09 | Today is an active company Holiday (`Holiday::where('date', $today)`) | Cron `hrms:check-missing-attendance` runs at 09:30 AM | Excluded by eligibility engine: zero missing attendance notifications generated for all employees not explicitly assigned to a holiday shift. |
+| AC-21 | FR-10 | Pay period cutoff closes in 4 hours, employee `idacct=107` has 1 unfiled attendance exception | Cron `hrms:notify-filing-deadlines` runs | Generates `timekeeping.cutoff_reminder` with `priority='high'`, alerting employee to file pending adjustment before lock. |
+| AC-22 | FR-11 | HR issues Notice to Explain (NTE) `id=3` to employee `idacct=108` | HR submits record in `DisciplinaryActionController` | Generates `hr.disciplinary_action` notification with `priority='critical'`, `is_actionable=1`, linking to `/requests?disciplinary=3`. |
+| AC-23 | FR-11 | HR tags employee `idacct=108` in Incident Report `id=12` | Record submitted in `IncidentReportController` | Generates `hr.incident_report` with `priority='high'`. |
+| AC-24 | FR-12 | HR publishes company-wide announcement `id=8` to all active employees | HR clicks Publish Announcement | `CreateBatchNotificationsAction` creates `announcement.created` notification for all accounts where `status = 1`. Inactive/resigned accounts (`status != 1`) receive zero records. |
+| AC-25 | FR-01, NFR-05 | Database transaction fails/aborts during leave approval | An unhandled exception occurs before DB commit | Transaction rolls back. Zero notification records exist in MySQL and zero WebSocket events are broadcast. |
+| AC-26 | FR-01, NFR-05 | WebSocket server (Pusher/Reverb) is offline or unreachable | `CreateNotificationAction` is executed during Leave approval | Notification is safely saved in MySQL, broadcast error is caught and logged, and the caller API response succeeds with HTTP 200. |
+| AC-27 | FR-02 | Client was offline when notification was generated | Client reconnects to network and mounts notification screen | Screen queries `GET /api/notifications` and `GET /api/notifications/count`, instantly synchronizing unread count and displaying the new notification. |
+| AC-28 | FR-02 | Client connects to WebSocket | Client subscribes to `private-user.{idacct}` | Channel authorization succeeds if and only if `auth()->id() === (int)$idacct`; unauthorized subscription attempts are rejected by Sanctum. |
+| AC-29 | FR-03 | Authenticated user requests notifications with category filter | `GET /api/notifications?category=payroll_compensation` | Response contains exclusively items where `category === 'payroll_compensation'`. |
+| AC-30 | FR-04 | User dismisses notification `id=500` | `DELETE /api/notifications/500` is requested | Returns HTTP 200, updates `status = 0`, and subsequent `GET /api/notifications` omits the record. |
+| AC-31 | FR-05 | User updates DND schedule | `PUT /api/notifications/settings` with `{"dnd_enabled": true, "dnd_start_time": "21:30:00"}` | Returns HTTP 200, updates `notification_settings`, and future queries reflect the new schedule. |
+| AC-32 | FR-07 | Employee taps Payslip notification on Mobile UI | Tapping notification item | Calls read API, marks item as read, and navigates client route to `/(app)/payslip?id=980`. |
+| AC-33 | FR-09 | Employee clocked in at 08:00 AM on 8-hour shift, current time is 06:00 PM (1 hour past 05:00 PM shift end + 30m grace), no timeout recorded | Cron `hrms:check-missing-attendance` runs | Generates `timekeeping.missing_time_out` reminder for employee. |
+| AC-34 | FR-10 | Employee already resolved missing time-in by filing Attendance Adjustment | Cron `hrms:check-missing-attendance` runs later in the day | Eligibility engine detects pending adjustment for that date; generates no duplicate reminder. |
+| AC-35 | FR-12 | HR publishes announcement targeted strictly to Unit `id=4` (Engineering) | Announcement published | Only active employees belonging to Unit `id=4` receive notification; employees in Unit `id=5` receive zero records. |
+| AC-36 | FR-13 | Employee `idacct=110` has birthday on Oct 14 and `birthday_privacy_opt_out = 0` | Daily cron `hrms:notify-birthdays-anniversaries` runs on Oct 14 at 08:00 AM | Generates `birthday.today` greeting to team members. |
+| AC-37 | FR-13 | Employee `idacct=111` has birthday on Oct 14 and `birthday_privacy_opt_out = 1` | Daily cron `hrms:notify-birthdays-anniversaries` runs on Oct 14 | Suppressed by privacy filter: zero birthday notifications generated for `idacct=111`. |
+| AC-38 | FR-14 | User is mentioned `@JaneDoe` in a group channel | `SendMessageHandler` executes | Generates `message.mention` notification for Jane Doe with `priority='high'`, linking to `/messages?conversation_id={id}`. |
+| AC-39 | FR-14 | Three colleagues react with 👍, ❤️, 🎉 to user's chat message within 2 minutes | Reactions posted via chat API | First reaction creates notification; subsequent reactions within 3-minute window update the existing unread record into a coalesced summary ("Jane Doe and 2 others reacted to your message"). |
+| AC-40 | FR-14 | User is actively focused in conversation `id=15` on Web | New message arrives in conversation `id=15` | Message appears in chat stream, but in-app toast notification for conversation `id=15` is suppressed to prevent visual clutter. |
+| AC-41 | FR-15 | Web user clicks notification bell in navbar | Bell button clicked | Dropdown appears smoothly with unread items, category icons, "Mark all read", and "View all notifications" link. |
+| AC-42 | FR-15 | Mobile user swipes left on notification item in `NotificationsScreen.tsx` | Left swipe gesture executed | Item reveals red delete icon and deletes item upon confirmation. |
+| AC-43 | FR-07 | Payroll batch computation finishes for period `id=12` | `pay_process_status` updates to `1` in `TimesheetProcessingController` | Notification `payroll.processing_completed` is sent strictly to Payroll Officers and HR Admins. Zero notifications are generated for general employees. |
+| AC-44 | FR-07 | Payroll calculation throws formula exception for employee `idacct=109` | Exception occurs during batch run | Notification `payroll.processing_failed` dispatched strictly to Payroll Officers detailing error. No employee notifications created. |
+
+---
+
+## 12. Edge Cases
+
+| ID | Category | Scenario | Expected Handling | AC |
+| --- | --- | --- | --- | --- |
+| EC-01 | Invalid input | Negative or non-integer `page` or `per_page` passed to list endpoint | Query clamps `page` to minimum 1, `per_page` clamped to range 1–100. Invalid category returns HTTP 422 with validation errors. | AC-03 |
+| EC-02 | Empty data | User has zero notifications in database | `GET /api/notifications` returns `data: []`, `unread_count: 0`. UI renders `NotificationEmptyState` with friendly graphic on both Web and Mobile. | AC-03 |
+| EC-03 | Permission | User attempts to mark as read or delete a notification belonging to another employee | Request rejected with HTTP 403 Forbidden `{"message": "Unauthorized access to notification."}`; database record is untouched. | AC-05 |
+| EC-04 | Failure | Database connection failure during notification creation | Exception caught; if inside transaction, transaction rolls back cleanly; no orphaned records or phantom broadcasts. | AC-25 |
+| EC-05 | Failure | Pusher/Reverb WebSocket daemon offline | `BroadcastNotificationAction` catches broadcast exception in `try/catch`, writes warning to Laravel log, and returns safely without aborting HTTP response. | AC-26 |
+| EC-06 | Unexpected behavior | User clicks "Mark all as read" rapidly multiple times (double-submit) | Handler executes idempotent query `UPDATE notifications SET read_at = now() WHERE idacct = ? AND read_at IS NULL`; subsequent executions affect 0 rows and return HTTP 200. | AC-06 |
+| EC-07 | Unexpected behavior | Queue worker replays bulk payslip release job | `CreateNotificationAction` checks `dedup_key` (e.g. `payslip_12_42`). If record with that key already exists, insert is skipped. | AC-12 |
+| EC-08 | Stale navigation | User clicks notification for an application that was since deleted or cancelled | Notification marks as read; user navigates to module list with toast: "The requested record is no longer available." | AC-11 |
+
+---
+
+## 13. Testing Strategy
+
+### Unit Testing
+
+| Target | Cases | Covers |
+| --- | --- | --- |
+| `CreateNotificationAction::execute` | Preference check (allowed vs muted), dedup key check, DB insert, `afterCommit` broadcast dispatch | AC-01, AC-25, AC-26 |
+| `ResolveNotificationRecipientsAction::execute` | Active employee filter (`status=1`), unit scoping, department scoping, approver tier resolution | AC-01, AC-24, AC-35 |
+| `CheckMissingAttendanceAction::execute` | Shift resolution, holiday exclusion, leave exclusion, OBT exclusion, grace period verification, timelog absence | AC-18, AC-19, AC-20, AC-33 |
+| `UpdateNotificationPreferencesHandler::execute` | Reject disable on `is_mandatory=1`, allow toggle on standard categories | AC-08, AC-31 |
+
+### Integration Testing
+
+| Flow / Endpoint | Setup | Assertion | Covers |
+| --- | --- | --- | --- |
+| `GET /api/notifications` | Seed 25 notifications for User A, 5 for User B | User A receives exactly 20 items (page 1) strictly belonging to User A; User B items excluded | AC-03, AC-05 |
+| `POST /api/notifications/{id}/read` | Seed unread notification for User A | `read_at` is set to timestamp, unread count decrements to 0, HTTP 200 returned | AC-04 |
+| `POST /api/notifications/{id}/read` (IDOR) | User A attempts to read User B's notification | HTTP 403 Forbidden returned; record `read_at` remains NULL | AC-05 |
+| `POST /api/notifications/read-all` | Seed 5 unread notifications for User A | All 5 records updated with `read_at = now()`; unread count returns 0 | AC-06 |
+| `GET /api/notifications/settings` | Seed user with customized DND and preferences | Returns full settings payload matching database state | AC-07 |
+| `PUT /api/notifications/preferences/{category}` | Attempt to set `channel_in_app = 0` for `hr_lifecycle` | Returns HTTP 422 with validation message | AC-08 |
+
+### Manual Testing Scenarios
+
+| # | Precondition | Steps | Expected Result | Covers |
+| --- | --- | --- | --- | --- |
+| MT-01 | Two browser sessions open: Employee A and Manager B | 1. Employee A submits Leave request.<br>2. Observe Manager B's screen. | Manager B's navbar bell increments in real-time without refresh. Toast appears. Clicking opens approval drawer. | AC-01, AC-02 |
+| MT-02 | Manager B approves Employee A's leave request | 1. Manager B clicks Approve.<br>2. Observe Employee A's screen. | Employee A's navbar bell updates. Notification says "Leave Request Approved". Clicking navigates to request. | AC-02, AC-09 |
+| MT-03 | Employee A views Notification Center on Web (`/notifications`) | 1. Click category tab "Payroll".<br>2. Click "Mark all as read". | List filters exclusively to payroll items. Unread badges clear to 0. | AC-03, AC-06, AC-29 |
+| MT-04 | Mobile app open on Expo simulator | 1. Trigger notification dispatch.<br>2. Tap notification item.<br>3. Swipe left on notification item. | Bell badge increments. Tapping marks read and deep-links. Swiping left deletes item. | AC-32, AC-42 |
+| MT-05 | Employee scheduled for shift starting 1 hour ago with no timelog | 1. Run `php artisan hrms:check-missing-attendance`.<br>2. Check employee notifications. | Missing time-in notification created and delivered. | AC-18 |
+| MT-06 | Employee on approved Sick Leave today with no timelog | 1. Run `php artisan hrms:check-missing-attendance`.<br>2. Check employee notifications. | Zero notifications created; leave exclusion honored. | AC-19 |
+
+**Test command:** `php artisan test --filter=Notification`
+
+---
+
+## 14. Security Considerations
+
+### Authentication
+
+All notification endpoints are strictly protected by the `auth:sanctum` middleware. Requests without a valid Bearer token receive HTTP 401 Unauthorized `{"message": "Unauthenticated."}`.
+
+### Authorization
+
+| Role | Allowed | Denied Response |
+| --- | --- | --- |
+| Any Authenticated Account (`idacct`) | Read, mark read, dismiss, and configure preferences for own notifications (`notifications.idacct === auth()->id()`) | HTTP 403 Forbidden `{"message": "Unauthorized access to notification."}` |
+| Approver (Manager / Supervisor) | Receive actionable approval notifications for subordinate requests in their approval matrix | N/A (routed by system) |
+| HR / Admin | Publish company announcements, trigger scheduled reminders | HTTP 403 Forbidden if non-admin accesses admin dispatch routes |
+
+### Validation
+
+| Field | Rules | Error Response |
+| --- | --- | --- |
+| `page` | `nullable\|integer\|min:1` | HTTP 422 `{"message": "Page must be an integer greater than 0."}` |
+| `per_page` | `nullable\|integer\|between:1,100` | HTTP 422 `{"message": "Per page must be between 1 and 100."}` |
+| `category` | `nullable\|string\|in:applications_approvals,timekeeping_attendance,payroll_compensation,announcements_company,hr_lifecycle,reminders_deadlines,birthdays_anniversaries,messaging_conversations,system_alerts` | HTTP 422 `{"message": "Invalid notification category."}` |
+| `dnd_enabled` | `required\|boolean` | HTTP 422 `{"message": "DND enabled must be a boolean."}` |
+| `dnd_start_time` | `nullable\|date_format:H:i:s` | HTTP 422 `{"message": "Invalid time format."}` |
+| `dnd_end_time` | `nullable\|date_format:H:i:s` | HTTP 422 `{"message": "Invalid time format."}` |
+| `channel_in_app` | `required\|boolean` | HTTP 422 `{"message": "Invalid channel setting."}` |
+
+### Data Protection
+
+- **Sensitive fields:** Financial figures (gross pay, net pay, basic salary, statutory deduction breakdown, loan balances) are **strictly forbidden** in notification `title`, `body`, and WebSocket payload previews. The preview must state neutral text (e.g. "Your payslip for period Oct 01 - Oct 15, 2026 is now available."). Salary figures are accessed only after the authenticated user navigates to the encrypted payslip endpoint.
+- **Exposure rules:** WebSocket events carry only non-sensitive summary metadata.
+- **Write protection:** Notification inserts are executed strictly via backend Actions/Handlers. Clients have zero write access to create arbitrary notifications.
+
+### API Security
+
+- **Object access (IDOR):** Handlers enforce `where('id', $id)->where('idacct', auth()->id())`. If the notification ID does not belong to the authenticated account, access is immediately rejected with HTTP 403 Forbidden.
+- **Mass assignment:** Eloquent models define strict `$fillable` arrays. No user request is passed directly to `Model::create()`.
+- **Rate limits:** API routes inherit standard Sanctum throttle middleware; notification list endpoints throttled to 60 requests/minute per authenticated user.
+
+---
+
+## 15. Implementation Notes
+
+- **Conventions to follow:** Follow SubHRMS conventions ([project-profile.md](../../rules/project-profile.md)): `idacct` column name, no `->foreign()` foreign keys (index only), `status` column soft deletes (`1=active`, `0=deleted`), Query/Handler/Action pattern with static `execute()`.
+- **Do not change:** Do not modify `routes/channels.php` `user.{userId}` channel registration (already implemented in T00001). Do not modify existing payroll calculation logic in `ReleasePayslipsHandler.php`—only hook the notification dispatch action after the `PayrollRunDetail` update.
+- **Known pitfalls:**
+  - Avoid calling `NotificationCreated::dispatch()` inside database transactions before `DB::commit()`. Always use `DB::afterCommit(...)` or dispatch after the transaction block completes to prevent race conditions where clients fetch notifications before MySQL commits.
+  - In `HeaderBarComponets.vue`, ensure the `getEcho().private('user.' + userId)` listener unsubscribes cleanly in `onUnmounted` to prevent memory leaks and duplicate audio chimes on portal switching.
+  - When releasing payslips for 1,000+ employees, never call single-insert queries in a foreach loop; use `CreateBatchNotificationsAction` which chunks inserts in batches of 100.
+- **Config / environment:** No new environment variables required. Reuses existing `BROADCAST_CONNECTION`, `PUSHER_*`, and `REVERB_*` keys.
+- **Deployment / rollback:**
+  - Deploy: Run migrations `php artisan migrate`. Seed default settings on initial user access. Start queue workers and scheduler.
+  - Rollback: `php artisan migrate:rollback --step=3`.
+- **Review findings:** N/A — not yet reviewed.
+
+---
+
+## 16. Assumptions and Decisions
+
+### Assumptions
+
+| ID | Assumption | Impact if Wrong | Confirmed By |
+| --- | --- | --- | --- |
+| A-01 | An authenticated user (`Account`) represents the recipient identity across all portals (Employee, Manager, HR, TK, Payroll, Admin). | If separate account models existed per portal, notifications would need multi-table polymorphism. Verified: all portals use `accounts` table and `Account.php`. | Confirmed (`app/Models/Account.php`, `GlobalController.php`) |
+| A-02 | Scheduled reminder jobs run in server timezone `Asia/Manila` matching Philippine payroll and labor standards. | Reminder timing could be offset by several hours if server timezone differs. | Confirmed (`config/app.php` timezone) |
+| A-03 | Inactive or resigned employees (`status != 1`) should never receive broadcast notifications. | Excluded by recipient resolver to prevent unwanted alerts to departed staff. | Confirmed (`AccountDetailVW.php`, `EmployeeMasterlist.php`) |
+
+### Technical Decisions
+
+| ID | Decision | Alternatives Rejected | Reason |
+| --- | --- | --- | --- |
+| D-01 | Native SubHRMS structured schema (`notifications` with `idacct`, `category`, `priority`, `data`) | Laravel default `notifications` table (`UUID` primary key, polymorphic `notifiable_type`, generic JSON blob) | Laravel's default table violates SubHRMS database standards, cannot be efficiently indexed by category or priority, and causes slow query times on large datasets. |
+| D-02 | Persist-before-broadcast pattern via `DB::afterCommit` | Immediate broadcast before commit | Prevents race condition where mobile clients receive socket event and query API before DB transaction commits, resulting in 404 or missing items. Prevents phantom alerts on transaction rollback. |
+| D-03 | Batch chunked database inserts (100/chunk) for company-wide releases | Individual record insert loop | Inserting 1,000 notifications in a loop during payroll closing causes HTTP 504 gateway timeouts and database lock contention. |
+| D-04 | Chat reaction coalescing within 3-minute window | Separate notification for every reaction | Prevents notification inbox flooding and alert fatigue during active discussions. |
+| D-05 | Mandatory delivery enforcement for statutory HR notices (`is_mandatory = 1`) | Allow users to disable all categories | Philippine labor compliance requires documented Notice to Explain (NTE) and disciplinary delivery; users must not be permitted to opt out. |
+| D-06 | Explicit separation of Payroll Processing vs. Payslip Release | Single generic payroll notification | Payroll calculation completion is an internal administrative milestone; employees should only be notified when their individual payslip is officially released. |
+| D-07 | Shared Web and Mobile UI Design Language & Components | Ad-hoc divergent mobile and web designs | Ensures seamless multi-device continuity so users experience the exact same category tabs, priority borders, and layout concepts whether on mobile or desktop. |
+
+### Open Questions
+
+| ID | Question | Owner | Blocks |
+| --- | --- | --- | --- |
+| Q-01 | Should mobile app background push notifications (APNs / FCM) be dispatched directly by Laravel or queued for a dedicated push microservice? | Tech Lead | N/A (Handled in future ticket T00004; in-app backend architecture is decoupled) |
+
+---
+
+## 17. Change Log
+
+| Version | Date | Type | Change | Reason / Impact | Changed Sections |
+| --- | --- | --- | --- | --- | --- |
+| 1.0 | 2026-10-02 | Initial | Initial draft of centralized notification spec | Baseline notification concepts | All |
+| 2.0 | 2026-10-14 | Major | Complete specification regeneration covering entire HRMS | Standardized to feature-specification template; added Notification Settings, missing attendance eligibility engine, role-based recipient resolution, all 6 portals, and mobile/web UX flows | All (§1–§16) |
+| 2.1 | 2026-10-14 | Minor | Enforce strict Web & Mobile visual concept parity, explicit separation of Payroll Processing vs. Payslip Release, detailed 6-portal Recipient Routing Matrix, and Mandatory Compliance Guard | Addresses user feedback: unified web/mobile card anatomy and category filters, decoupled payroll processing completion from employee payslip release, explicit attendance exclusions (shift, leave, holiday, rest day, OBT), and mandatory alert protection | §1, §2, §3, §6, §7 (new), §9, §11, §16 |
