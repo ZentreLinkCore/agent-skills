@@ -8,7 +8,7 @@
 | Branch | `T00001` — backend repo: base `origin/master`, 40 commits, 73 files changed at HEAD `fc999da2` (= `origin/T00001`), **plus uncommitted edits in the working tree: 15 modified files and 1 new file (+632 / −568 lines)**; mobile repo `resources/views/mobapp` (`hrms-react-native`): base `origin/main`, 52 commits, 122 files changed at HEAD `c3130cc` (= `origin/T00001`), **plus 11 modified files uncommitted**. The `DockerTemplate` repository (nginx) still holds one uncommitted change on its own `T00001` branch. This run verifies the working tree. |
 | Specification File | [specs.md](./specs.md) — version v4 with the Minor corrections of 2026-10-13 (AC-67, AC-73, AC-101, §3.2, §4.5, §6.4, MT-2); unchanged since run v3; status not recorded in the file; Open Questions Q-1 – Q-7 (§10.3) are open and were not graded |
 | Verification Date | 2026-10-14 |
-| Verification Run | v6 — closes the run. Findings #1 – #3 of run v5 (linked-ticket ownership, tickets conjured from text, unread-event sync) re-verified fixed by `/webkit-fix T00001 --verify` (uncommitted working tree); every earlier suite re-executed, 58 new checks aimed at getting around the fixes, and the sibling broadcasters of `UnreadCountUpdated` read for the same flaw as Finding #3. No new finding; two small consequences of the ownership rule are recorded as Improvements #32 and #33 |
+| Verification Run | v7 — scoped re-check after the improvements pass (Improvements #1, #2, #7, #9, #12, #16, #21, #22, #23, #25, #26, #32 fixed, #10 partly); no new finding, status unchanged. Earlier v6 note: closes the run. Findings #1 – #3 of run v5 (linked-ticket ownership, tickets conjured from text, unread-event sync) re-verified fixed by `/webkit-fix T00001 --verify` (uncommitted working tree); every earlier suite re-executed, 58 new checks aimed at getting around the fixes, and the sibling broadcasters of `UnreadCountUpdated` read for the same flaw as Finding #3. No new finding; two small consequences of the ownership rule are recorded as Improvements #32 and #33 |
 
 **Implementation Scope**
 
@@ -26,6 +26,8 @@
 ✅ PASS (1 AC pending manual check)
 
 ### Summary
+
+**Run v7 (scoped):** the improvements pass was re-checked by reading the code and running `php -l`, `php artisan route:list` (route set unchanged), `SearchMessagesSyntaxTest` (15 passed) and `npx tsc --noEmit` (exit 0). The earlier uncommitted fixes are now committed (HEAD `1639158b`); the working tree holds only this pass (2 backend files, 6 mobile files). The device-only checks and the disposable-database execution suites were **not** re-run. Not re-run does not mean failed: runs v1 – v6 stand for everything this pass did not touch.
 
 The three findings of run v5 are fixed and hold. A linked ticket must now be the sender's own application (`422 "Invalid ticket."` otherwise) and is described from the application, so the original exploit no longer returns the victim's remarks; typing `#LV-2026-001` no longer conjures a card; and the unread event keeps the global badge and the inbox previews in sync without letting a read echo rewrite a preview. I tried to get around the ownership rule with cross-table document-number collisions, prefix confusion, case, wildcard and SQL-looking ids, edits, and every read path (pinned, thread, single message, around, search, list): nothing leaks. All 270 execution checks of runs v1 – v5 pass again. 109 of 110 acceptance criteria are met; AC-26 (back navigation keeps scroll and badges) needs a device. No blocker, no required fix, no specification change. 33 optional improvements remain (§3). The fixes of code-review #1 – #24 and of runs v5 are still uncommitted in both repositories.
 
@@ -57,6 +59,8 @@ None. Finding #1 of run v5 is fixed: `app/Handlers/Messages/SendMessageHandler.p
 None. Finding #2 of run v5 is fixed (`parseTicketLinks` is gone, no match left in `app/`). Finding #3 is fixed: `app/Events/Messages/UnreadCountUpdated.php:31,56` carries `read_echo`, set at `app/Http/Controllers/employee/MessagesController.php:486`, and `resources/views/mobapp/src/module/employee/messages/contexts/MessagesContext.tsx:296-358` applies the count delta and keeps the preview on a read echo.
 
 ### IMPROVEMENT
+
+> **Run v7 status of the improvements:** ✅ FIXED and re-checked — #1 (`markAllAsRead` now groups the maxima and advances positions in one statement, `MessagesController.php` `markAllAsRead`), #2 (own-DM names loaded once, `SearchMessagesQuery.php:469-474`), #7 (`channelPermissions.ts:35-37` reads `is_system` / `isDefault`), #9 (`onSendVoiceReply` passed to `ThreadModal`, `ConversationScreen.tsx:3698`), #12 (code points, `MessageInputBar.tsx:301`, `:1733`), #16 (selection props and state removed), #21 (`mentionParser.ts:656`, `MessageContent.tsx:80`), #22 (`SendMessageHandler.php:43`, no `i` flag), #23 (`MessagesController.php:326-327`), #25 (`has_more` returned, `MessagesController.php:696`), #26 (`UserTyping` inside `DB::afterCommit`), #32 (tickets without a document number hidden, `ConversationScreen.tsx:544`). ◐ PARTIAL — #10 (system rows break grouping, `messageGrouping.ts:159-172`; the `NEW MESSAGES` divider does not yet). Open and not touched: #3 – #6, #8, #11, #13 – #15, #17, #19, #20, #24, #27 – #31, #33. None of these were executed against a database or a device in this run.
 
 #### Improvement #1
 
@@ -384,4 +388,5 @@ Before it goes live: commit the working-tree fixes (code-review #1 – #24 and r
 - v2 — 2026-10-13 — all 31 findings of v1 re-verified fixed; 4 new findings (#1 – #4) — ⚠ PASS WITH FIXES
 - v3 — 2026-10-13 — the 4 findings of v2 fixed; AC-42 / AC-43 executed for the first time and failing (1 new finding, #1) — ⚠ PASS WITH FIXES
 - v4 — 2026-10-13 — Finding #1 of v3 fixed (`@all` / `@here`, commit `fc999da2`); AC-42 / AC-43 met by execution; no new finding — ✅ PASS (1 AC pending manual check)
+- v6 — 2026-10-14 — the three findings of v5 fixed; no new finding — ✅ PASS (1 AC pending manual check)
 - v5 — 2026-10-14 — after the 24 code-review fixes (uncommitted): they hold; absence sweep found a linked-ticket data exposure (BLOCKER, #1) and cards conjured from text (#2), the mobile review a regression in the unread sync (#3) — ❌ FAILED
