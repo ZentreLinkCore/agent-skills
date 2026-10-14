@@ -8,6 +8,7 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 │   ├── T00001/
 │   │   ├── spec.md             ← written by /webkit-specify
 │   │   ├── plan.md             ← written by /webkit-specify, ticked by /webkit-implement
+│   │   ├── task.md             ← created by /webkit-specify, kept current by every later skill
 │   │   ├── investigation.md    ← written by /webkit-investigate
 │   │   ├── refactor.md         ← written by /webkit-refactor
 │   │   ├── verify.md           ← written by /webkit-verify
@@ -20,16 +21,19 @@ Every spec-driven piece of work gets a **ticket**: a number, a folder inside its
 └── <project-b>/                ← another project, its own T00001…
     └── T00001/
         ├── spec.md
-        └── plan.md
+        ├── plan.md
+        └── task.md
 ```
 
 One ticket = one piece of work = one folder = one branch. Every document a workflow skill produces about that work — the spec, its implementation plan, the root-cause investigation, the refactor record, the conformance report, the diff review, the design review — lands in the same folder under a fixed name, and `git log` says which ticket produced any given commit.
 
-A ticket does **not** need all seven files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no spec and no plan. What is present tells you what has been done.
+A ticket does **not** need all eight files. A feature ticket may never have an `investigation.md`; a bug ticket usually has no spec and no plan. What is present tells you what has been done.
 
 The spec file is `spec.md`, written from [the feature-specification template](../template/feature-specification.md). Tickets created before `/webkit-specify` hold their spec as **`specs.md`** (plural) — still valid, still the spec. Spec discovery accepts both names, and an update edits whichever exists; never create a `spec.md` beside an existing `specs.md`.
 
 The plan file is `plan.md`, written by `/webkit-specify` with the spec, from [the implementation-plan template](../template/implementation-plan.md). The spec says **what** and is what reviews check against; the plan says **how and in what order**, file by file, and is what `/webkit-implement` executes. A plan never exists without a spec. Tickets specified before plans existed have none; `/webkit-specify T##### --plan` adds one.
+
+The tracker file is `task.md`, created by `/webkit-specify` with the spec and the plan, from [the task-tracker template](../template/task-tracker.md). It is the one page that says what is done and what is still open: every plan task, every finding still to fix, what the ticket is waiting on, and a log of each skill run. It is a view; plan.md, the reports, and the spec stay the sources ([task.md upkeep](#taskmd-upkeep)).
 
 ---
 
@@ -109,21 +113,22 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 
 | File | Written by | Overwrite behaviour on re-run |
 | :--- | :--- | :--- |
-| `spec.md` (`specs.md` on older tickets) | `/webkit-specify` | Update in place. **Minor** change: edit the affected sections and add a Change Log row under the current version. **Major** change: increment the version (`1.0` → `1.1`) and log reason, impact, and changed sections. Review findings never create a version. |
-| `plan.md` | `/webkit-specify` (tasks ticked by `/webkit-implement`) | Update in place, filled from [the implementation-plan template](../template/implementation-plan.md), whenever the spec changes in a way that affects it or the plan itself was wrong: bump the Metadata **Plan Revision** and add a Plan Change Log row; a spec Major change also updates **Based on Spec Version**. Ticked tasks are never edited or unticked: changed work is a new task. `/webkit-implement` edits only the task checkboxes and Plan Status. |
+| `spec.md` (`specs.md` on older tickets) | `/webkit-specify` | Update in place. **Minor** change: edit the affected sections and add a Change Log row under the current version. **Major** change: increment the version (`1.0` → `1.1`) and log reason, impact, and changed sections. Review findings never create a version. Two other skills make Minor edits without a `/webkit-specify` run: `/webkit-verify` applies a **Case 1** correction (a spec error it proved), and `/webkit-fix` records fixed findings in §14 **Review findings**; either one also sets Status `Done` when the ticket closes ([Closing a ticket](#closing-a-ticket)). |
+| `plan.md` | `/webkit-specify` (tasks ticked by `/webkit-implement`, `/webkit-verify`, `/webkit-fix`) | Update in place, filled from [the implementation-plan template](../template/implementation-plan.md), whenever the spec changes in a way that affects it or the plan itself was wrong: bump the Metadata **Plan Revision** and add a Plan Change Log row; a spec Major change also updates **Based on Spec Version**. Ticked tasks are never edited or unticked: changed work is a new task. `/webkit-implement`, `/webkit-fix`, and `/webkit-verify` edit only the task checkboxes and Plan Status; `/webkit-verify` also applies the plan side of a Case 1 spec correction. |
+| `task.md` | `/webkit-specify` creates it; `/webkit-implement`, `/webkit-verify`, `/webkit-fix`, `/webkit-code-review`, `/webkit-design-review` keep it current | Update in place, never overwritten: see [task.md upkeep](#taskmd-upkeep). |
 | `investigation.md` | `/webkit-investigate` | Update in place, filled from [the investigation-report template](../template/investigation-report.md); bump the Metadata **Investigation Run** row and append the superseded run to the run history. Its Fix Plan checkboxes and §9 Resolution are filled by the skill that applies the fix. |
 | `refactor.md` | `/webkit-refactor` | Update in place, filled from [the refactor-report template](../template/refactor-report.md); bump the Metadata **Refactor Run** row so successive cleanups on one ticket each leave a line, and append the superseded run to the run history. |
-| `verify.md` | `/webkit-verify` | Overwrite with the latest run, filled from [the verification-report template](../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. |
-| `code-review.md` | `/webkit-code-review` | Overwrite with the latest run, filled from [the code-review-report template](../template/code-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
-| `design-review.md` | `/webkit-design-review` | Overwrite with the latest run, filled from [the design-review-report template](../template/design-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. |
+| `verify.md` | `/webkit-verify` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the verification-report template](../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
+| `code-review.md` | `/webkit-code-review` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the code-review-report template](../template/code-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
+| `design-review.md` | `/webkit-design-review` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the design-review-report template](../template/design-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
 
-- **These seven filenames are fixed.** No dates, no ticket numbers, no feature names, no portal prefixes — `verify-20260907.md`, `T00001-spec.md`, `spec-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
-- Every one of the seven names its own ticket and project in its **Metadata table** (each is filled from its template in [`.agents/template/`](../template/)); older `specs.md` files and reports written before the templates carry a `> **Ticket:** <project> T#####` header line instead. Either way, a document copied or pasted elsewhere still says where it belongs.
+- **These eight filenames are fixed.** No dates, no ticket numbers, no feature names, no portal prefixes — `verify-20260907.md`, `T00001-spec.md`, `spec-payroll.md`, `investigation-tk-late-log.md`, and `code_review.md` are all wrong. History lives *inside* the file, in its version/run lines, so a stale link never points at a file that no longer exists.
+- Every one of the eight names its own ticket and project in its **Metadata table** (each is filled from its template in [`.agents/template/`](../template/)); older `specs.md` files and reports written before the templates carry a `> **Ticket:** <project> T#####` header line instead. Either way, a document copied or pasted elsewhere still says where it belongs.
 - A ticket folder holding only its spec — or only `investigation.md` — is normal. It just means the work has not reached the other steps yet.
 - **One workstream per ticket.** If an investigation turns up a *second, unrelated* defect, that is a second ticket with its own `investigation.md` — not a second investigation file crammed into this folder.
 - **The fixed filenames only work inside a ticket folder.** A legacy spec in a portal folder (§7) shares that folder with other specs, so `verify.md` there would collide between features — reports for legacy specs keep the old dated `.agents/reports/<domain>-<feature>-{verify,review,design-review}-<YYYYMMDD>.md` path until the spec is migrated to a ticket.
 - A diff review for a change with **no spec at all** likewise goes to `.agents/reports/<scope>-review-<YYYYMMDD>.md`. `/webkit-code-review` runs without a spec by design; it never allocates a ticket to have somewhere to write.
-- Nothing outside these seven filenames belongs in a ticket folder.
+- Nothing outside these eight filenames belongs in a ticket folder.
 - [`.agents/reports/`](../reports/) is now only the **fallback and the archive**: investigations written before this convention live there and stay valid, and the two unticketed cases above still land there. New ticketed work does not add to it.
 
 ### Run-history block
@@ -136,6 +141,41 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 ```
 
 On every re-run, **before overwriting**: append the previous run's line (its run value, date, and status or verdict) under the marker. Then bump the Metadata run row and its date, and write one line on what changed since the previous run. Never delete a superseded line — overwriting a report without recording the previous run destroys the only record that an earlier run disagreed. (`spec.md` keeps its history in its §16 Change Log instead, and `plan.md` in its §10 Plan Change Log; reports written before the templates use a `> **Run:**` header line.)
+
+### Fix pass
+
+`/webkit-fix` closes the findings it fixed **in the report itself**, so the report does not have to be re-run just to learn that the fixes landed. A fix pass on run `vN`:
+
+1. sets each handled finding's **Resolution** line (`✅ FIXED`, `✅ FIXED (traced)`, `✅ ALREADY RESOLVED`, or `❌ NOT FIXED`, with the evidence),
+2. recomputes the report's status and recommendation from the findings still open, with the report's own rule, and suffixes the status with `(after fix pass vN.k)`,
+3. appends the run `vN` line under `<!-- Run history -->` and sets the Metadata run row to `vN.k — fix pass <date> by /webkit-fix: <findings closed>; not re-reviewed` (`k` counts the fix passes on run `N`).
+
+Findings, evidence, and numbering are otherwise left as the review wrote them. The next real run of the review is `v(N+1)`; it appends the `vN.k` line to the history like any superseded run. The `(after fix pass …)` suffix is what tells a reader the status comes from the fixes' own checks, not from a fresh adversarial review.
+
+### task.md upkeep
+
+`task.md` is shared by the skills that move the ticket. Each one, at the end of its run, updates only what it owns, from the sources it just read or wrote:
+
+| Skill | Updates |
+| :--- | :--- |
+| `/webkit-specify` | Creates it. On a spec or plan change: Metadata, the §1 Specify row, §2 to match plan.md, §4 open questions. |
+| `/webkit-implement` | §2 ticks (same as plan.md), the §1 Implement row (`done/total tasks`), §4 commands for the user. |
+| `/webkit-verify` | The §1 Verify row, its own §3 items (this run's BLOCKER / REQUIRED FIX), §2 ticks it added to plan.md, §4 pending manual checks, Metadata after a Case 1 correction. |
+| `/webkit-code-review` · `/webkit-design-review` | Their §1 row and their own §3 items (CRITICAL / HIGH). |
+| `/webkit-fix` | Ticks the §3 items it closed (`— fixed <date>`), the §1 Fix row and the source report's row, §2 ticks it added to plan.md, Metadata after a closing. |
+
+Every update also refreshes **Done**, **Next step**, and **Last Updated**, and adds one line at the top of §5 Activity Log. A ticket that has a spec but no `task.md` (created before it existed) gets one from the template the first time any of these skills runs on it. A ticket with no spec (a bug ticket with only `investigation.md`) has no `task.md`.
+
+### Closing a ticket
+
+Whichever of `/webkit-verify` or `/webkit-fix` leaves the ticket in this state sets the spec's **Status** to `Done` and the plan's **Plan Status** to `Done`, and records it in `task.md`:
+
+- `verify.md` exists and its status is ✅ PASS (any form, including `(n AC pending manual check)` and `(after fix pass …)`),
+- no CRITICAL or HIGH finding is open in `code-review.md` or `design-review.md`, where they exist,
+- every plan task is ticked or retired, and
+- the spec's §15 Open Questions is empty and its Status is `Approved` or `In Progress`.
+
+Anything missing stays listed in `task.md` §4 Waiting On. A `Draft` or `In Review` spec is never moved to `Done`: that would skip its approval.
 
 ## 6. The branch is the ticket
 

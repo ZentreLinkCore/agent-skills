@@ -14,6 +14,10 @@ Fill rules. Delete this comment and every other guide comment from the finished 
    evidence, future features, new modules, or spec changes.
 5. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity
    into the next), so "Finding #3" always names one issue.
+6. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
+   when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
+   and recomputes the verdict, the Final Recommendation and the Review Run row as a fix pass (vN.k). See
+   ticket-numbering.md §5 "Fix pass".
 
 The reviewer must NOT update specs, create spec versions, request new features, or restart planning.
 If a code issue can only be resolved by changing a requirement, record it under INFO as
@@ -39,7 +43,8 @@ If a code issue can only be resolved by changing a requirement, record it under 
 ### Overall Code Quality
 
 <!-- Choose one, derived from Findings:
-     any CRITICAL or HIGH → CHANGES REQUIRED · only MEDIUM / LOW → APPROVED WITH COMMENTS · none (INFO only) → APPROVED. -->
+     any CRITICAL or HIGH → CHANGES REQUIRED · only MEDIUM / LOW → APPROVED WITH COMMENTS · none (INFO only) → APPROVED.
+     After a /webkit-fix pass, count only the findings still open, and end the verdict "(after fix pass vN.k)". -->
 
 {{APPROVED | APPROVED WITH COMMENTS | CHANGES REQUIRED}}
 
@@ -78,6 +83,7 @@ If a code issue can only be resolved by changing a requirement, record it under 
 - **Issue:** {{what is wrong, and the failure: inputs or state → wrong outcome}}
 - **Why It Matters:** {{the consequence if it ships}}
 - **Recommended Fix:** {{the concrete change: construct, and what it becomes}}
+- **Resolution:** Open
 
 ### HIGH
 
@@ -91,6 +97,7 @@ If a code issue can only be resolved by changing a requirement, record it under 
 - **Issue:** {{what is wrong, and the failure: inputs or state → wrong outcome}}
 - **Why It Matters:** {{the consequence if it ships}}
 - **Recommended Fix:** {{the concrete change}}
+- **Resolution:** Open
 
 ### MEDIUM
 
@@ -103,6 +110,7 @@ If a code issue can only be resolved by changing a requirement, record it under 
 - **Line:** {{42}}
 - **Issue:** {{what is wrong, citing the project rule or pattern it breaks}}
 - **Recommendation:** {{the change}}
+- **Resolution:** Open
 
 ### LOW
 
@@ -114,6 +122,7 @@ If a code issue can only be resolved by changing a requirement, record it under 
 - **File:** [`{{path/to/file.php}}`]({{path/to/file.php}}#L{{42}})
 - **Line:** {{42}}
 - **Suggestion:** {{the change}}
+- **Resolution:** Open
 
 ### INFO
 

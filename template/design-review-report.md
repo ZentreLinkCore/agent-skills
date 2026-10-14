@@ -14,6 +14,10 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 5. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity into
    the next), so "Finding #3" always names one issue.
 6. Fit findings and Modern Enhancement Ideas never mix. Ideas are optional and never change the verdict.
+7. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
+   when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
+   and recomputes the verdict, the Final Recommendation and the Review Run row as a fix pass (vN.k). See
+   ticket-numbering.md §5 "Fix pass".
 
 The reviewer must NOT edit code or theme files, update specs, request new features, or restart planning.
 If a visual problem can only be resolved by changing a requirement, record it under INFO as
@@ -44,7 +48,8 @@ If a visual problem can only be resolved by changing a requirement, record it un
 
 <!-- Choose one, derived from Findings:
      any CRITICAL or HIGH → CHANGES REQUIRED · only MEDIUM / LOW → APPROVED WITH COMMENTS · none (INFO only) → APPROVED.
-     Modern Enhancement Ideas never change this. -->
+     Modern Enhancement Ideas never change this.
+     After a /webkit-fix pass, count only the findings still open, and end the verdict "(after fix pass vN.k)". -->
 
 {{APPROVED | APPROVED WITH COMMENTS | CHANGES REQUIRED}}
 
@@ -72,6 +77,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **What the User Sees:** {{the visible symptom, in which mode / at which breakpoint / in which portal}}
 - **Authority:** {{ui-design.md rule · theme.css:NN · WCAG AA · inferred from N siblings}}
 - **Recommended Fix:** `{{exact before}}` → `{{exact after}}`
+- **Resolution:** Open
 
 ### HIGH
 
@@ -87,6 +93,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **What the User Sees:** {{the visible symptom}}
 - **Authority:** {{authority}}
 - **Recommended Fix:** `{{exact before}}` → `{{exact after}}`
+- **Resolution:** Open
 
 ### MEDIUM
 
@@ -101,6 +108,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **What the User Sees:** {{the visible symptom}}
 - **Authority:** {{authority}}
 - **Recommendation:** `{{exact before}}` → `{{exact after}}`
+- **Resolution:** Open
 
 ### LOW
 
@@ -114,6 +122,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **What the User Sees:** {{the visible symptom}}
 - **Authority:** {{authority}}
 - **Suggestion:** {{the change}}
+- **Resolution:** Open
 
 ### INFO
 

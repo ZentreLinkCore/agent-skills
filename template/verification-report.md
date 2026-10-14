@@ -13,10 +13,15 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 5. Finding numbers are unique across BLOCKER and REQUIRED FIX (#1, #2, … continuing from one category into the
    next), so "Finding #3" always names one issue.
 6. Every FAIL in §2, §4, and §5 names the finding in §3 that explains it.
+7. Every BLOCKER, REQUIRED FIX, and IMPROVEMENT ends with "- **Resolution:** Open". /webkit-fix replaces that line
+   when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
+   and recomputes §1, §2, §4, §5, §8 and the Verification Run row as a fix pass (vN.k). See
+   ticket-numbering.md §5 "Fix pass".
 
 The verifier must NOT:
 - create new features or expand scope,
-- rewrite the specification or create a new spec version,
+- rewrite the specification or create a new spec version (its only spec edit is a Case 1 Minor correction,
+  applied after this report is written and recorded in §7),
 - suggest architecture changes without evidence.
 
 The verifier must:
@@ -58,7 +63,9 @@ The verifier must:
 <!-- Choose one, derived from §3:
      any BLOCKER → ❌ FAILED · REQUIRED FIX but no BLOCKER → ⚠ PASS WITH FIXES · neither, and every AC MET
      (or UNVERIFIED with its manual check in §6) → ✅ PASS.
-     If an AC could only be verified by hand (§6), write "✅ PASS (n AC pending manual check)". -->
+     If an AC could only be verified by hand (§6), write "✅ PASS (n AC pending manual check)".
+     After a /webkit-fix pass the status is recomputed from the findings still open and ends
+     "(after fix pass vN.k)". -->
 
 {{✅ PASS | ⚠ PASS WITH FIXES | ❌ FAILED}}
 
@@ -107,6 +114,7 @@ The verifier must:
 - **Actual Behavior:** {{what the implementation does, with evidence}}
 - **Impact:** {{why this matters}}
 - **Required Action:** {{exact fix: file, construct, and what it becomes}}
+- **Resolution:** Open
 
 ### REQUIRED FIX
 
@@ -122,6 +130,7 @@ The verifier must:
 - **Expected:** {{what the specification requires}}
 - **Actual:** {{what the implementation does, with evidence}}
 - **Required Action:** {{exact fix: file, construct, and what it becomes}}
+- **Resolution:** Open
 
 ### IMPROVEMENT
 
@@ -133,6 +142,7 @@ The verifier must:
 - **Current Situation:** {{what exists now}}
 - **Suggestion:** {{the change}}
 - **Reason:** {{why it is worth doing}}
+- **Resolution:** Open
 
 ### OUT OF SCOPE
 
@@ -216,6 +226,8 @@ The verifier must:
 **Changed Sections:**
 
 - {{section name}} — {{reason}}
+
+**Applied:** {{Case 1: "Yes — spec §16 Minor row <YYYY-MM-DD>; plan revision <n> (or 'plan unaffected')" · Case 2: "No — a requirement change needs stakeholder approval: /webkit-specify"}}
 
 ---
 

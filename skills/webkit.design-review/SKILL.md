@@ -18,7 +18,7 @@ This is **not** a code review (`/webkit-code-review`), **not** a spec check (`/w
 > [!IMPORTANT]
 > **Never blend the two sections.** A screen can pass the Fit Review and still deserve modernization; a screen can look current and still break every token rule. Blended, a real contrast failure and a "consider a fluid type scale" idea carry the same weight, and neither gets fixed.
 >
-> **This skill MUST NOT modify application code, theme files, or any specification.** Its only output is `design-review.md`. Fixing is `/webkit-fix`'s job; a reviewer who restyles as they go cannot report honestly on what changed.
+> **This skill MUST NOT modify application code, theme files, or any specification.** Its only output is `design-review.md`, plus its own rows in the ticket's `task.md`. Fixing is `/webkit-fix`'s job; a reviewer who restyles as they go cannot report honestly on what changed.
 
 ---
 
@@ -342,7 +342,9 @@ Read the hits per [ticket-numbering.md](../../rules/ticket-numbering.md) §4. A 
 
 No ticket → write to `.agents/reports/<scope>-design-review-<YYYYMMDD>.md` and set the Ticket row to "None — <reason>". Never allocate a ticket; this skill does not start work.
 
-**Step 2 — Write the file** to `.agents/specs/<project>/<ticket>/design-review.md`: exactly that filename. Re-reviewing **overwrites the file in place**. Before overwriting, append the previous run's **Review Run** value with its date and verdict (e.g. `- v1 — 2026-10-08 — initial — CHANGES REQUIRED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Review Run** row and set **Review Date** to today.
+**Step 2 — Write the file** to `.agents/specs/<project>/<ticket>/design-review.md`: exactly that filename. Re-reviewing **overwrites the file in place**. Before overwriting, append the previous run's **Review Run** value with its date and verdict (e.g. `- v1 — 2026-10-08 — initial — CHANGES REQUIRED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Review Run** row and set **Review Date** to today. A previous run row of the form `vN.k` is a [fix pass](../../rules/ticket-numbering.md#fix-pass) by `/webkit-fix`: append it to the history like any run, number this run `v(N+1)`, and re-check each `✅ FIXED` line rather than trusting it. Every finding is written with `- **Resolution:** Open` (the template's last field); `/webkit-fix` fills it.
+
+**Step 3 — Update `task.md`** (ticket folder only) per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): the §1 Design review row (`vN — <verdict>`); replace this report's unticked §3 items with this run's CRITICAL / HIGH findings (ticked ones stay as history) and count the rest on the Optional line; **Next step** (`/webkit-fix <ticket> --design-review` when any CRITICAL / HIGH is open); one §5 line. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first. This file and the report are the only files this skill writes.
 
 ---
 
@@ -377,4 +379,4 @@ Always include the saved report path:
 - Fix the CRITICAL and HIGH findings, on the ticket's existing branch: `/webkit-fix <ticket> --design-review`. MEDIUM and LOW only if the user names them.
 - Check the code, not the look: `/webkit-code-review <ticket>`
 - Check it matches the spec: `/webkit-verify <ticket>`
-- After fixes: `/webkit-design-review <ticket>` again (the run history records what changed).
+- After fixes: **no re-run needed.** `/webkit-fix` closes the findings in this report as a fix pass and recomputes the verdict. Re-run only when its Fix Summary says a re-run is needed, or when a fresh review is wanted before merge.

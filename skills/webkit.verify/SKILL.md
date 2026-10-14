@@ -1,7 +1,7 @@
 ---
 name: webkit-verify
 description: |
-  Adversarial check of a finished implementation against its ticket's spec.md, every claim backed by file:line evidence; grades BLOCKER / REQUIRED FIX / IMPROVEMENT / OUT OF SCOPE and writes `verify.md`. Read-only: never edits code or the spec. Code quality without a spec is /webkit-code-review.
+  Adversarial check of a finished implementation against its ticket's spec.md, every claim backed by file:line evidence; grades BLOCKER / REQUIRED FIX / IMPROVEMENT / OUT OF SCOPE and writes `verify.md`, then keeps the ticket in step: applies a proven spec error (Case 1) to spec.md and plan.md, ticks plan tasks it proved done, updates task.md. Never edits code. Code quality without a spec is /webkit-code-review.
   Trigger: "/webkit-verify", "verify against the spec", "does it match the spec", "spec compliance", "are all requirements done"
   Use when: implementation is finished and the question is whether it does what the spec says.
 ---
@@ -18,7 +18,7 @@ Reviews the completed implementation against its specification. It answers:
 This is **not** a feature planning command, **not** a redesign command, and **not** a place to introduce new requirements. The specification remains the source of truth.
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application code or the spec.** Its only output is `verify.md` in the spec's ticket folder. Fixing is `/webkit-fix`'s job; changing the spec is `/webkit-specify`'s, and only under the [Spec Update Rules](#spec-update-rules).
+> **This skill MUST NOT modify application code.** Its output is `verify.md` in the spec's ticket folder, plus the ticket updates of [Phase 7](#phase-7--keep-the-ticket-in-step): a **Case 1** spec correction applied in place (with the plan change it needs), ticks for plan tasks this run proved done, and `task.md`. Fixing is `/webkit-fix`'s job; a requirement change (Case 2, a new spec version) is `/webkit-specify`'s.
 
 ---
 
@@ -27,8 +27,10 @@ This is **not** a feature planning command, **not** a redesign command, and **no
 This skill owns **only** checking the implementation against its specification, and reporting ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
 
 - fixing the code → `/webkit-fix`
-- changing the spec → `/webkit-specify`
+- a requirement change or new spec version (Case 2) → `/webkit-specify`
 - reviewing general code quality → `/webkit-code-review`
+
+Phase 7's edits (a Case 1 correction, plan ticks, `task.md`) are this skill's own bookkeeping: they record what this run proved and add no requirement.
 
 If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
 
@@ -56,15 +58,17 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
                  │
                  ▼
    verify.md  (.agents/specs/<project>/T#####/verify.md)
+   + spec.md / plan.md corrected in place (Case 1 only) · plan ticks · task.md
                  │
        ┌─────────┴───────────┐
        ▼                     ▼
    webkit.fix           webkit-specify
- (BLOCKER, REQUIRED     (only when Spec Impact =
-  FIX findings)          SPEC UPDATE REQUIRED)
+ (BLOCKER, REQUIRED     (only Case 2: a requirement
+  FIX findings; marks    change that needs a new
+  them FIXED here)       spec version)
 ```
 
-The report is a file on disk; `/webkit-fix` usually runs in a new session and can only act on what was saved.
+The report is a file on disk; `/webkit-fix` usually runs in a new session and can only act on what was saved. `/webkit-fix` then closes the findings in this same file and recomputes its status (a fix pass), so a second verify run is not needed just to confirm the fixes.
 
 ---
 
@@ -242,18 +246,18 @@ IMPROVEMENT and OUT OF SCOPE findings never change the status. An `UNVERIFIED` A
 
 ### Spec Update Rules
 
-Verification never updates the specification automatically. The default is **NO SPEC CHANGE REQUIRED**.
+The default is **NO SPEC CHANGE REQUIRED**. Verification changes the specification only for Case 1, and applies that correction itself in [Phase 7](#phase-7--keep-the-ticket-in-step); Case 2 is never applied here.
 
 Report **SPEC UPDATE REQUIRED** only for:
 
 | Case | Example | Action |
 | --- | --- | --- |
-| **1. Specification error**: the spec contradicts an existing business rule, is impossible to implement, or contradicts itself. | The spec says "Users can delete records", but the business rule is "Records must be archived". | Correct the spec in place with `/webkit-specify` (Minor change, no new version). |
-| **2. Approved requirement change**: a stakeholder changed the requirement. | The stakeholder changes the workflow. | Create a new spec version with `/webkit-specify` (Major change). |
+| **1. Specification error**: the spec contradicts an existing business rule, is impossible to implement, or contradicts itself. | The spec says "Users can delete records", but the business rule is "Records must be archived". | This skill corrects the spec and the plan in place in Phase 7 (Minor change, no new version). No `/webkit-specify` run. |
+| **2. Approved requirement change**: a stakeholder changed the requirement. | The stakeholder changes the workflow. | Not applied here. Create a new spec version with `/webkit-specify` (Major change) once the stakeholder approves. |
 
 Normal bug fixes **never** change the spec or create a version: missing validation, wrong API response, UI alignment issue, typo, query optimization. Fix the implementation only.
 
-A SPEC UPDATE REQUIRED decision always names the Case and the **Changed Sections** (section name and reason).
+A SPEC UPDATE REQUIRED decision always names the Case, the **Changed Sections** (section name and reason), and whether it was **Applied**. Findings are graded against the spec as it stood when this run started; the Case 1 correction is applied after the report is written.
 
 ---
 
@@ -280,7 +284,30 @@ Where this skill's results go in the template:
 - Write to `.agents/specs/<project>/<ticket>/verify.md`, beside the spec: exactly that filename, no date or feature name ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
 - A **legacy** portal spec has no ticket folder: write to `.agents/reports/<domain>-<feature>-verify-<YYYYMMDD>.md` and say why. Never write `verify.md` into a portal folder, and never allocate a ticket; allocating is `/webkit-specify`'s job.
 - Re-verifying **overwrites the file in place**. Before overwriting, append the previous run's **Verification Run** value with its date and status (e.g. `- v1 — 2026-10-08 — initial — ❌ FAILED`) to the list under `<!-- Run history -->` at the bottom. Then increment the version in the Metadata **Verification Run** row, set **Verification Date** to today, and write one line on what changed ("Findings #2–#3 fixed; Finding #1 still open").
+- A previous run row of the form `vN.k` is a [fix pass](../../rules/ticket-numbering.md#fix-pass) by `/webkit-fix`: append it to the history like any run, and number this run `v(N+1)`. Its `✅ FIXED` Resolution lines are claims to re-test, not evidence: re-check each one, and a finding that is not really fixed comes back as a new finding.
+- Every finding is written with `- **Resolution:** Open` (the template's last field); `/webkit-fix` fills it.
 - Every `file:line` must be a real, current location.
+
+---
+
+## Phase 7 — Keep the Ticket in Step
+
+Runs after the report is saved. These are the documents the next session reads; updating them now is what spares a `/webkit-specify` run, and a second verify run, later. Skip a step whose file the ticket does not have. A legacy portal spec (report in `.agents/reports/`): Step 1 only.
+
+**Step 1 — Apply a Case 1 correction.** Only when §7 is SPEC UPDATE REQUIRED **Case 1**. Follow `/webkit-specify`'s [Minor change](../webkit.specify/SKILL.md#minor-change-update-in-place-no-new-version) rules exactly:
+
+1. Edit only the **Changed Sections** §7 names, and only to state the rule the business already has. Keep IDs stable.
+2. Add a §16 Change Log row under the **current** version, type `Minor`: `<the correction>` · `Spec error found by verify run vN (Case 1)` · the sections. **Specification Version** unchanged. An older header-format `specs.md` (no §16): add a `<!-- Changelog -->` line instead, without bumping `v<N>`.
+3. Bring `plan.md` in step per [Keep the plan in step](../webkit.specify/SKILL.md#keep-the-plan-in-step): edit or append **unticked** tasks only, bump **Plan Revision**, add a §10 row. A ticked task is never edited; changed finished work is a new task.
+4. Fill §7's **Applied** line in `verify.md`.
+
+Case 2 is never applied: write `Applied: No — …` and leave the spec alone.
+
+**Step 2 — Tick what this run proved.** In `plan.md`, tick each unticked task whose **Done when** this run confirmed with `file:line` or command evidence (a previous session may have built it without ticking). Set **Plan Status** to `In Progress`, or `Done` when every task is ticked or retired. Never untick: a ticked task whose Done When fails is a finding.
+
+**Step 3 — Close the ticket when it is finished**, per [Closing a ticket](../../rules/ticket-numbering.md#closing-a-ticket): spec **Status** and **Plan Status** → `Done` only when every condition holds.
+
+**Step 4 — Update task.md** per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): the §1 Verify row (`vN — <status>`); replace this report's unticked §3 items with this run's BLOCKER / REQUIRED FIX findings (ticked items stay as history); §2 ticks from Step 2; §4 pending manual checks; Metadata after Steps 1 and 3; **Done**, **Next step** (`/webkit-fix <ticket> --verify` when anything required is open); one §5 line. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first.
 
 ---
 
@@ -297,16 +324,17 @@ Where this skill's results go in the template:
 | Requesting a spec version for a bug fix | Bug fixes change the implementation only. |
 | Grading against an open question or a rejected option | Only decided, written requirements bind the code. |
 | Fixing what you find | The report no longer matches any commit. |
+| Trusting a `✅ FIXED` line from a fix pass | It records the fixer's own check; re-test the finding. |
 | Passing a requirement you could not check | `UNVERIFIED` with a reason is useful; a false `MET` is worse than no report. |
 
 ---
 
 ## Follow-up Commands
 
-Always include the saved report path:
+Always include the saved report path and the updated `task.md` path, and say what Phase 7 changed in the spec and the plan (or that it changed nothing):
 
-- Fix the BLOCKER and REQUIRED FIX findings, on the ticket's existing branch: `/webkit-fix <ticket> --verify`. IMPROVEMENT findings only if the user names them.
-- Only when Specification Impact is SPEC UPDATE REQUIRED: `/webkit-specify <ticket> amend per .agents/specs/<project>/<ticket>/verify.md` (Case 1 → Minor correction, Case 2 → Major version).
+- Fix the BLOCKER and REQUIRED FIX findings, on the ticket's existing branch: `/webkit-fix <ticket> --verify`. IMPROVEMENT findings only if the user names them. The fix marks them FIXED in this report and recomputes its status.
+- Only for **Case 2** (a stakeholder changed a requirement): `/webkit-specify <ticket> amend per .agents/specs/<project>/<ticket>/verify.md` (Major version). Case 1 is already applied.
 - Root cause of one finding: `/webkit-investigate <target_path> <Finding #2 from .agents/specs/<project>/<ticket>/verify.md>`
 - Code quality beyond the spec: `/webkit-code-review <ticket>`
-- After fixes: `/webkit-verify <ticket>` again (the run history records what changed).
+- After fixes: **no re-run needed.** `/webkit-fix` closes the findings here as a fix pass. Re-run only when its Fix Summary says a re-run is needed, or when a fresh adversarial pass is wanted before merge.

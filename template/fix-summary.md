@@ -9,6 +9,8 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 2. Replace every {{PLACEHOLDER}}. A finished summary contains no "{{".
 3. Never leave a field blank. Write "None" for an empty list, or "N/A — <reason>".
 4. Only the approved fixes from the source report. No speculative improvements, no suggested additional work.
+5. Documents Updated lists what Phase 8 (Close the Loop) actually wrote. "No change — <reason>" for a document it
+   left alone; "N/A — <reason>" for one the ticket does not have.
 -->
 
 ## Metadata
@@ -62,6 +64,19 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 **CHANGELOG:** {{`<path>` — Fixed line added under `## [x.y.z]`, or "None — <reason>"}}
 
 **Before release:** {{every `warnings` and `after_release` line of each bumped target, or "None"}}
+
+---
+
+## Documents Updated
+
+| Document | Change |
+| --- | --- |
+| `{{report path}}` | {{n}} findings closed ({{Finding #1–#3}}) · {{status before}} → {{status after}} · run v{{N}} → v{{N}}.{{k}} |
+| `plan.md` | {{TASK-xx ticked · Plan Status → Done, or "No change — <reason>"}} |
+| `spec.md` | {{§14 Review findings +n · §16 Minor row · Status → Done, or "No change — <reason>"}} |
+| `task.md` | {{n findings ticked · Next step: <command>}} |
+
+**Re-run of the source skill needed:** {{"No — every fix confirmed by its own scenario", or "Yes — `/webkit-<skill> <ticket>` — <the Phase 8 trigger that applies>"}}
 
 ---
 

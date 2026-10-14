@@ -13,7 +13,7 @@ Acts as a senior developer reviewing a pull request. It reviews the **actual cod
 This is **not** a specification review, **not** a feature planning process, and **not** a place to add new requirements.
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application code or any specification.** Its only output is the review report. Fixing is `/webkit-fix`'s job. A reviewer who fixes while reviewing cannot report honestly on what changed.
+> **This skill MUST NOT modify application code or any specification.** Its only output is the review report, plus its own rows in the ticket's `task.md`. Fixing is `/webkit-fix`'s job. A reviewer who fixes while reviewing cannot report honestly on what changed.
 
 ---
 
@@ -297,8 +297,11 @@ Never allocate a ticket here; that is `/webkit-specify`'s job. State the ticket 
 **Step 2 — Write the file.**
 
 - Write to `.agents/specs/<project>/<ticket>/code-review.md`: exactly that filename ([ticket-numbering.md](../../rules/ticket-numbering.md) §5).
-- Re-reviewing **overwrites the file in place**. Before overwriting, append the previous run's **Review Run** value with its date and verdict (e.g. `- v1 — 2026-10-08 — initial — CHANGES REQUIRED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Review Run** row, set **Review Date** to today, and write one line on what changed ("Findings #1–#2 fixed; 1 new MEDIUM").
+- Re-reviewing **overwrites the file in place**. Before overwriting, append the previous run's **Review Run** value with its date and verdict (e.g. `- v1 — 2026-10-08 — initial — CHANGES REQUIRED`) to the list under `<!-- Run history -->`. Then increment the Metadata **Review Run** row, set **Review Date** to today, and write one line on what changed ("Findings #1–#2 fixed; 1 new MEDIUM"). A previous run row of the form `vN.k` is a [fix pass](../../rules/ticket-numbering.md#fix-pass) by `/webkit-fix`: append it to the history like any run, number this run `v(N+1)`, and re-check each `✅ FIXED` line rather than trusting it.
+- Every finding is written with `- **Resolution:** Open` (the template's last field); `/webkit-fix` fills it.
 - Every `file:line` must be real and current.
+
+**Step 3 — Update `task.md`** (ticket folder only) per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): the §1 Code review row (`vN — <verdict>`); replace this report's unticked §3 items with this run's CRITICAL / HIGH findings (ticked ones stay as history) and count the rest on the Optional line; **Next step** (`/webkit-fix <ticket> --code-review` when any CRITICAL / HIGH is open); one §5 line. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first. This file and the report are the only files this skill writes.
 
 ---
 
@@ -340,4 +343,4 @@ Always include the saved report path:
 - Maintainability findings (duplication, large functions, dead code, inconsistent patterns) as a behavior-preserving cleanup: `/webkit-refactor <ticket> --code-review Finding #n`
 - Check spec conformance too: `/webkit-verify <ticket>`
 - Root cause of one finding: `/webkit-investigate <target_path> <Finding #n from .agents/specs/<project>/<ticket>/code-review.md>`
-- After fixes: `/webkit-code-review <ticket>` again (the run history records what changed).
+- After fixes: **no re-run needed.** `/webkit-fix` closes the findings in this report as a fix pass and recomputes the verdict. Re-run only when its Fix Summary says a re-run is needed, or when a fresh review is wanted before merge.

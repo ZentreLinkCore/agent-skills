@@ -192,7 +192,7 @@ A new file is a claim that nothing reusable exists, and that claim needs evidenc
 
 Execute `plan.md` task by task, in its order: the plan's Preparation tasks, then its Backend tasks (built per this skill's Phase 4), its Frontend Integration tasks (Phase 5), and its Validation tasks (Phase 6). **The backend is always completed before frontend integration.**
 
-- **One task at a time.** Make the task's change in the files it names, check its **Done when**, then tick it in `plan.md` (`- [ ]` → `- [x]`). Set **Plan Status** to `In Progress` when you tick the first task and to `Done` when the last one is ticked. Ticking and Plan Status are the **only** edits you make to the plan: they are how the next session knows where to resume.
+- **One task at a time.** Make the task's change in the files it names, check its **Done when**, then tick it in `plan.md` (`- [ ]` → `- [x]`) **and** in `task.md` §2. Set **Plan Status** to `In Progress` when you tick the first task and to `Done` when the last one is ticked. Ticking and Plan Status are the **only** edits you make to the plan: they are how the next session knows where to resume.
 - **Never tick a task whose Done When you could not confirm.** Leave it unticked and name it, with the reason, in the summary's Notes.
 - **Do not reorder** unless a dependency the plan missed forces it; record the reorder as plan drift.
 - **Plan drift** is any place the plan cannot be followed as written: a path that does not exist, a Reuse Map row the code contradicts, a missing step a spec FR / AC needs, a wrong order. Follow the **spec** (it binds; the plan only derives from it), make the smallest deviation that satisfies it, and list every drift in the summary's Notes so `/webkit-specify` corrects the plan. Do not rewrite the plan yourself.
@@ -268,6 +268,7 @@ Before finishing, verify:
 - Edited PHP files parse (`php -l <file>`); the frontend typechecks / builds where the project has those scripts.
 - Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
 - Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.
+- `task.md` is current, per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): §2 matches the plan's ticks, the §1 Implement row reads `<done>/<total> tasks`, §4 lists the plan's §9 Commands for the User still to run, **Next step** is `/webkit-verify <ticket>` (or the first unticked task's blocker), and §5 has one line for this run. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first.
 
 ---
 

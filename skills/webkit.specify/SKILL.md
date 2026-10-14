@@ -1,7 +1,7 @@
 ---
 name: webkit-specify
 description: |
-  Writes a feature's spec and implementation plan before any code exists: `.agents/specs/<project>/T#####/spec.md` (what, with Given/When/Then acceptance criteria) and `plan.md` (files and tasks in build order). Never touches application code. Bugs go to /webkit-investigate; writing the code is /webkit-implement.
+  Writes a feature's spec and implementation plan before any code exists: `.agents/specs/<project>/T#####/spec.md` (what, with Given/When/Then acceptance criteria), `plan.md` (files and tasks in build order), and `task.md` (the progress tracker every later skill keeps current). Never touches application code. Bugs go to /webkit-investigate; writing the code is /webkit-implement.
   Trigger: "/webkit-specify", "write a spec", "specify this feature", "new feature request", "acceptance criteria", "implementation plan"
   Use when: a new feature, or a change to a ticket's intended behavior, must be pinned down before anyone builds it.
 ---
@@ -12,16 +12,16 @@ Creates the implementation blueprint **before** coding. The spec becomes the sin
 
 Process: understand the requirement → analyze the existing project → generate the spec from the template → derive the implementation plan from the spec → lock the intended behavior → implementation executes the plan, and review checks against the spec.
 
-Two files, two jobs: **`spec.md` says WHAT** (requirements, contracts, acceptance criteria) and is what reviewers check against; **`plan.md` says HOW and IN WHAT ORDER** (files, tasks, dependencies) and is what `/webkit-implement` executes and ticks off.
+Three files, three jobs: **`spec.md` says WHAT** (requirements, contracts, acceptance criteria) and is what reviewers check against; **`plan.md` says HOW and IN WHAT ORDER** (files, tasks, dependencies) and is what `/webkit-implement` executes and ticks off; **`task.md` says WHAT IS DONE** (every task and finding with its checkbox, what the ticket waits on, a log of each skill run), and every later skill keeps it current.
 
 > [!IMPORTANT]
-> **This skill MUST NOT modify application files.** No controllers, migrations, routes, components, or composables. Its only output is `spec.md` and `plan.md` in the ticket folder.
+> **This skill MUST NOT modify application files.** No controllers, migrations, routes, components, or composables. Its only output is `spec.md`, `plan.md`, and `task.md` in the ticket folder.
 
 ---
 
 ## Authority Boundary
 
-This skill owns **only** writing and maintaining the feature specification (`spec.md`) and its implementation plan (`plan.md`) ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
+This skill owns **only** writing and maintaining the feature specification (`spec.md`) and its implementation plan (`plan.md`), and creating the ticket's tracker (`task.md`) ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
 
 - writing or changing application code → `/webkit-implement`
 - reviewing an implementation → `/webkit-verify`, `/webkit-code-review`
@@ -38,7 +38,7 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 | `/webkit-specify <request>` | New feature, or an update to the ticket that already covers it (Phase 5 finds it). |
 | `/webkit-specify <target_path> <request>` | Same, with the code location the feature lives in. |
 | `/webkit-specify T##### <request>` | Work on that existing ticket. |
-| `/webkit-specify T##### --plan` | Generate `plan.md` for a ticket whose spec has none (tickets written before the plan existed), or regenerate a stale one. Runs Phase 2 and Phase 4, then saves only `plan.md` (Phase 5, Step 3); the spec is read, never edited. |
+| `/webkit-specify T##### --plan` | Generate `plan.md` for a ticket whose spec has none (tickets written before the plan existed), or regenerate a stale one. Runs Phase 2 and Phase 4, then saves `plan.md` and creates or re-syncs `task.md` (Phase 5, Step 3); the spec is read, never edited. |
 
 ---
 
@@ -53,20 +53,21 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
    Phase 4  Fill .agents/template/implementation-plan.md     → plan (derived from the spec)
    Phase 5  Persist → .agents/specs/<project>/T#####/spec.md
                     → .agents/specs/<project>/T#####/plan.md
+                    → .agents/specs/<project>/T#####/task.md   (from the plan)
                      │
                      ▼
-   spec.md = source of truth (locked)  ·  plan.md = build order
+   spec.md = source of truth (locked)  ·  plan.md = build order  ·  task.md = what is done
                      │
                      ▼
              webkit-implement
    (executes plan.md task by task: backend first → frontend integration)
                      │
                      ▼
-     webkit.verify · webkit.code-review
-   (check against the spec — never redesign it)
+     webkit.verify · webkit.code-review → webkit.fix
+   (check against the spec — never redesign it; each run updates task.md)
 ```
 
-The spec and the plan are **files on disk**. The implement and review skills usually run in a new session with no memory of this conversation; they can only follow what was persisted. The same ticket folder later receives `verify.md` and `code-review.md`. Numbering and folder rules are canonical in [ticket-numbering.md](../../rules/ticket-numbering.md).
+The spec and the plan are **files on disk**. The implement and review skills usually run in a new session with no memory of this conversation; they can only follow what was persisted. The same ticket folder later receives `verify.md` and `code-review.md`, and `task.md` records each of those runs. Numbering and folder rules are canonical in [ticket-numbering.md](../../rules/ticket-numbering.md).
 
 ---
 
@@ -225,10 +226,12 @@ Displaying them in chat is not enough; `/webkit-implement` and the review skills
 
 **Step 3 — Write the files.**
 
-- Paths: `.agents/specs/<project>/<ticket>/spec.md` and `.agents/specs/<project>/<ticket>/plan.md` (e.g. `.agents/specs/<project>/T00003/plan.md`). Exactly these names: no ticket number, date, feature name, or portal in the filename; the folder already names the ticket.
-- Write the spec first, then the plan. Both or neither: a spec saved without its plan leaves `/webkit-implement` to plan from scratch.
+- Paths: `.agents/specs/<project>/<ticket>/spec.md`, `.agents/specs/<project>/<ticket>/plan.md`, and `.agents/specs/<project>/<ticket>/task.md` (e.g. `.agents/specs/<project>/T00003/plan.md`). Exactly these names: no ticket number, date, feature name, or portal in the filename; the folder already names the ticket.
+- Write the spec first, then the plan, then `task.md`. Spec and plan are both or neither: a spec saved without its plan leaves `/webkit-implement` to plan from scratch.
+- **`task.md`** is filled from [the task-tracker template](../../template/task-tracker.md): Metadata from the spec and plan; §1 with the Specify row filled, `0/<N> tasks` for Implement, `—` for every other stage, and Next step `/webkit-implement <ticket>`; §2 lists every plan TASK as `- [ ] TASK-xx — <title>` under its phase (a task blocked by an Open Question ends `— BLOCKED (Q-xx)`); §3 `None yet.`; §4 the Open Questions and §9 Commands for the User; §5 one line for this run. It is a view of the plan: it never holds a task the plan does not.
 - A ticket created before this skill holds its spec as `specs.md`. That file **is** the spec: update it under its existing name and never create a second spec beside it. Its plan is still `plan.md`.
 - Do not create `verify.md` or `code-review.md`. An empty placeholder reads as "already verified".
+- An existing `task.md` is updated in place, never overwritten: its ticks, §3 findings, and §5 log are other skills' history ([task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep)).
 
 ---
 
@@ -275,6 +278,8 @@ Every spec change ends by checking `plan.md` in the same ticket folder. The rule
 
 **Never edit or untick a task already ticked `[x]`.** `/webkit-implement` ticks tasks as it finishes them, so a ticked task describes code that exists. A change to finished work is a **new** task at the end of its phase (`TASK-14 — Extend SaveLeaveHandler for the v1.1 approval step`). If the ticket has no `plan.md` yet, create one with Phase 4.
 
+Then bring `task.md` in step: Metadata (spec version, plan revision and status), the §1 Specify row, §2 to match the plan (new tasks unticked, retired ones struck through, ticks untouched), §4, and one §5 line. A Major change on a `Done` ticket reopens it: spec Status `In Review`, Plan Status `In Progress`.
+
 ---
 
 ## After Specification Creation
@@ -284,7 +289,8 @@ The spec is now the source of truth.
 1. The developer reads the spec.
 2. The developer implements it with `/webkit-implement`, which executes `plan.md` task by task (backend first, then frontend integration) and ticks each task as it is done.
 3. The reviewer checks the implementation against the acceptance criteria (`/webkit-verify`) and code quality (`/webkit-code-review`). Reviews check against the spec, not the plan.
-4. Issues found update §14 Implementation Notes as a minor change, and the plan per [Keep the plan in step](#keep-the-plan-in-step). They do not restart the specification.
+4. Issues found are recorded without a `/webkit-specify` run: `/webkit-fix` writes each fixed finding into §14 **Review findings** (a Minor change), and `/webkit-verify` applies a proven spec error (Case 1) to the spec and the plan itself. They do not restart the specification. Only a requirement change (Case 2) comes back here.
+5. `task.md` shows, at any point, which tasks are done, which findings are still open, and what the ticket is waiting on.
 
 ## Review Rules
 
@@ -309,7 +315,7 @@ Such a modification is then classified Minor or Major as described above.
 
 ## Follow-up Commands
 
-End by stating the ticket and both saved paths, with the plan's size, e.g. "Spec and plan saved as `T00003` → `.agents/specs/<project>/T00003/spec.md` and `plan.md` (14 tasks, 9 files); implement it on branch `T00003`." Name any Open Question that keeps either file in `Draft`. Then suggest:
+End by stating the ticket and the three saved paths, with the plan's size, e.g. "Spec, plan, and tracker saved as `T00003` → `.agents/specs/<project>/T00003/spec.md`, `plan.md` (14 tasks, 9 files), and `task.md`; implement it on branch `T00003`." Name any Open Question that keeps either file in `Draft`. Then suggest:
 
 - Build it (executes `plan.md`: backend first, then frontend integration): `/webkit-implement <ticket>`
 - Conformance against the spec: `/webkit-verify <ticket>` (writes `verify.md` in the same folder)
