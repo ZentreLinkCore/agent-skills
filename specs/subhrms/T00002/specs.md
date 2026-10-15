@@ -603,7 +603,9 @@ All notification endpoints are strictly protected by the `auth:sanctum` middlewa
 - **Deployment / rollback:**
   - Deploy: Run migrations `php artisan migrate`. Seed default settings on initial user access. Start queue workers and scheduler.
   - Rollback: `php artisan migrate:rollback --step=3`.
-- **Review findings:** N/A — not yet reviewed.
+- **Review findings:**
+  - design-review v1 #1–#4 (mobile) — text and fills on the notification center, settings and card must reach WCAG AA 4.5:1 in light and dark: use the theme's `accentFill` / `onAccentFill` roles or `#9F5617` for fills, `primaryDark` and `dangerText` for text, an accessible shade per category tag, and `#DC2626` (not a token that turns `#F87171` in dark mode) for white-on-red → fixed 2026-10-15
+  - design-review v1 #5–#9 (web) — the notification pages and the bell badge must not use `teal-500` / `teal-600` / `red-500` / `slate-400` for text or white-on-fill: `teal-700` fills, `teal-700` / `teal-800` text, `red-700` / `amber-700` pills, `slate-500` (light) and `slate-400` (dark) timestamps, `slate-600` / `slate-300` helper text, `red-600` badge → fixed 2026-10-15
 
 ---
 
@@ -644,3 +646,4 @@ All notification endpoints are strictly protected by the `auth:sanctum` middlewa
 | 1.0 | 2026-10-02 | Initial | Initial draft of centralized notification spec | Baseline notification concepts | All |
 | 2.0 | 2026-10-14 | Major | Complete specification regeneration covering entire HRMS | Standardized to feature-specification template; added Notification Settings, missing attendance eligibility engine, role-based recipient resolution, all 6 portals, and mobile/web UX flows | All (§1–§16) |
 | 2.1 | 2026-10-14 | Minor | Enforce strict Web & Mobile visual concept parity, explicit separation of Payroll Processing vs. Payslip Release, detailed 6-portal Recipient Routing Matrix, and Mandatory Compliance Guard | Addresses user feedback: unified web/mobile card anatomy and category filters, decoupled payroll processing completion from employee payslip release, explicit attendance exclusions (shift, leave, holiday, rest day, OBT), and mandatory alert protection | §1, §2, §3, §6, §7 (new), §9, §11, §16 |
+| 2.1 | 2026-10-15 | Minor | Review findings recorded — /webkit-fix T00002 --design-review (run v1): #1–#9 | Visual-layer contrast rules found by the design review are noted as constraints on the existing UI; no requirement changed | §15 |
