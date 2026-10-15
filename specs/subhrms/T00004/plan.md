@@ -11,7 +11,7 @@
 | Based on Spec Version | 1.1 |
 | Plan Revision | 2 |
 | Created Date | 2026-10-15 |
-| Plan Status | Ready |
+| Plan Status | Done |
 
 ---
 
@@ -82,7 +82,7 @@
 - **Goal:** Establish utilities, state composables, and type definitions required for docked floating chat, 3-column full view, and Slack-style message formatting.
 - **Exit check:** TypeScript compilation / build succeeds without errors; utilities return expected preview strings and clustering maps.
 
-- [ ] **TASK-01 — Add Message Preview and Clustering Utilities**
+- [x] **TASK-01 — Add Message Preview and Clustering Utilities**
   - **Files:** `resources/views/web/src/module/employee/messages/utils/messages.utils.ts` (Modify)
   - **Change:** Implement `formatLatestMessagePreview(message)` following `T00001` contract (Text, `Sent a photo`, `Sent a video`, `Sent a voice message`, `Sent a file`, `No messages yet`); implement `shouldGroupWithPrevious(currentMsg, prevMsg)` checking 5-minute threshold and same sender ID.
   - **Test:** Unit test asserting correct preview string output for each message type and correct grouping boolean.
@@ -90,7 +90,7 @@
   - **Depends on:** None
   - **Done when:** `formatLatestMessagePreview` and `shouldGroupWithPrevious` produce verified results.
 
-- [ ] **TASK-02 — Create Floating Chat Dock Composable**
+- [x] **TASK-02 — Create Floating Chat Dock Composable**
   - **Files:** `resources/views/web/src/module/employee/messages/composables/useFloatingChat.ts` (Create)
   - **Change:** Implement reactive state `dockedWindows` (max 2 open windows + minimized overflow tray), `openFloatingChat(conversationId)`, `minimizeChat(conversationId)`, `expandToFullView(conversationId)`, and `closeChat(conversationId)`.
   - **Test:** Composable state test asserting that opening a 3rd window auto-minimizes the oldest, and expand navigates to `/messages`.
@@ -98,7 +98,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Docked windows state accurately tracks open, minimized, and closed chat windows.
 
-- [ ] **TASK-03 — Extend Messages Pinia Store for Threads, Right Info Panel, and Dock Synchronization**
+- [x] **TASK-03 — Extend Messages Pinia Store for Threads, Right Info Panel, and Dock Synchronization**
   - **Files:** `resources/views/web/src/module/employee/messages/store/messages.store.ts` (Modify)
   - **Change:** Add `activeThreadRoot`, `threadReplies`, `seenReceipts`, `showChatInfoPanel`, and helper methods `toggleChatInfoPanel()`, `openThread(rootMessage)`, `closeThread()`, and `sendThreadReply(text, isBroadcast)`. Ensure active conversation state can be hydrated by either floating chat or full-view page.
   - **Test:** Store test verifying thread replies loading and thread reply broadcast insertion.
@@ -113,7 +113,7 @@
 - **Goal:** Verify that existing backend endpoints and Echo channels are fully prepared for web thread replies, reactions, and seen receipts.
 - **Exit check:** `php artisan test --filter=Messages` passes on backend.
 
-- [ ] **TASK-04 (Backend Verification) — Verify Backend Contract Parity for Web Consumers**
+- [x] **TASK-04 (Backend Verification) — Verify Backend Contract Parity for Web Consumers**
   - **Files:** `tests/Feature/Messages/MessagesControllerTest.php` (Modify/Verify)
   - **Change:** Validate that `POST /api/employee/messages/conversations/{id}/messages` correctly handles `parent_id` and `is_thread_broadcast` payloads and returns formatted response keys.
   - **Test:** `tests/Feature/Messages/MessagesControllerTest.php` — asserts 200 OK and JSON structure matching spec contract.
@@ -128,7 +128,7 @@
 - **Goal:** Build the complete UI layer: Navbar popover, floating chat dock with minimize/expand, Facebook Messenger-style 3-column full view with Slack message feed, and collapsible right-hand info accordion panel.
 - **Exit check:** All Vue components mount without errors; `npm run build` succeeds; user can chat in floating dock and 3-column full view.
 
-- [ ] **TASK-05 — Implement Quick Access Messages Popover**
+- [x] **TASK-05 — Implement Quick Access Messages Popover**
   - **Files:** `resources/views/web/src/module/employee/messages/components/popover/MessagesPopover.vue` (Create)
   - **Change:** Build dropdown containing: header with unread badge, debounced search bar, horizontal active colleagues presence reel, filter chips (`All`, `Channels`, `DMs`, `Unread`), conversation items with avatars, delivery ticks, and `formatLatestMessagePreview` text, and "See all in Full View" footer button.
   - **Test:** Component mount test verifying filter chip clicks, search debounce filtering, and conversation card click emitting select event.
@@ -136,7 +136,7 @@
   - **Depends on:** TASK-01, TASK-03
   - **Done when:** Popover displays smoothly and updates lists dynamically based on search and tabs.
 
-- [ ] **TASK-06 — Integrate Popover into Navbar Header Bar**
+- [x] **TASK-06 — Integrate Popover into Navbar Header Bar**
   - **Files:** `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` (Modify)
   - **Change:** Replace `goToMessages` direct route navigation with toggling `showMessagesPopover`. Mount `<MessagesPopover>` inside an anchored relative container with outside-click dismiss.
   - **Test:** Clicking navbar message icon toggles popover visibility and does not trigger `router.push('/messages')`.
@@ -144,7 +144,7 @@
   - **Depends on:** TASK-05
   - **Done when:** Clicking message icon in navbar opens popover without full-page navigation.
 
-- [ ] **TASK-07 — Build Slack-Style Message Row Component**
+- [x] **TASK-07 — Build Slack-Style Message Row Component**
   - **Files:** `resources/views/web/src/module/employee/messages/components/feed/SlackMessageRow.vue` (Create)
   - **Change:** Render message in left-aligned gutter: avatar (36x36px), name, role badge, timestamp; collapse header if grouped within 5 minutes; dual-color mentions (`@current_user` in golden chestnut, `@other_user` in slate); attachments rendering; emoji reaction counter pills; thread preview pill (`💬 {count} replies`); seen avatars; floating micro-action bar on hover.
   - **Test:** Component test verifying 5-minute collapsing class, mention styling, and thread indicator display.
@@ -152,7 +152,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Message row displays with full Slack styling, reactions, and thread pills.
 
-- [ ] **TASK-08 — Build Slack-Style Message Feed Component**
+- [x] **TASK-08 — Build Slack-Style Message Feed Component**
   - **Files:** `resources/views/web/src/module/employee/messages/components/feed/SlackMessageFeed.vue` (Create)
   - **Change:** Render chronological stream using `SlackMessageRow.vue`, date dividers, typing indicator ("{User} is typing..."), auto-scroll to bottom with scroll-to-bottom button when scrolled up, and empty state.
   - **Test:** Component test asserting auto-scroll behavior on new message and date divider rendering.
@@ -160,7 +160,7 @@
   - **Depends on:** TASK-07
   - **Done when:** Feed scrolls smoothly, renders messages chronologically, and updates on real-time events.
 
-- [ ] **TASK-09 — Build Slack Message Composer Component**
+- [x] **TASK-09 — Build Slack Message Composer Component**
   - **Files:** `resources/views/web/src/module/employee/messages/components/composer/SlackMessageComposer.vue` (Create)
   - **Change:** Auto-expanding textarea (`min-h-[40px] max-h-[120px]`), Enter to send (Shift+Enter for newline), emoji picker toggle button, file attachment button, mention suggestions popup when `@` is typed.
   - **Test:** Test verifying Enter triggers submit, Shift+Enter adds newline, and empty message submit is blocked.
@@ -168,7 +168,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Composer allows typing, attaching files, inserting emojis, and sending messages cleanly.
 
-- [ ] **TASK-10 — Build Slack Thread Slide-Over Panel Component**
+- [x] **TASK-10 — Build Slack Thread Slide-Over Panel Component**
   - **Files:** `resources/views/web/src/module/employee/messages/components/thread/SlackThreadPanel.vue` (Create)
   - **Change:** Root message card at top, scrollable thread replies stream, and dedicated thread composer with "Also send to channel" checkbox.
   - **Test:** Component test asserting reply submission emits `is_thread_broadcast` and appends to thread list.
@@ -176,7 +176,7 @@
   - **Depends on:** TASK-08, TASK-09
   - **Done when:** Thread panel loads replies, sends thread responses, and toggles channel broadcasting.
 
-- [ ] **TASK-11 — Build Individual Floating Chat Window Component**
+- [x] **TASK-11 — Build Individual Floating Chat Window Component**
   - **Files:** `resources/views/web/src/module/employee/messages/components/dock/FloatingChatWindow.vue` (Create)
   - **Change:** Compact floating window (360x480px) with header (avatar, name, online dot, minimize `—`, expand `⛶`, close `✕`), body housing `SlackMessageFeed`, slide-over overlay for `SlackThreadPanel`, and footer housing `SlackMessageComposer`.
   - **Test:** Clicking minimize collapses window; clicking expand navigates to `/messages`; clicking close triggers teardown.
@@ -184,17 +184,17 @@
   - **Depends on:** TASK-02, TASK-08, TASK-09, TASK-10
   - **Done when:** Floating chat window operates autonomously with full messaging and thread capability.
 
-- [ ] **TASK-12 — Build Global Floating Chat Dock Manager and Mount in Root Layout**
+- [x] **TASK-12 — Build Global Floating Chat Dock Manager and Mount in Root Layout**
   - **Files:**
     - `resources/views/web/src/module/employee/messages/components/dock/FloatingChatDock.vue` (Create)
-    - `resources/views/web/src/layouts/ModernAppLayout.vue` (Modify)
-  - **Change:** Implement `FloatingChatDock.vue` rendering active `FloatingChatWindow`s and minimized tabs at bottom-right. Mount `<FloatingChatDock />` globally in `ModernAppLayout.vue`. Automatically hide dock when current route is `/messages`.
+    - `resources/views/web/src/layout/DashboardLayout.vue` (Modify)
+  - **Change:** Implement `FloatingChatDock.vue` rendering active `FloatingChatWindow`s and minimized tabs at bottom-right. Mount `<FloatingChatDock />` globally in `DashboardLayout.vue`. Automatically hide dock when current route is `/messages`.
   - **Test:** Floating dock renders across various portal pages (e.g. `/dashboard`, `/employees`) and disappears on `/messages`.
   - **Covers:** FR-02, FR-08, EC-05, AC-04, AC-05, AC-06
   - **Depends on:** TASK-11
   - **Done when:** Floating dock persists seamlessly during navigation and handles multiple chat windows.
 
-- [ ] **TASK-13 — Modernize Left Chats Sidebar for Full View**
+- [x] **TASK-13 — Modernize Left Chats Sidebar for Full View**
   - **Files:** `resources/views/web/src/module/employee/messages/components/MessagesSidebar.vue` (Modify)
   - **Change:** Upgrade sidebar to match Facebook Messenger layout: large "Chats" title, `...` options, compose button, search input with rounded filter pills (`All`, `Unread`, `Channels`, `Direct Messages`), and conversation list items with avatar, online green dot, snippet, relative timestamp, and solid blue unread dot.
   - **Test:** Clicking filter pills updates displayed conversation items; selecting a conversation highlights active row.
@@ -202,7 +202,7 @@
   - **Depends on:** TASK-01
   - **Done when:** Left sidebar delivers sleek Facebook Messenger aesthetic.
 
-- [ ] **TASK-14 — Build Right-Hand Collapsible Chat Info & Accordion Panel**
+- [x] **TASK-14 — Build Right-Hand Collapsible Chat Info & Accordion Panel**
   - **Files:** `resources/views/web/src/module/employee/messages/components/info/ChatInfoAccordion.vue` (Create)
   - **Change:** Build Facebook-style right panel:
     1. Profile header (72x72px avatar with green dot, full name, role/dept, corporate verified status).
@@ -218,7 +218,7 @@
   - **Depends on:** TASK-01, TASK-03, TASK-10
   - **Done when:** Right panel provides comprehensive context accordion matching reference design.
 
-- [ ] **TASK-15 — Implement 3-Column Full View Messages Page**
+- [x] **TASK-15 — Implement 3-Column Full View Messages Page**
   - **Files:** `resources/views/web/src/module/employee/messages/pages/Messages.vue` (Modify)
   - **Change:** Connect `MessagesSidebar.vue` (Left Column), `SlackMessageFeed.vue` + `SlackMessageComposer.vue` (Center Column with header featuring `(i)` button), and `ChatInfoAccordion.vue` (Right Column). Add smooth collapse transition for the right column when `(i)` is toggled.
   - **Test:** Full view loads conversation specified by `route.query.conversation_id`; `(i)` button toggles right panel smoothly.
@@ -233,7 +233,7 @@
 - **Goal:** Execute end-to-end acceptance walk, verify all acceptance criteria (AC-01 to AC-26), and validate build integrity.
 - **Exit check:** `npm run build` succeeds; zero console errors on popover, dock, and 3-column full view; all manual scenarios MT-01 to MT-05 verified.
 
-- [ ] **TASK-16 — End-to-End Walkthrough and Validation Suite**
+- [x] **TASK-16 — End-to-End Walkthrough and Validation Suite**
   - **Files:** `tests/Feature/Messages/WebMessagesTest.php` (Create)
   - **Change:** Run automated backend tests for messaging; execute manual test walk MT-01 through MT-05 covering popover, floating dock, 3-column full view, thread replies, seen avatars, and accordion panel.
   - **Covers:** AC-01 to AC-26, MT-01 to MT-05
