@@ -189,6 +189,8 @@ Judge maintainability against the project's own patterns, never taste. Deep code
 
 Reading shows what the code says; running shows what it does. Use `php artisan tinker --execute="..."`, `php artisan route:list`, `vendor/bin/phpunit`, `npm run typecheck` / `npm run build`, and negative `grep -rn` searches for what must not exist.
 
+An acceptance criterion that can only be seen in the running UI (and would otherwise stay `UNVERIFIED`) is checked with Playwright or any browser tool you have. Log in as the default dev user documented in the project's root [AGENTS.md](../../../AGENTS.md#7-seeing-the-real-behavior-or-ui-playwright-or-any-browser-tool); if the project documents none, ask rather than guess a login. Log in once and reuse the session. The evidence is the page, the steps, and what you saw. The password never goes into `verify.md`.
+
 > [!CAUTION]
 > Never run a destructive command (`migrate:fresh`, truncation, seeding over data) against a database you have not confirmed is disposable. Ask first.
 
