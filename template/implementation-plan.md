@@ -3,14 +3,13 @@
 <!--
 TEMPLATE: implementation-plan (written by /webkit-specify beside spec.md; executed by /webkit-implement)
 
-Fill rules. Delete this comment and every other guide comment from the finished plan.
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
 1. The plan is derived from spec.md in the same ticket folder. The spec says WHAT; the plan says HOW and IN WHAT
    ORDER, file by file. Never restate a requirement: cite it by ID (FR-, NFR-, AC-, EC-, D-). Where the plan and
    the spec disagree, the spec wins.
 2. Never add behavior the spec does not define. A task the plan needs but the spec cannot justify is a spec gap:
    fix the spec first, then plan it.
-3. Replace every {{PLACEHOLDER}}. A finished plan contains no "{{". Never leave a cell blank; write
-   "N/A — <reason>". Banned words: "should", "might", "maybe", "etc.", "as needed", "appropriate", "TBD".
+3. Banned words: "should", "might", "maybe", "etc.", "as needed", "appropriate", "TBD".
 4. Every path exists (verified in the spec's project scan) or is marked **(new)**. Every **(new)** file has a
    §2 Reuse Map row whose decision is CREATE.
 5. Task IDs (TASK-01, TASK-02, …) are stable: never renumber. Retire a task with ~~strikethrough~~ and a reason;
@@ -23,9 +22,9 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 8. Coverage: every FR in spec §6 appears in at least one task's Covers; every AC in spec §10 appears in §8
    Acceptance Walk.
 9. Every task that changes backend or frontend code has a Test line naming the test file and what it asserts, per
-   .agents/rules/testing.md ("Every Code Change Ships With a Test"); "None — <reason>" only for a change with no
-   behavior. A frontend app with no test runner gets a Preparation task that sets one up. Done When includes the
-   test passing.
+   .agents/rules/conditional/testing.md ("Every Code Change Ships With a Test"); "None — <reason>" only for a
+   change with no behavior. A frontend app with no test runner gets a Preparation task that sets one up. Done When
+   includes the test passing.
 10. /webkit-implement edits only two things here: a task checkbox ([ ] → [x]) once its Done When holds, and the
    Plan Status. Everything else changes through /webkit-specify and is logged in §10.
 -->
@@ -52,7 +51,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 
 ## 1. Technical Context
 
-<!-- The facts /webkit-implement needs before touching a file, taken from the project profile and the closest
+<!-- The facts /webkit-implement needs before touching a file, taken from the project's rules and the closest
      sibling feature. One value per row. -->
 
 | Aspect | Value |

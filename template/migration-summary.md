@@ -4,11 +4,8 @@
 TEMPLATE: migration-summary (used by /webkit-migrate)
 
 Printed in chat at the end of /webkit-migrate; it is not saved as a file (the contract is the saved record).
-Fill rules. Delete this comment and every other guide comment from the printed summary.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished summary contains no "{{".
-3. Never leave a field blank. Write "None" for an empty list, or "N/A — <reason>".
-4. Only what was actually migrated. No speculative improvements, no feature suggestions.
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+Only what was actually migrated. No speculative improvements, no feature suggestions.
 -->
 
 ## Metadata
@@ -29,7 +26,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 - **Frontend:** {{pages / components / hooks / page registration built}}
 - **Database:** {{migrations scaffolded and not run, or "None — reused `<table>`"}}
 - **Registrations:** {{route-file and router entries added}}
-- **Tests:** {{target test files added, per .agents/rules/testing.md, with their run result; a runner set up in the target is also named in Notes}}
+- **Tests:** {{target test files added, per .agents/rules/conditional/testing.md, with their run result; a runner set up in the target is also named in Notes}}
 
 ---
 
@@ -76,9 +73,8 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 
 ## Completion Status
 
-<!-- Choose one. MIGRATION COMPLETED requires PARITY CONFIRMED. Migrations still waiting for the user to run them go
-     in Notes; they do not make the migration partial. PARTIALLY COMPLETED names exactly which contract items were not
-     migrated or are not at parity, and why. -->
+<!-- Choose one: MIGRATION COMPLETED only with PARITY CONFIRMED (migrations awaiting the user do not make it partial);
+     otherwise PARTIALLY COMPLETED, naming each item not migrated or not at parity, and why. Full rule: SKILL.md Output. -->
 
 {{MIGRATION COMPLETED | PARTIALLY COMPLETED}}
 

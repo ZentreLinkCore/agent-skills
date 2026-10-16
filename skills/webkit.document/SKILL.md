@@ -17,30 +17,10 @@ Acts as a technical writer documenting a feature that already shipped. It produc
 
 The reader half is the point. Someone who never scrolls past **Under the Hood** should still be able to use the page correctly.
 
-This skill only documents. It is **not** responsible for:
-
-- fixing a bug it finds (`/webkit-investigate`, then `/webkit-fix`),
-- checking the build against its spec (`/webkit-verify`),
-- reviewing code quality or the visual layer (`/webkit-code-review`, `/webkit-design-review`),
-- writing or changing a specification (`/webkit-specify`),
-- code comments, PHPDoc, or README setup notes ([documentation.md](../../rules/documentation.md)).
-
 > [!IMPORTANT]
 > **This skill MUST NOT modify application code, specs, or data.** Its only output is the guide in `.agents/docs/`. A bug found while documenting goes under Known Issues and Limitations and is handed to `/webkit-investigate`; it is never fixed here.
 
----
-
-## Authority Boundary
-
-This skill owns **only** writing the feature guide from the code that shipped ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
-
-- changing code → `/webkit-fix` or `/webkit-implement`
-- finding a root cause → `/webkit-investigate` (the guide records the symptom under Known Issues)
-- writing or changing a spec → `/webkit-specify`
-
-If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
-
----
+Shared steps (gates, ticket resolution, templates) follow [skill-protocol.md](../../rules/conditional/skill-protocol.md). **Authority:** writing the feature guide from the code that shipped. Code changes → `/webkit-fix` or `/webkit-implement`; a bug's root cause → `/webkit-investigate`, then `/webkit-fix` (the guide records the symptom under Known Issues); checking the build against its spec → `/webkit-verify`; code quality or the visual layer → `/webkit-code-review`, `/webkit-design-review`; writing or changing a spec → `/webkit-specify`. Code comments, PHPDoc, and README setup notes are not guides ([code-quality.md §5](../../rules/conditional/code-quality.md#5-comments-and-documentation)).
 
 ## Inputs
 
@@ -50,7 +30,14 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 | `/webkit-document T#####` | Document the feature as that ticket's branch built it (`F####` works the same way); analyzed without checking it out. |
 | `/webkit-document <feature name>` | Document the feature the reader calls by that name; find its pages first. |
 
----
+## Context Loading Priority
+
+1. **`task.md`** of each ticket that shaped the feature, when it exists: which tickets touched it, and what is still open. Read `summary.md` first if it exists: a good starting point for the feature's purpose and the files changed. The guide is always verified against the shipped code (Phases 2 and 6), never against the summary.
+2. **`context.md`** (if it exists), with **`touched-files.md`** and **`dependency-map.md`**: a starting list of the feature's files and its route → controller → Query → table chains, for Phase 2 and the Under the Hood diagrams. Each is still read in the code.
+3. **The spec only for intent** (Phase 1, step 4): §1 Overview to §3 Background and Motivation (why it exists) and §5 User Flow to §6 Functional Requirements (the flows and rules it was meant to have), so the differences can go under Known Issues. Never evidence of what the page does; `plan.md` is not needed.
+4. **Source**: the existing guide (Phase 1, step 2), then the feature's menu, routes, page templates, api and state files, and the controller → Query / Handler behind each action, at line ranges. Locate them with Graphify first ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then the targeted greps in Phases 1–2.
+
+Rules: per the [router](../../rules/rule-router.md); every claim answers to [system-awareness.md §1](../../rules/conditional/system-awareness.md#1-never-fabricate). Open the template at Phase 7. **Avoid:** reading whole module folders or every page file whole; other features' guides beyond the duplicate check and Related Features; reports other than the investigation a Known Issue links; tickets that never touched the feature; the whole blueprint.
 
 ## Where Guides Live
 
@@ -62,70 +49,33 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 | Scope | One ticket | One feature, across every ticket that touches it |
 | Lifetime | Finished with the ticket | Updated in place for as long as the feature exists |
 
-A guide never goes in a ticket folder. [ticket-numbering.md](../../rules/ticket-numbering.md) §5 fixes the seven filenames allowed there, and a guide inside `T00004/` is invisible to anyone looking for how the feature works. A ticket is one piece of work and finishes; a feature is touched by many tickets and must still have exactly one guide. The tickets that shaped it are recorded in the guide's Metadata, not in its path.
+A guide never goes in a ticket folder. [ticket-numbering.md §5](../../rules/conditional/ticket-numbering.md#5-the-file-contract) fixes the filenames allowed there, and a guide inside `T00004/` is invisible to anyone looking for how the feature works. A ticket is one piece of work and finishes; a feature is touched by many tickets and must still have exactly one guide. The tickets that shaped it are recorded in the guide's Metadata, not in its path.
 
----
-
-## Workflow Integration
-
-```text
-   webkit-specify → webkit-implement → webkit-verify / webkit-code-review
-                                                 │
-                                  webkit-fix / webkit-refactor (as needed)
-                                                 │
-                                                 ▼
-                                         webkit-document                ← you are here
-                                                 │
-                                                 ▼
-          feature guide  (.agents/docs/<feature>.md, one per feature, updated in place)
-                                                 │
-                     ┌───────────────────────────┴──────────────────────┐
-                     ▼                                                  ▼
-            webkit-investigate                                   webkit-verify
-     (a Known Issue that needs a fix)                 (the spec and the build disagree)
-```
-
----
-
-## Core Rules
+## Core rules
 
 - **Document what shipped, not what was designed.** Where the code and the spec disagree, the code wins and the difference is written under Known Issues. A guide that describes a button nobody built sends people looking for it.
 - **Verified or not written.** Every label, route, rule, link, and diagram box traces to a file on the branch or commit named in Verified Against. Anything unverified is cut, or stated plainly as unverified.
 - **Exact labels.** Bold text is the on-screen label copied from the template. Never paraphrase a button.
-- **One feature, one guide.** Update an existing guide in place; never write a second file or a `-v2`.
+- **One feature, one guide.** Update an existing guide in place; never write a second file or a `-v2`. Two guides drift, and within a month both are wrong.
 - **Two readers, two halves.** No developer jargon above Under the Hood; real identifiers below it.
-- **No edits.** No code, specs, or data. A bug becomes a Known Issue and a follow-up, never a fix.
 
-## Documentation Mindset
-
-Ask:
-
-- What would the reader call this, and what do they confuse it with?
-- What does a first-time user see and click, in what order?
-- What makes a row appear, disappear, or stay Pending?
-- What will they hit when something looks wrong, and what do they do then?
-- Where did I read each sentence, and is that file current on the branch I named?
-- What did the spec promise that the build does not do?
-
----
+**Mindset:** What would the reader call this, and what do they confuse it with? What does a first-time user see and click, in what order? What makes a row appear, disappear, or stay Pending? What will they hit when something looks wrong, and what do they do then? Where did I read each sentence, and is that file current on the branch I named? What did the spec promise that the build does not do?
 
 ## Phase 0 — Resolve the Project (BLOCKING)
 
-Run [Which Project Am I In?](../../rules/project-profile.md), **state the resolved project in your first message**, and read only your project's sections. The reader's vocabulary and the files you read are not portable:
+Run protocol §1 (project, ticket, branch analysis **without checkout**), **state the resolved project in your first message**, and read only your project's sections. The reader's vocabulary and the files you read are not portable:
 
 | | Project with portals | Project without portals |
 | --- | --- | --- |
 | Navigation the reader follows | Portal → menu → page | Domains; there are no portals |
 | Who the reader is | HR staff, managers, employees | Organization members |
 | Domain words to define | pay period, cut-off, timesheet, statutory | organizations, members, roles |
-| Menu labels | `src/composables/useSidebarLinks.ts` | Not recorded in the profile: grep the label and cite the file it is in |
+| Menu labels | `src/composables/useSidebarLinks.ts` | Not recorded in the rules: grep the label and cite the file it is in |
 | Page routes | `src/module/<portal>/<feature>/route/<feature>.routes.ts` | `src/module/<domain>/route/<domain>.routes.tsx`, mounted by `app/routes.tsx` |
 | Page state | Composable or Pinia store | Hook or React Context |
 | Who-sees-what scoping | Portal, team scope (`team_only`), role | Organization scope, role |
 
-Paths are relative to `resources/views/web/`; your project's section of the profile has the full layout. Writing "go to the Payroll Portal" in a guide for a project without portals sends the reader looking for a menu that does not exist.
-
----
+Paths are relative to `resources/views/web/`; the full layout is in [frontend-vue.md §1](../../rules/conditional/frontend-vue.md#1-module-layout) or [frontend-react.md §2](../../rules/conditional/frontend-react.md#2-layout). Writing "go to the Payroll Portal" in a guide for a project without portals sends the reader looking for a menu that does not exist.
 
 ## Phase 1 — Resolve the Feature (MANDATORY)
 
@@ -133,7 +83,7 @@ Paths are relative to `resources/views/web/`; your project's section of the prof
 
 A guide covers one user-facing capability, even when it spans several pages, two portals, and many files. [duty-roster.md](../../docs/duty-roster.md) covers four pages across two portals because, to a user, that is one thing; four guides would have hidden the most important fact about it, that two of those pages are duplicates.
 
-Ask *what would the reader call this?* That is the feature, and its kebab-case form is the filename. Then find every page that belongs to it, whichever form the argument took:
+Ask *what would the reader call this?* That is the feature, and its kebab-case form is the filename. Then find every page that belongs to it, whichever form the argument took: Graphify first (`graphify query "<feature label>"`), then:
 
 ```bash
 grep -rn '<feature label>' resources/views/web/src/composables/useSidebarLinks.ts   # menu entries (project with portals)
@@ -142,7 +92,7 @@ grep -rln '<feature>' resources/views/web/src/module/ | sort                    
 
 ### 2. Check it is not already documented
 
-Reuse before creating ([duplicate-prevention.md](../../rules/duplicate-prevention.md)):
+Reuse before creating ([system-awareness.md §3](../../rules/conditional/system-awareness.md#3-reuse-vs-create)):
 
 ```bash
 ls .agents/docs/
@@ -157,7 +107,7 @@ grep -ril '<feature|route|page label>' .agents/docs/ 2>/dev/null
 
 ### 3. Given a ticket? Document the branch, not the tree
 
-`/webkit-document T00004` (or `F0135`) means "document what was built on that branch". Resolve it per [ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch): fetch and analyze **without checking out** (Steps 1–4, §8.3). When several branches match the ticket, stop and ask.
+`/webkit-document T00004` (or `F0135`) means "document what was built on that branch". Resolve it per protocol §1: fetch and analyze **without checking out** ([ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch), Steps 1–4, §8.3). Several matching branches: stop and ask.
 
 ```bash
 base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
@@ -175,15 +125,13 @@ The diff tells you which feature the ticket touched. The guide still documents t
 grep -ril '<feature>' ".agents/specs/$project" --include='spec.md' --include='specs.md' 2>/dev/null
 ```
 
-A ticket's spec (`.agents/specs/<project>/T#####/spec.md`, `specs.md` on older tickets) says *why* the feature exists and what its rules were meant to be; often it is the only place the "why" is written. It is **not** evidence of what the page does: Phase 2 is. Every ticket whose spec covers the feature goes in the Ticket(s) row. An `F####` ticket usually has no spec folder; its branch is the source of truth.
+A ticket's spec (`.agents/specs/<project>/T#####/spec.md`, `specs.md` on older tickets) says *why* the feature exists and what its rules were meant to be; often it is the only place the "why" is written. It is **not** evidence of what the page does: Phase 2 is. Every ticket whose spec covers the feature goes in the Ticket(s) row. An `F####` ticket usually has no spec folder; its branch is the source of truth. No ticket at all: the guide is still written, with Ticket(s) `None — <reason>`; never allocate one.
 
 **Before Phase 2, state:** the feature, its pages, the guide path (new, or existing with its current Guide Version), and what you are verifying against (branch and commit, or the working tree).
 
----
-
 ## Phase 2 — Gather Ground Truth from the Code
 
-You are describing a screen you cannot see. Every sentence about it comes from a file, not from what a page like this usually does ([anti-hallucination.md](../../rules/anti-hallucination.md)).
+You are describing a screen you cannot see. Every sentence about it comes from a file, not from what a page like this usually does ([system-awareness.md §1](../../rules/conditional/system-awareness.md#1-never-fabricate)).
 
 ### The menu path the reader will follow
 
@@ -216,16 +164,14 @@ sed -n '1,120p' <state file>                      # composable, store, hook, or 
 grep -rn '<endpoint>' routes/api/                 # the real route and controller
 ```
 
-Then follow the controller into its Query or Handler to learn **what makes a row appear or disappear**. That is the single most useful thing the guide can explain, and it is never visible from the frontend.
+Then follow the controller into its Query or Handler (`graphify path "<Controller>" "<Query>"` to trace the chain, then the files themselves) to learn **what makes a row appear or disappear**. That is the single most useful thing the guide can explain, and it is never visible from the frontend.
 
 ### What the reader is not allowed to do
 
 Permissions, scoping, and role checks decide what the reader sees: portal and team scope (`team_only`) in a project with portals, organization scope in a project without portals. Find them in the controller and middleware, and say them in plain words: *"A manager sees only their own team. HR sees everyone."*
 
 > [!CAUTION]
-> [context-loading.md](../../rules/context-loading.md) caps you at about two full files at once. Use the targeted greps above and read line ranges. A feature spanning six files is documented by reading the right 40 lines of each, not all six whole.
-
----
+> [context-budget.md §3](../../rules/context-budget.md#3-read-limits) caps you at two full files at once. Use the targeted greps above and read line ranges. A feature spanning six files is documented by reading the right 40 lines of each, not all six whole.
 
 ## Phase 3 — Draft the Reader Half
 
@@ -270,8 +216,6 @@ one payslip per employee.
 ```
 
 The closing line is required on any step list where the wait is noticeable. It is the difference between a user who waits and a user who clicks Generate four times.
-
----
 
 ## Phase 4 — Draw the Diagrams
 
@@ -368,8 +312,6 @@ A broken block fails **silently to an error box**, and makes the whole guide loo
 
 If a diagram will not render cleanly, **ship the numbered list alone** and write "N/A — <reason>" in its place. A missing picture costs the reader nothing; a broken one costs them trust in everything around it.
 
----
-
 ## Phase 5 — Draft the Under-the-Hood Half
 
 - **The Data Behind It**: where each thing on screen comes from. If it is computed rather than stored, **say so outright** ("there is no duty roster table") and give the resolution order as a priority table. This is usually the single most valuable paragraph in the guide.
@@ -379,8 +321,6 @@ If a diagram will not render cleanly, **ship the numbered list alone** and write
 - **Glossary**: codes and status labels as they appear on screen and in the data, with meanings. Readers meet codes like `NGHT` and `REST` on screen with no legend.
 - **Known Issues and Limitations**: **required, and written honestly.** Verified current behavior, numbered, each saying what actually happens. "Clicking Publish reliably reports '0 draft schedules activated'" is the standard. Include every spec-vs-code difference, and link the investigation (`.agents/specs/<project>/T#####/investigation.md`, or `.agents/reports/`) when one exists. A guide that documents only the happy path teaches people to file bugs that are already known.
 - **Related Features**: the neighbouring features a reader will confuse this with, and the one-line difference.
-
----
 
 ## Phase 6 — Verify Every Claim
 
@@ -411,13 +351,9 @@ git cat-file -e "origin/<branch>:<path>" && echo "ok <path>"
 
 Anything you could not verify is not written as fact. Cut it, or mark it plainly: *"Export appears on the page but produces no file; see Known Issues."*
 
----
-
 ## Phase 7 — Write the Guide
 
-Fill the template [.agents/template/feature-guide.md](../../template/feature-guide.md). Follow its exact structure: no custom format, no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Update history -->` marker.
-
-### Persist the guide (MANDATORY)
+Fill [feature-guide.md](../../template/feature-guide.md) per protocol §3, with this template's own marker: delete every guide comment except `<!-- Update history -->`.
 
 **Step 1 — Choose the file.** The existing guide from Phase 1, or `.agents/docs/<feature-kebab>.md` named for what the reader calls the feature. No dates, ticket numbers, portal prefixes, or `-v2` in the filename: history lives inside the file.
 
@@ -432,34 +368,25 @@ Fill the template [.agents/template/feature-guide.md](../../template/feature-gui
 
 **Step 3 — Report.** End your message with the guide path, whether it is new or updated (with its Guide Version), what it was verified against, the number of Known Issues, and **anything you could not verify**, so the user knows where the guide is thin.
 
----
-
-## Anti-Patterns
+## Anti-patterns
 
 | Anti-pattern | Why it fails |
 | --- | --- |
-| Describing the screen from how pages like this usually work | The reader is standing in front of the real one ([anti-hallucination.md](../../rules/anti-hallucination.md)). |
-| Paraphrasing a button: **Create** for **Generate Payslips** | The reader scans the screen for your word and does not find it. |
-| Documenting the spec instead of the build | Sends people hunting for features nobody shipped. |
+| Describing the screen from how pages like this usually work | The reader is standing in front of the real one. |
 | Documenting the working tree for a ticket argument | The tree may not hold what the ticket built; the branch does. |
 | Portal menu paths in a project without portals | Sends the reader to a menu that does not exist. |
 | Happy path only | The reader's first real question is "why is this employee missing?" |
 | Skipping Known Issues to make the feature look finished | The next person re-reports a bug the team already knows about. |
-| Jargon above Under the Hood | One word like "payload" ends the guide for a non-developer. |
 | One guide per page file | Splits one user-facing thing into several guides and hides the duplication. |
-| A second guide, or a `-v2`, for a documented feature | Two guides drift; within a month both are wrong. |
 | Overwriting a guide without appending to its update history | Destroys the only record of what the guide said before. |
 | Refreshing Verified Against without re-checking unchanged sections | The row then vouches for claims nobody checked. |
 | A diagram restating a two-line list | Costs a screen of space and adds nothing. |
 | Class and table names in a diagram above Under the Hood | The half that exists for non-developers becomes readable only by developers. |
 | A 20-box diagram | Past ~7 boxes it is harder to follow than the steps it summarizes. |
 | Shipping a mermaid block without the pre-ship checks | It fails silently to an error box, and the guide looks unmaintained. |
-| Fixing the bug you found while writing | This skill writes guides; the bug goes under Known Issues and to `/webkit-investigate`. |
 | "Simply click" / "seamless experience" | Longer and emptier than the plain sentence. |
 
----
-
-## Follow-up Commands
+## Follow-up commands
 
 Always include the saved guide path:
 

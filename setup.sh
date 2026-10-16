@@ -8,8 +8,9 @@
 # What it does:
 #   1. Points .claude/{skills,specs,blueprint,reports,definition} at .agents/ via symlink,
 #      so there is ONE copy and the two can never drift.
-#   2. Installs the slim rule set into .claude/rules/ — the files Claude Code auto-loads
-#      on every turn. The full canonical rules stay in .agents/rules/ and are read on demand.
+#   2. Installs the ALWAYS-ON rules into .claude/rules/ (symlinks to rules/core/*.md,
+#      rules/rule-router.md, rules/context-budget.md) — the files Claude Code auto-loads on
+#      every turn. Conditional rules stay in .agents/rules/conditional/, read on demand.
 #   3. Drops the portable AGENTS.md at the project root for non-Claude agents
 #      (Antigravity/Gemini, Cursor, Copilot).
 #
@@ -64,38 +65,65 @@ for d in skills; do
     echo "  ✓ $d → ../.agents/$d"
 done
 
-# ── 2. Slim rules for Claude Code's per-turn auto-load ─────────────────────────
-# SYMLINKED per file, not copied — so editing .agents/claude-adapter/rules/<x>.md
-# takes effect immediately with no sync step. Per-file (not a directory symlink)
-# because the loader globs `.claude/rules/*.md`, and a real directory listing with
-# symlinked files inside is the shape that reliably works.
+# ── 2. Always-on rules for Claude Code's per-turn auto-load ───────────────────
+# Claude Code loads every .md in .claude/rules/ on EVERY turn, so only the always-on set
+# goes there. Each file is SYMLINKED to its single canonical copy in .agents/rules/, so a
+# pull applies at once and nothing can drift. Per-file (not a directory symlink) because
+# the loader globs `.claude/rules/*.md`.
+ALWAYS_ON=(.agents/rules/core/*.md .agents/rules/rule-router.md .agents/rules/context-budget.md)
+always_names=" "
 mkdir -p .claude/rules
-linked=0; kept=0
-for src in .agents/claude-adapter/rules/*.md; do
-    name="$(basename "$src")"; dst=".claude/rules/$name"
+linked=0; kept=0; copied=0
+for src in "${ALWAYS_ON[@]}"; do
+    [ -f "$src" ] || continue
+    name="$(basename "$src")"; dst=".claude/rules/$name"; rel="../../$src"
+    always_names="$always_names${name%.md} "
 
-    # A real file here that is NOT ours: back it up rather than clobber it.
-    if [ -f "$dst" ] && [ ! -L "$dst" ]; then
-        if ! diff -q "$dst" "$src" >/dev/null 2>&1; then
-            mkdir -p .claude-rules-backup
-            cp "$dst" ".claude-rules-backup/$name"
-            echo "  · $name differed — backed up to .claude-rules-backup/"
-        fi
-        rm "$dst"
-    fi
-
-    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "../../.agents/claude-adapter/rules/$name" ]; then
+    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$rel" ]; then
         kept=$((kept+1)); continue
     fi
+    # A real file here that differs from ours: back it up rather than clobber it.
+    if [ -f "$dst" ] && [ ! -L "$dst" ] && ! diff -q "$dst" "$src" >/dev/null 2>&1; then
+        mkdir -p .claude-rules-backup
+        cp "$dst" ".claude-rules-backup/$name"
+        echo "  · $name differed — backed up to .claude-rules-backup/"
+    fi
     rm -f "$dst"
-    ln -s "../../.agents/claude-adapter/rules/$name" "$dst"
-    linked=$((linked+1))
+    ln -s "$rel" "$dst"
+    if [ -L "$dst" ]; then linked=$((linked+1)); else copied=$((copied+1)); fi
 done
-echo "  ✓ .claude/rules/ — ${linked} linked, ${kept} already correct (edits in .agents/ apply instantly)"
+echo "  ✓ .claude/rules/ — ${linked} linked, ${kept} already correct, ${copied} copied"
+if [ "$copied" -gt 0 ]; then
+    echo "  ! ${copied} file(s) were COPIED, not symlinked (no symlink support, e.g. Git Bash on Windows)."
+    echo "        Re-run this script after every 'git -C .agents pull' so the copies stay current."
+fi
+
+# Retire what earlier kit versions installed in .claude/rules/: full copies of the rule
+# library and pointer stubs. Each costs tokens on every turn. Symlinks are removed; real
+# files are MOVED to .claude-rules-backup/, never deleted.
+RETIRED="anti-hallucination authority-boundary coding-standards context-loading documentation duplicate-prevention execution-strategy git-workflow hrms-rules incremental-generation laravel-standards naming-convention performance project-profile project-structure security system-awareness testing ticket-numbering ui-design versioning vue-standards"
+retired=0
+for name in $RETIRED; do
+    case "$always_names" in *" $name "*) continue ;; esac
+    dst=".claude/rules/$name.md"
+    if [ -L "$dst" ]; then
+        rm -f "$dst"; retired=$((retired+1))
+    elif [ -f "$dst" ]; then
+        mkdir -p .claude-rules-backup
+        mv "$dst" ".claude-rules-backup/$name.md"; retired=$((retired+1))
+    fi
+done
+[ "$retired" -gt 0 ] && echo "  ✓ retired ${retired} old rule file(s) from .claude/rules/ (real files kept in .claude-rules-backup/)"
 
 # ── 3. Portable entry point ────────────────────────────────────────────────────
-if [ -f AGENTS.md ]; then
-    echo "  · AGENTS.md already at root — left as is"
+# Never overwritten: a project's root AGENTS.md can hold its own sections (e.g. the dev
+# login the browser checks in /webkit-verify and /webkit-design-review read).
+if [ -f AGENTS.md ] && cmp -s AGENTS.md .agents/claude-adapter/AGENTS.md; then
+    echo "  ✓ AGENTS.md — already current"
+elif [ -f AGENTS.md ]; then
+    echo "  · AGENTS.md at root differs from the kit's entry point — left as is."
+    echo "        Make it load the always-on set listed in .agents/claude-adapter/AGENTS.md,"
+    echo "        keeping your project-specific sections."
 else
     cp .agents/claude-adapter/AGENTS.md AGENTS.md
     echo "  ✓ AGENTS.md — portable entry point for non-Claude agents"
@@ -130,10 +158,10 @@ fi
 
 # ── Report ─────────────────────────────────────────────────────────────────────
 slim=$(( $(cat .claude/rules/*.md | wc -c) / 4 ))
-full=$(( $(cat .agents/rules/*.md | wc -c) / 4 ))
+full=$(( $(find .agents/rules -name '*.md' -exec cat {} + | wc -c) / 4 ))
 echo
 echo "Done."
 echo "  /webkit-* commands: available"
-echo "  always-on rules:    ~${slim} tokens/turn  (full library is ~${full}, read on demand)"
+echo "  always-on rules:    ~${slim} tokens/turn  (whole library ~${full}; conditional rules are read on demand)"
 echo
 echo "  Reminder: .agents/ is a git clone — pull it to get skill updates."

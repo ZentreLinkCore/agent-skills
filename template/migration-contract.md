@@ -3,22 +3,15 @@
 <!--
 TEMPLATE: migration-contract (used by /webkit-migrate)
 
-Fill rules. Delete this comment and every other guide comment from the finished contract — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished contract contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". An empty list says "None."
-4. Every contract item (flow step, transition, field, endpoint, rule, validation, UI state, edge case) is traced to
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. Every contract item (flow step, transition, field, endpoint, rule, validation, UI state, edge case) is traced to
    a source file:line or a spec section. Nothing is invented: an item that cannot be verified is asked about,
    never guessed.
-5. §1–§9 describe behavior and data in stack-neutral terms: no Vue, React, or Laravel syntax. The stack appears
+2. §1–§9 describe behavior and data in stack-neutral terms: no Vue, React, or Laravel syntax. The stack appears
    only in §10 Translation Decisions and §11 Target Reuse.
-6. Where the spec and the source code disagree, the contract follows the code's runtime behavior and lists the
+3. Where the spec and the source code disagree, the contract follows the code's runtime behavior and lists the
    disagreement in §13.
-7. §12 Parity Checklist starts as "NOT CHECKED YET"; it is filled after the target implementation, in the same run.
-
-The migrator must NOT edit the source feature, run migrations, fix source defects, or add behavior the source
-does not have. A suspected source defect is recorded in §13, not fixed and not silently copied.
+4. §12 Parity Checklist starts as "NOT CHECKED YET"; it is filled after the target implementation, in the same run.
 -->
 
 ## Metadata
@@ -171,7 +164,7 @@ does not have. A suspected source defect is recorded in §13, not fixed and not 
 <!-- How each source layer the feature uses becomes a target layer, per the target's profile. Only the layers this
      feature uses. "Must Survive" names the contract item the translation preserves. -->
 
-- **Target profile from:** {{the target's own `.agents/rules/project-profile.md` / Known Target Profile — `hrms_react` (re-verified YYYY-MM-DD) / Architecture Discovery}}
+- **Target profile from:** {{the target's own `.agents/rules/` (`core/project-gate.md` and its conditional rules, or an older kit's `project-profile.md`) / Known Target Profile — `hrms_react` (re-verified YYYY-MM-DD) / Architecture Discovery}}
 - **Closest sibling module in the target:** `{{path}}`
 
 | Layer | Source Pattern | Target Pattern | Must Survive |
@@ -208,9 +201,8 @@ does not have. A suspected source defect is recorded in §13, not fixed and not 
 
 ### Parity Result
 
-<!-- On creation: NOT CHECKED YET. After the target implementation, choose one:
-     PARITY CONFIRMED — every row checked and equal.
-     PARITY WITH GAPS — a row differs or could not be checked; each one is named in the table. -->
+<!-- NOT CHECKED YET on creation; after the target implementation, PARITY CONFIRMED (every row checked and equal)
+     or PARITY WITH GAPS (each differing or unchecked row named). Full rule: the skill's Phase 7. -->
 
 {{NOT CHECKED YET | PARITY CONFIRMED | PARITY WITH GAPS}}
 

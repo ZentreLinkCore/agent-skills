@@ -1,40 +1,32 @@
 # Claude Adapter
 
-Everything in this folder is **derived**, not canonical. It exists so a project can be wired up in one command without paying for the full rule library on every turn.
-
-Install it with [`../setup.sh`](../setup.sh) — do not copy these files by hand.
+This folder holds only what has to differ for one tool: the portable [`AGENTS.md`](./AGENTS.md) that [`../setup.sh`](../setup.sh) copies to the project root for non-Claude agents. It holds **no rules**. Every rule has exactly one copy, in [`../rules/`](../rules/).
 
 ```bash
 bash .agents/setup.sh            # this project only
 bash .agents/setup.sh --global   # + one skills copy for EVERY project on this machine
 ```
 
-## Why the split
+## What setup.sh installs
 
-Claude Code auto-loads **every `.md` in `.claude/rules/` into every single turn**, whether the task needs it or not. The full library in [`../rules/`](../rules/) is ~1,650 lines (~30,500 tokens), and in either project roughly a third of it describes the *other* one — Vue rules in a React repo, portal rules where there are no portals.
-
-That is expensive twice over. It costs tokens on every request, and wrong-project content sitting in context is what makes an agent search for a component library that isn't there and then build a duplicate of one that is.
-
-So:
-
-| | Lives in | Loaded |
+| Installed at | Points to | Loaded |
 | :--- | :--- | :--- |
-| **Slim set** — the project gate, the working discipline, and 21 pointer stubs | `claude-adapter/rules/` → installed to `.claude/rules/` | every turn (~3,200 tokens) |
-| **Full canonical rules** | `../rules/` | on demand, when a task touches that rule |
-| **`AGENTS.md`** — portable entry point | `claude-adapter/AGENTS.md` → installed to the project root | by non-Claude agents (Antigravity, Cursor, Copilot) |
+| `.claude/rules/<name>.md` | a **symlink** to each always-on rule: `.agents/rules/core/*.md`, `.agents/rules/rule-router.md`, `.agents/rules/context-budget.md` | every turn (Claude Code auto-loads `.claude/rules/*.md`) |
+| `.claude/skills` | a symlink to `.agents/skills` | a skill's `SKILL.md` when its command runs; only the `description:` frontmatter on every turn |
+| `AGENTS.md` (project root) | a copy of [`AGENTS.md`](./AGENTS.md) here, only when the project has none (an existing one is never overwritten) | by non-Claude agents (Antigravity, Cursor, Copilot) |
+
+Conditional rules (`.agents/rules/conditional/`) are never installed: the router in the always-on set tells the agent which one to read, when.
+
+## Why it is shaped this way
+
+Claude Code loads **every** `.md` in `.claude/rules/` on **every** turn. Whatever is installed there is paid for constantly, whether the task needs it or not, and content for the other project in context is what makes an agent build to the wrong stack.
+
+- Earlier versions kept a second copy of the rules here. Once that copy was refreshed with the full library, every turn loaded ~33,600 tokens of rules. Symlinking the always-on files instead means there is nothing here to drift and nothing to re-copy.
+- On Windows without symlink support, Git Bash's `ln -s` silently makes a **copy**. `setup.sh` detects that and warns: re-run it after every `git -C .agents pull` so the copies stay current.
+- `setup.sh` also retires what older versions installed (the full copies and the pointer stubs): symlinks are removed, and real files are moved to `.claude-rules-backup/`, never deleted.
 
 ## Editing
 
-**Edit the canonical rule in [`../rules/`](../rules/).** Then, if the change belongs in the always-on set, mirror the *rule* — not the exposition — into `claude-adapter/rules/project-profile.md`, which carries the gate and the working-discipline summary.
-
-Never blanket-copy `../rules/*.md` over `claude-adapter/rules/`. That restores all ~30,500 tokens per turn and silently undoes the point of this folder.
-
-## The stubs
-
-Each stub names its canonical file and the condition for reading it. They exist so that a skill linking `../../rules/<name>.md` still resolves from `.claude/skills/`, instead of hitting a missing file and guessing.
-
-## Why there is no skills adapter
-
-The rules needed one because Claude Code loads `.claude/rules/*.md` on **every turn**, so size is paid constantly. A `SKILL.md` is only read when its command is invoked — a stub there would just be read *and then* the real file, costing more than it saves.
-
-Skills are unified a different way: `setup.sh` symlinks `.claude/skills` at the clone, so there is one copy per project, and `--global` symlinks `~/.claude/skills` so one clone serves every project on the machine. The per-turn cost skills do carry is their `description:` frontmatter, which is loaded for command discovery — keep those short (trigger conditions and guarantees, not how the skill works).
+- **A rule**: edit it in `../rules/` (core or conditional). Nothing to copy: the installed files are symlinks.
+- **The always-on set**: a file belongs in `../rules/core/` only if every turn needs it. Each extra always-on file costs its full size on every request; prefer a router row.
+- **Skills**: there is no skills adapter. A `SKILL.md` is read only when its command runs, so a stub would add a read instead of saving one. Keep each `description:` short (triggers and guarantees): it is loaded on every turn for command discovery.

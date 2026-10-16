@@ -3,21 +3,19 @@
 <!--
 TEMPLATE: feature-specification (used by /webkit-specify)
 
-Fill rules. Delete this comment and every other guide comment from the finished spec.
-1. Replace every {{PLACEHOLDER}}. A finished spec contains no "{{".
-2. Never leave a section, row, or cell blank. If it does not apply, write "N/A — <reason>".
-3. Be exact: real names, literal values, status codes, limits, messages. Banned words: "should", "might",
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. Be exact: real names, literal values, status codes, limits, messages. Banned words: "should", "might",
    "maybe", "etc.", "as needed", "appropriate", "TBD".
-4. Use the names that exist in the codebase (tables, columns, classes, routes, components). Never invent one.
+2. Use the names that exist in the codebase (tables, columns, classes, routes, components). Never invent one.
    Anything that does not exist yet is marked **(new)**.
-5. IDs are stable once written: SC-, FR-, NFR-, AC-, EC-, A-, D-, Q-. Never renumber. Retire an ID with
+3. IDs are stable once written: SC-, FR-, NFR-, AC-, EC-, A-, D-, Q-. Never renumber. Retire an ID with
    ~~strikethrough~~ and a reason; do not reuse it.
-6. Keep the layers apart:
+4. Keep the layers apart:
    - Requirements (WHAT): §1–7, §10, §11, §13
    - Technical design (HOW): §8
    - Plan (IN WHAT ORDER): plan.md in this ticket folder, from implementation-plan.md; §9 only points to it
    - Decisions (WHY): §15
-7. This file is the single source of truth. Implementation follows it and review checks against it. Minor
+5. This file is the single source of truth. Implementation follows it and review checks against it. Minor
    corrections are edited in place; only a major change creates a new version (see §16).
 -->
 

@@ -3,17 +3,10 @@
 <!--
 TEMPLATE: refactor-report (used by /webkit-refactor)
 
-Fill rules. Delete this comment and every other guide comment from the finished record — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished record contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". An empty list says "None."
-4. Regression Evidence lists only checks that were actually RUN, with their real result. A check that was not run
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. Regression Evidence lists only checks that were actually RUN, with their real result. A check that was not run
    is written as "Not run — <reason>", never as passing.
-5. A refactor does not change behavior. Anything that did change is stated in §5, never hidden.
-
-The refactorer must NOT fix bugs, add features, change public APIs, response shapes, database schema, or visible
-UI behavior, or edit the specification.
+2. A refactor does not change behavior. Anything that did change is stated in §5, never hidden.
 -->
 
 ## Metadata
@@ -63,7 +56,7 @@ UI behavior, or edit the specification.
 
 | Before | After | Why |
 | --- | --- | --- |
-| `{{path/to/File.php:120-180}}` {{inline logic}} | `{{app/Queries/<Domain>/<Name>.php}}` | {{rule, e.g. thin-controller rule in laravel-standards.md}} |
+| `{{path/to/File.php:120-180}}` {{inline logic}} | `{{app/Queries/<Domain>/<Name>.php}}` | {{rule, e.g. thin-controller rule in backend.md §1}} |
 
 ---
 
@@ -80,8 +73,8 @@ UI behavior, or edit the specification.
 
 ## 5. Regression Evidence
 
-<!-- The project's own checks, run before the change (baseline) and after it. Only checks this project defines;
-     never a test runner it does not have. -->
+<!-- The project's own checks, run before the change (baseline) and after it. Only checks this project defines
+     (including a frontend runner this run set up per testing.md); never claim a runner it does not have. -->
 
 | Check | Command | Before | After |
 | --- | --- | --- | --- |

@@ -3,26 +3,20 @@
 <!--
 TEMPLATE: feature-guide (used by /webkit-document)
 
-Fill rules. Delete this comment and every other guide comment from the finished guide — except the
-"Update history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-   A block marked "one per …" repeats as often as needed.
-2. Replace every {{PLACEHOLDER}}. A finished guide contains no "{{" (so never use mermaid's {{hexagon}} shape).
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". An empty list says "None."
-4. Every claim is verified against the code at the branch and commit in "Verified Against": each bold label greps
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. The marker that stays is "Update history" at the bottom (this guide's run-history marker). A block marked
+   "one per …" repeats as often as needed. A finished guide contains no "{{", so never use mermaid's {{hexagon}} shape.
+2. Every claim is verified against the code at the branch and commit in "Verified Against": each bold label greps
    to a template, each route to a routes file, each rule to a Query, Handler, or middleware, each link and #L
    anchor resolves, each diagram box names something real. What could not be verified is cut, or stated plainly
    as unverified; it is never written as fact.
-5. The code wins over the spec. Describe what the code does, and record every difference from the spec under
+3. The code wins over the spec. Describe what the code does, and record every difference from the spec under
    Known Issues and Limitations.
-6. Above "Under the Hood": bold is the exact on-screen label copied from the template, italic is an example value;
+4. Above "Under the Hood": bold is the exact on-screen label copied from the template, italic is an example value;
    one action per numbered step, 25 words maximum; no developer words (composable, endpoint, payload, query, component,
    store, state, hook, API, props, mount) and no file paths, class names, or table names, except the File column of
    "Where to Find It". From "Under the Hood" down: real identifiers, linked relative from .agents/docs/ with #L
    line anchors.
-
-The writer must NOT modify application code, specs, or data. A bug found while writing is recorded under Known
-Issues and Limitations for /webkit-investigate; it is never fixed here.
 -->
 
 ## Metadata

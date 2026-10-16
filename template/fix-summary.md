@@ -4,12 +4,9 @@
 TEMPLATE: fix-summary (used by /webkit-fix)
 
 Printed in chat at the end of /webkit-fix; it is not saved as a file.
-Fill rules. Delete this comment and every other guide comment from the printed summary.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished summary contains no "{{".
-3. Never leave a field blank. Write "None" for an empty list, or "N/A — <reason>".
-4. Only the approved fixes from the source report. No speculative improvements, no suggested additional work.
-5. Documents Updated lists what Phase 8 (Close the Loop) actually wrote. "No change — <reason>" for a document it
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-specific:
+1. Only the approved fixes from the source report. No speculative improvements, no suggested additional work.
+2. Documents Updated lists what Phase 8 (Close the Loop) actually wrote. "No change — <reason>" for a document it
    left alone; "N/A — <reason>" for one the ticket does not have.
 -->
 
@@ -54,7 +51,7 @@ Fill rules. Delete this comment and every other guide comment from the printed s
 
 ## Version
 
-<!-- From Phase 7 (.agents/rules/versioning.md §7). One row per target; "Versioning: off" when the mode is off.
+<!-- From Phase 7 (.agents/rules/conditional/versioning.md §7). One row per target; "Versioning: off" when the mode is off.
      Shipped: "Yes" (defect in the base → PATCH), "No — unreleased work on this branch" (no bump of its own),
      or "—" for a target the fix did not touch. -->
 
