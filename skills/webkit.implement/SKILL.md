@@ -93,7 +93,9 @@ Older specs use other section names (Business Rules, Permissions, Non-Functional
 
 ## Phase 2 — Analyze Existing Code
 
-Search for reusable code before implementing: services, components, models, controllers, queries, actions, helpers, hooks, utilities, validation, middleware, and tables. For each need ask: *can this be reused? extended? can it replace duplicate logic?* Create only when nothing fits. Locate with Graphify first (`query`, then `explain` on the printed label; `affected` before changing a shared class), then the targeted searches below. The file you open is the evidence, never the graph.
+Search for reusable code before implementing: services, components, models, controllers, queries, actions, helpers, hooks, utilities, validation, middleware, and tables. For each need ask: *can this be reused? extended? can it replace duplicate logic?* Create only when nothing fits.
+
+**Code graph.** When `graphify-out/graph.json` exists, start each search with `graphify explain "<ExactName>" --all` (a class, method, composable, or component) to see where it lives and who uses it, and `graphify affected` before changing a shared class. Record the command in the Reuse Ledger's *Searched* column. It locates; the file proves: read the hit before deciding `REUSE` or `EXTEND`. A `CREATE` still needs a grep, because a node missing from a stale graph is not proof that nothing exists, and its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)) are grep-only. No graph → the targeted searches below.
 
 **Backend.** Run the [System Awareness](../../rules/conditional/system-awareness.md#2-the-scan) scan (models → migrations → routes → controllers → Query / Handler / Action classes). Existing model or table covers the data → reuse it, never a new migration. Existing controller or route covers the module → add a method, never a parallel controller or duplicate route.
 
@@ -178,10 +180,11 @@ Before finishing, verify:
 - API responses, including error responses, are handled correctly.
 - Loading, error, and empty states exist.
 - Permission handling works for every role in the spec, including the roles that must be rejected.
-- Edited PHP files parse (`php -l <file>`); the frontend typechecks / builds where the project has those scripts.
+- Edited PHP files parse (`php -l <file>`); the frontend typechecks where the project has the script, and `node .agents/scripts/check-changed.mjs` is clean (only the changed files; never the full `npm run build`: [testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)).
 - **Every test added in this run passes**, together with the existing tests of the areas touched: `php artisan test --testsuite=Unit`, the feature tests on a disposable database ([testing.md](../../rules/conditional/testing.md#backend-phpunit)), and each frontend app's `npm test`. A test that could not run leaves its task unticked, named in Notes with the command that runs it.
 - Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
 - Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.
+- The code graph is current: when `graphify-out/graph.json` exists, run `graphify update .` so the next skill sees this run's code (AST only, no API cost; never commit `graphify-out/`).
 - `task.md` is current (protocol §5): §2 matches the plan's ticks, the §1 Implement row reads `<done>/<total> tasks`, §4 lists the plan's §9 Commands for the User still to run, and **Next step** is `/webkit-verify <ticket>` (or the first unticked task's blocker).
 
 ---

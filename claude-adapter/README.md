@@ -13,7 +13,7 @@ bash .agents/setup.sh --global   # + one skills copy for EVERY project on this m
 | :--- | :--- | :--- |
 | `.claude/rules/<name>.md` | a **symlink** to each always-on rule: `.agents/rules/core/*.md`, `.agents/rules/rule-router.md`, `.agents/rules/context-budget.md` | every turn (Claude Code auto-loads `.claude/rules/*.md`) |
 | `.claude/skills` | a symlink to `.agents/skills` | a skill's `SKILL.md` when its command runs; only the `description:` frontmatter on every turn |
-| `AGENTS.md` (project root) | a copy of [`AGENTS.md`](./AGENTS.md) here | by non-Claude agents (Antigravity, Cursor, Copilot) |
+| `AGENTS.md` (project root) | a copy of [`AGENTS.md`](./AGENTS.md) here, only when the project has none (an existing one is never overwritten) | by non-Claude agents (Antigravity, Cursor, Copilot) |
 
 Conditional rules (`.agents/rules/conditional/`) are never installed: the router in the always-on set tells the agent which one to read, when.
 

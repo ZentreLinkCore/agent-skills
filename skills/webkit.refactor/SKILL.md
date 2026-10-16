@@ -61,14 +61,14 @@ Run protocol §1. The project gate matters here: refactoring toward the other pr
 
 Load per Context Loading Priority: the goal and the target (the path, the stated goal, or the named code-review findings), and the spec's behavior to preserve.
 
-**Find every caller** of what you are about to move (the class, method, component, and route): `graphify affected "<Node>" --depth 2` first, then targeted `rg` for each symbol to confirm in source, so nothing is left pointing at the old location.
+**Find every caller** of what you are about to move (the class, method, component, and route): `graphify explain "<ExactName>" --all` (and `affected --depth 2`) first, then targeted `rg` for each symbol **anyway**: the graph misses route → method links, string references, and globally-registered components, and a missed caller is a regression. Nothing may be left pointing at the old location.
 
 ## Phase 2 — Baseline
 
 Before changing anything, run the checks the project actually has and record the results:
 
 - PHP: `php -l <file>` for files you will touch; `php artisan test --filter <area>` (PHPUnit exists in both projects; feature tests on a disposable database per [testing.md](../../rules/conditional/testing.md#backend-phpunit)).
-- Frontend: `npm test -- <path>`, `npm run typecheck`, `npm run build` where defined.
+- Frontend: `npm test -- <path>` and `npm run typecheck` where defined; after each move, `node .agents/scripts/check-changed.mjs` (only the changed files; never the full `npm run build`: [testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)).
 - **No test covers the code you will move → write one now** (a characterization test: it pins today's behavior, including its odd cases), per [testing.md](../../rules/conditional/testing.md#every-code-change-ships-with-a-test-mandatory): a unit test for pure logic, a feature test for an endpoint, Handler, or Query, a component test for a frontend piece (a frontend app with no runner gets one set up first). It must pass **before** the first move; it is the proof the refactor changed nothing. A refactor of untested code proved only by typecheck is not proved.
 - **API payloads**: for every endpoint whose code you will touch, capture the response shape now (e.g. `php artisan tinker --execute="..."` against a read-only call, or the existing test's assertion).
 
@@ -90,7 +90,7 @@ List each move: what goes from where to where, and which rule the result follows
 > [!CAUTION]
 > **`app/Domain/` is retired and does not exist on disk.** Do not move code into it, and do not conclude "no existing Query" from an empty search of it: search `app/Queries/` and `app/Handlers/`. Correcting a stale `App\Domain\...` namespace in a file you touch is part of the refactor.
 
-**Find the shared version** with Graphify first (`query` the behavior, then `affected` on the candidate to see who already uses it), then targeted search ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
+**Find the shared version** with Graphify first (`explain --all` on candidate names, `query --seed` only to find a label, then `affected` on the candidate to see who already uses it), then targeted search ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
 
 **Before consolidating a duplicate**, confirm the shared version covers **every** behavior of the local copy (props, states, edge cases). A "duplicate" with an extra behavior is a feature: collapsing it changes behavior. Either fold that capability into the shared component, or leave the copy and record why.
 
@@ -100,6 +100,7 @@ Code-writing discipline per protocol §6. Refactor-specific:
 
 - One move at a time; run the relevant check after each.
 - Update every caller found in Phase 1; leave no reference to the old location.
+- After the last move, when `graphify-out/graph.json` exists, run `graphify update .` so the graph shows the new locations (never commit `graphify-out/`).
 - Preserve developer comments, business reasoning, and copyright markers; update PHPDoc / JSDoc to match changed signatures.
 - Keep state reactivity intact (Vue refs / computed; React state identity and hook dependency arrays) and database transactions intact (`DB::transaction` stays around the same writes).
 

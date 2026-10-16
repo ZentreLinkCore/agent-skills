@@ -93,9 +93,9 @@ Reproduce before theorizing. Use the cheapest reliable evidence first:
 | Code path | `graphify path "<route or page>" "<model>"` first, then confirm in source: the route (`php artisan route:list --path=api/...`) → controller → Query / Handler / Action → model, and the page → state → api layer |
 | Data | Read-only queries (`SELECT` only), `php artisan tinker --execute="..."` for read-only inspection |
 | History | `git log --oneline -- <file>`, `git log -S '<code>'`, `git blame -L <a>,<b> <file>` to find when and why the behavior changed |
-| Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `npm run build`: only the checks the project actually defines (not every project has a JS test runner) |
+| Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `node .agents/scripts/check-changed.mjs <files>`: only the checks the project actually defines (not every project has a JS test runner). The full `npm run build` only when the build itself is what is broken ([testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)) |
 
-**Search:** Graphify first (`query`, then `explain` on the nodes it names; [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search in this order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global. Use repo-relative paths. The graph is a map, not evidence: every Evidence line cites the source file.
+**Search:** Graphify first (`explain "<ExactName>" --all` on the classes and methods the symptom names; `query --seed` only to find a label; [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search in this order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global. Use repo-relative paths. The graph is a map, not evidence: every Evidence line cites the source file.
 
 ## Phase 3 — Root Cause Analysis
 
@@ -118,7 +118,7 @@ Finally, **check against the spec** when one exists: code deviating from the spe
 - **Affected files**: every file in the cause chain, with line numbers and its role (root cause, caller, symptom surface).
 - **Affected data**: tables and models, whether records are already wrong, and a **read-only** query that finds them.
 - **Affected endpoints and views**, and the **users, roles, or portals** that hit them.
-- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect. `graphify affected "<root-cause node>" --depth 2` first, then verify each in source ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), [system-awareness.md](../../rules/conditional/system-awareness.md)).
+- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect. `graphify explain "<ExactName>" --all` on the root-cause method lists its callers, `graphify affected` widens that, and `graphify path "<A>" "<B>"` traces a call chain; confirm each in the file before citing it as evidence, and grep its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), [system-awareness.md](../../rules/conditional/system-awareness.md)).
 
 **Severity** (impact if left unfixed; the same scale as code-review):
 

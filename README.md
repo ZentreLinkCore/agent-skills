@@ -36,7 +36,7 @@ bash .agents/setup.sh --global    # optional: /webkit-* commands in every projec
 
 1. Links `.claude/skills` to `.agents/skills`, so Claude Code finds the `/webkit-*` commands.
 2. Links the always-on rules into `.claude/rules/` (`rules/core/*.md`, `rule-router.md`, `context-budget.md`). Claude Code loads these on every turn. It also retires files older versions put there (moving real files to `.claude-rules-backup/`).
-3. Copies `claude-adapter/AGENTS.md` to the project root as the entry point for other agents (refreshing an older kit copy, with a `.bak`).
+3. Copies `claude-adapter/AGENTS.md` to the project root as the entry point for other agents, when there is none. An existing root `AGENTS.md` is never overwritten (it may hold project-specific sections, such as the dev login the browser checks use); `setup.sh` says what to point it at.
 
 Get updates with `git -C .agents pull`. The links mean a changed file applies at once. Where symlinks are unavailable (Git Bash on Windows), `setup.sh` copies instead and says so: re-run it after each pull.
 
@@ -189,6 +189,66 @@ versioning:
 ```
 
 A project with no file runs in `recommend` mode. The version files, build numbers, and CHANGELOG path are declared per app; see the existing files in [config/](./config/) and [rules/conditional/versioning.md](./rules/conditional/versioning.md).
+
+## Code graph (recommended)
+
+[graphify](https://github.com/Graphify-Labs/graphify) builds a local map of a project's code: which class, method, composable, or component calls or imports which. With it, an agent answers "who uses this?" with one command instead of a dozen greps. It is recommended, not required: a project without a graph falls back to targeted search.
+
+### Set it up
+
+Once per machine:
+
+```bash
+brew install uv
+uv tool install graphifyy     # the package has two y's; the command is `graphify`
+uv tool update-shell          # puts ~/.local/bin on PATH; open a new terminal afterwards
+```
+
+Once per project, from its root:
+
+```bash
+printf '/graphify-out/\n/.graphifyignore\n' >> .git/info/exclude   # local only: the graph is never committed
+printf 'public/\nstorage/\n' > .graphifyignore                       # skip static assets
+graphify extract . --code-only    # ~40 s; reads code only, needs no API key, nothing leaves the machine
+graphify hook install             # optional: rebuilds in the background after each commit, checkout, and merge
+```
+
+`graphify hook install` also appends `graphify-out/graph.json merge=graphify` to `.gitattributes`. The graph is never committed, so delete that line again: `git diff .gitattributes` must come back empty.
+
+### What the skills do with it
+
+Nothing to type. When `graphify-out/graph.json` exists, the skills use it on their own, and fall back to grep when it does not:
+
+| Skill | Uses the graph to |
+| :--- | :--- |
+| `/webkit-context` | Map the affected, reusable, and do-not-touch files before the spec |
+| `/webkit-specify` | Fill the plan's Reuse Map |
+| `/webkit-implement` | Search before creating anything (the Reuse Ledger); refreshes the graph at the end |
+| `/webkit-fix` | List a method's callers before changing it; refreshes the graph at the end |
+| `/webkit-code-review` | Find callers outside the diff that a change could break |
+| `/webkit-investigate` | Trace callers and call chains from the root cause |
+| `/webkit-refactor` | Find every caller before moving code; refreshes the graph at the end |
+| `/webkit-verify` | Find where each spec rule's code would live (the absence sweep) |
+
+The rule behind it is [context-budget.md §2](./rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), part of the always-on set every agent loads. To make sure an agent uses it outside a skill, say so: "use graphify to find who calls `X` first".
+
+### Use it yourself
+
+```bash
+graphify explain "rawTimesheetPeriods" --all              # every caller and callee
+graphify path "TimesheetController" "rawTimesheetPeriods"  # how two things connect
+graphify update .                                          # refresh after big changes (~30 s)
+open graphify-out/graph.html                               # visual map (heavy on a large project)
+```
+
+### Limits
+
+- **Exact names only.** A vague name lands on the wrong node (`"Employee"` finds a test method). Prose `graphify query "…"` is fuzzy and truncates.
+- **It finds; the file proves.** Read the file before relying on a result.
+- **Blind spots:** route → controller method, a frontend `api/...` URL → its backend route, table columns, and globally-registered components. Use grep for those.
+- **It is only as fresh as its last build.** Something missing from a stale graph may still exist.
+
+To remove it: `graphify hook uninstall`, `graphify uninstall --purge`, then delete `.graphifyignore` and the two lines added to `.git/info/exclude`.
 
 ## Change the kit
 

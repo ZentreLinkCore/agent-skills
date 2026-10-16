@@ -116,16 +116,14 @@ done
 [ "$retired" -gt 0 ] && echo "  ✓ retired ${retired} old rule file(s) from .claude/rules/ (real files kept in .claude-rules-backup/)"
 
 # ── 3. Portable entry point ────────────────────────────────────────────────────
+# Never overwritten: a project's root AGENTS.md can hold its own sections (e.g. the dev
+# login the browser checks in /webkit-verify and /webkit-design-review read).
 if [ -f AGENTS.md ] && cmp -s AGENTS.md .agents/claude-adapter/AGENTS.md; then
     echo "  ✓ AGENTS.md — already current"
-elif [ -f AGENTS.md ] && head -1 AGENTS.md | grep -q '^# Agent Rules'; then
-    # Written by an earlier version of this script: refresh it, keeping the old one.
-    cp AGENTS.md AGENTS.md.bak
-    cp .agents/claude-adapter/AGENTS.md AGENTS.md
-    echo "  ✓ AGENTS.md — refreshed (previous copy saved as AGENTS.md.bak)"
 elif [ -f AGENTS.md ]; then
-    echo "  · AGENTS.md at root is not the kit's — left as is."
-    echo "        Point it at .agents/AGENTS.md, or merge in .agents/claude-adapter/AGENTS.md."
+    echo "  · AGENTS.md at root differs from the kit's entry point — left as is."
+    echo "        Make it load the always-on set listed in .agents/claude-adapter/AGENTS.md,"
+    echo "        keeping your project-specific sections."
 else
     cp .agents/claude-adapter/AGENTS.md AGENTS.md
     echo "  ✓ AGENTS.md — portable entry point for non-Claude agents"

@@ -94,7 +94,9 @@ Older specs use other section names (Business Rules, Permissions, Non-Functional
 - **Performance**: slow queries (N+1, missing indexes, unbounded `get()`); unnecessary API calls; large data handling (pagination, chunking); missing optimization the spec's §7 targets require.
 - **Maintainability**, judged against the existing project patterns and [.agents/rules/](../../rules/), never taste: consistency, duplicate logic, future maintenance problems with a concrete consequence. Deep code-quality review belongs to `/webkit-code-review`.
 
-**Verify by execution where you can.** Reading shows what the code says; running shows what it does: `php artisan tinker --execute="..."`, `php artisan route:list`, `vendor/bin/phpunit`, `npm run typecheck` / `npm run build`, and negative `grep -rn` searches for what must not exist.
+**Verify by execution where you can.** Reading shows what the code says; running shows what it does: `php artisan tinker --execute="..."`, `php artisan route:list`, `vendor/bin/phpunit`, `npm run typecheck`, `node .agents/scripts/check-changed.mjs --base origin/master` (never the full `npm run build`: [testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)), and negative `grep -rn` searches for what must not exist.
+
+An acceptance criterion that can only be seen in the running UI (and would otherwise stay `UNVERIFIED`) is checked with Playwright or any browser tool you have. Log in as the default dev user documented in the project's root [AGENTS.md](../../../AGENTS.md#7-seeing-the-real-behavior-or-ui-playwright-or-any-browser-tool); if the project documents none, ask rather than guess a login. Log in once and reuse the session. The evidence is the page, the steps, and what you saw. The password never goes into `verify.md`.
 
 > [!CAUTION]
 > Never run a destructive command (`migrate:fresh`, truncation, seeding over data) against a database you have not confirmed is disposable. Ask first.

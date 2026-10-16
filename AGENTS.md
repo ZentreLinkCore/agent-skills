@@ -54,4 +54,5 @@ cleanup:  refactor (standalone, or on a ticket's code-review findings)
 | [blueprint/](./blueprint/)`<project>/` | Product blueprints: the source of truth for behavior where one exists. Read one specification, never the folder. |
 | [docs/](./docs/) | Feature guides (`/webkit-document`) and kit docs ([token-optimization.md](./docs/token-optimization.md)) |
 | [reports/](./reports/) | The pre-ticket archive, and reports for work with no ticket |
+| [scripts/](./scripts/) | Tooling the rules call, e.g. `check-changed.mjs`, the changed-files frontend build check ([testing.md](./rules/conditional/testing.md#frontend-build-check-changed-files-only)) |
 | [claude-adapter/](./claude-adapter/) | The root `AGENTS.md` that `setup.sh` installs; no rules |

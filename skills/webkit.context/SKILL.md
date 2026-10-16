@@ -44,11 +44,12 @@ From the request, list the terms you will query: entities, actions, roles or por
 
 When `graphify-out/graph.json` exists at the project root:
 
-1. **Query each concept**: `graphify query "<terms>" --budget 1500`. Note the node labels and their `src` / `loc`.
-2. **Explain the relevant nodes**: `graphify explain "<label>"`; check `Source:` (basenames collide). Use `--seed <path>` for an exact file.
+1. **Start from exact names**: classes, components, routes, and files the request names or a targeted search finds. `graphify query "<terms>" --seed <exact/path> --budget 1500` only to discover a label: it is fuzzy and truncates.
+2. **Explain each node**: `graphify explain "<ExactName>" --all` for every caller and callee; check `Source:` (basenames collide).
 3. **Trace the chains**: `graphify path "<page or route>" "<model>"` for route → controller → Query / Handler / Action → model, and page → composable / hook → api function → endpoint.
 4. **Find what a change would break**: `graphify affected "<node>" --depth 2` for every node likely to change. These callers go in the dependency map and, when their behavior must hold, in the do-not-touch list.
-5. **Check freshness**: a node whose file no longer exists, or whose `loc` does not match the file, means the graph is stale there. Note it, and use the fallback for that area. Do not rebuild the graph.
+5. **Grep the blind spots**: route → controller method, frontend `api/...` strings → backend routes, table columns, and globally-registered components are not in the graph ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
+6. **Check freshness**: a node whose file no longer exists, or whose `loc` does not match the file, means the graph is stale there. Note it, and use the fallback for that area (`graphify update .` refreshes it: AST only, no API cost).
 
 No graph, or no match (exit `4`): targeted search in the [context-budget.md](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search) order, stopping at the first acceptable match.
 

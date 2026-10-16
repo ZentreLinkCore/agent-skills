@@ -78,7 +78,7 @@ Inspect, Graphify first, then targeted search (`graphify path` for the reference
 Rules:
 
 - **Reuse before create** ([system-awareness.md §3](../../rules/conditional/system-awareness.md#3-reuse-vs-create)). If an existing model, table, route, controller, or component covers the same domain entity, spec it as **Reused** or **Extended**. Never spec a parallel table or a duplicate endpoint. Spec something **New** only when the scan finds nothing, or the user explicitly asked for a separate one.
-- **Record the search.** Note what you searched and what it found for every component, class, and table: these become the plan's §2 Reuse Map, so `/webkit-implement` does not repeat the scan blind. A row taken from the context map says so in its Searched cell (`context.md v<N> — <its evidence>`).
+- **Record the search.** Note what you searched and what it found for every component, class, and table: these become the plan's §2 Reuse Map, so `/webkit-implement` does not repeat the scan blind. A row taken from the context map says so in its Searched cell (`context.md v<N> — <its evidence>`). When `graphify-out/graph.json` exists, `graphify explain "<ExactName>" --all` shows where a candidate class, composable, or component lives and who uses it; record the command as the search, read the file before listing it as **Reused**, and grep its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
 - **Real names only.** Every table, column, class, route, and component named in the spec either exists (verified here) or is marked **(new)**.
 - If project information cannot be detected, use only the prompt context and record that limit as an assumption in §15.
 

@@ -81,6 +81,8 @@ Build the list from the report only, using the table in [Core Principle](#core-p
 
 ## Phase 3 — Validate Existing Code
 
+**Callers first.** Before editing a method, class, composable, or component, list who calls it: `graphify explain "<ExactName>" --all` when `graphify-out/graph.json` exists, otherwise grep. Read each caller the fix could change (signature, return shape, side effect); those callers are the regression scope of Phase 5. The graph only locates, and its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)) are grep-only.
+
 Before modifying code, for each fix (Graphify first, then targeted search):
 
 - Can existing code be reused?
@@ -129,10 +131,12 @@ After each fix, verify:
 Run the checks the project actually has, per [testing.md](../../rules/conditional/testing.md#running-and-reporting) (feature tests on a disposable database only, [Backend](../../rules/conditional/testing.md#backend-phpunit)):
 
 - PHP: `php -l <file>`, the regression tests you added and the affected area's existing tests (`php artisan test --filter <Name>`), `php artisan route:list --path=api` after a route change.
-- Frontend: the regression tests you added and the area's existing tests (`npm test -- <path>`), plus `npm run typecheck` and `npm run build` where defined.
+- Frontend: the regression tests you added and the area's existing tests (`npm test -- <path>`), plus `npm run typecheck` where defined and `node .agents/scripts/check-changed.mjs` (only the changed files; never the full `npm run build`: [testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)).
 - The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result. Its regression test is this check; a scenario that cannot be a test (device-only) is traced instead.
 
 A check that fails because of your change is fixed before moving on; one already failing before it is noted, not fixed.
+
+After the last fix, when `graphify-out/graph.json` exists, run `graphify update .` so the next skill sees the fixed code (AST only, no API cost; never commit `graphify-out/`).
 
 ## Phase 6 — Completion Validation
 

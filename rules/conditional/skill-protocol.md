@@ -59,6 +59,8 @@ For `implement`, `fix`, `refactor`, `migrate`:
 - **Scan before creating** ([system-awareness.md](./system-awareness.md)) and record the search behind every new file.
 - **Every code change ships with a test that has run** ([testing.md](./testing.md#every-code-change-ships-with-a-test-mandatory)); a test that could not run is reported `written, not run — <reason>` with its command, never as passing.
 - **Smallest diff**, in the surrounding file's style ([code-quality.md](./code-quality.md)).
+- **Frontend build check on the changed files only** (`node .agents/scripts/check-changed.mjs`), never the full `npm run build` unless asked or the bundle config changed ([testing.md](./testing.md#frontend-build-check-changed-files-only)).
+- **Refresh the code graph** after the last edit when `graphify-out/graph.json` exists: `graphify update .` (AST only, no API cost; never commit `graphify-out/`), so the next skill sees this run's code ([context-budget.md §2](../context-budget.md#2-find-code-graphify-first-then-targeted-search)).
 - **Version step** (`implement`, `fix`): last, per [versioning.md](./versioning.md). Read it then, not before.
 - Never stage or commit. End with a suggested Conventional Commit message ([git-workflow.md](../core/git-workflow.md)).
 

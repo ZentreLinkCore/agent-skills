@@ -17,12 +17,12 @@ Scaffold anything new to match the namespace, file casing, and folder of its clo
 
 ## 2. The scan
 
-Locate with Graphify first when `graphify-out/` exists ([context-budget.md §2](../context-budget.md#2-find-code-graphify-first-then-targeted-search)), then confirm in the files:
+Steps 1–3 run on the files and grep: model fields, migration columns, and route → controller links are graph blind spots ([context-budget.md §2](../context-budget.md#2-find-code-graphify-first-then-targeted-search)). Step 4 starts with the graph when `graphify-out/graph.json` exists.
 
 1. **Models.** Find the entities in `app/Models/`; read `$table`, `$fillable`, `$casts`, and relationships. These are the authoritative field names for queries, validation, responses, frontend state, and mock data.
 2. **Migrations.** Where a model is ambiguous or incomplete, resolve it in `database/migrations/` (including subfolders such as `table/`, `alters/`, `views/`). The `Schema::create()` / `Schema::table()` block is ground truth for columns, types, nullability, defaults, and indexes.
 3. **Routes.** Search the `routes/api/` tree (`routes/api.php` is only the orchestrator) by portal or domain keyword for an existing endpoint. `php artisan route:list --path=api` is ground truth for what is registered.
-4. **Controllers and Query / Handler / Action classes.** Check the project's controller folder ([backend.md](./backend.md)) and `app/Queries/`, `app/Handlers/`, `app/Actions/`. `app/Domain/` is retired: never look there or write there.
+4. **Controllers and Query / Handler / Action classes.** Check the project's controller folder ([backend.md](./backend.md)) and `app/Queries/`, `app/Handlers/`, `app/Actions/`. `app/Domain/` is retired: never look there or write there. With a graph, `graphify explain "<ExactClass>" --all` lists a class's callers and callees faster than grep; it only locates, so read the file to confirm.
 
 This scan is a **read-only exception** to the frontend / backend boundary ([context-budget.md §4](../context-budget.md#4-scope)): reading a model, migration, or route file to get real field names is always allowed and is mandatory for frontend work too. It never authorizes editing across the boundary.
 

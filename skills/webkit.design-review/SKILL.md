@@ -182,6 +182,10 @@ Every light token in that list needs a `dark:` partner. A missing one is **HIGH*
 
 Name the places the change reuses the system well, with line numbers. A report that is only negative reads as opinion and gets dismissed.
 
+### 8. See it rendered (when a browser tool is available)
+
+With Playwright or any browser tool and a reachable app, confirm what the class strings only suggest: contrast, dark mode, and the layout at `md` and below. Log in as the default dev user documented in the project's root [AGENTS.md](../../../AGENTS.md#7-seeing-the-real-behavior-or-ui-playwright-or-any-browser-tool); if the project documents none, ask rather than guess a login. Log in once and reuse the session. A finding from a rendered page names the page, the mode, and the viewport. Save screenshots outside the repo (the scratchpad or temp directory): the report is the only file this skill writes, and the password never goes into it.
+
 ## Phase 4 — Classify and Filter
 
 Same scale as code-review, graded by **what the user sees**, never by fix difficulty.

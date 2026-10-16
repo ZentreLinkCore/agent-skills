@@ -54,12 +54,29 @@ When a frontend change needs a test and the app has no runner (no `test` script,
 
 - **Dev dependencies only.** Never add a runtime dependency, and never change the version of a package already installed. Let the package manager resolve versions (`npx expo install` matches them to the Expo SDK). Use the manager the lock file names.
 - **Prove it.** The setup is done when the first real test runs green through the new script.
-- **Install fails** (peer conflict, no network): restore `package.json` and the lock file to their previous state, fall back to typecheck / lint / build, and list the install as a command for the user. Never leave a half-installed runner.
+- **Install fails** (peer conflict, no network): restore `package.json` and the lock file to their previous state, fall back to typecheck / lint / the [changed-files build check](#frontend-build-check-changed-files-only), and list the install as a command for the user. Never leave a half-installed runner.
 - Record the setup in the run's summary Notes. It is a one-time change per app; later runs use the runner.
 
 ### Running and reporting
 
-- Run the tests you added plus the existing tests of the area you touched (`php artisan test --filter <Name>`, `npm test -- <path>`), along with the project's static checks (`php -l`, typecheck, lint, build).
+- Run the tests you added plus the existing tests of the area you touched (`php artisan test --filter <Name>`, `npm test -- <path>`), along with the project's static checks (`php -l`, typecheck, lint, and the [changed-files build check](#frontend-build-check-changed-files-only)).
 - A task or fix is done only when its test passes. One whose test could not run stays not done, with the reason and the command.
 - A test that already failed before your change is noted, not fixed.
 - Never weaken an assertion, skip, or delete a test to get a green run.
+
+### Frontend build check: changed files only
+
+`npm run build` bundles the **whole** app: on SubHRMS it takes about 4 minutes and needs a 6 GB heap. **Never run it as a routine check.** Check only the files that changed, from the project root:
+
+```bash
+node .agents/scripts/check-changed.mjs                       # uncommitted changes (the default)
+node .agents/scripts/check-changed.mjs --base origin/master  # everything on the branch
+node .agents/scripts/check-changed.mjs <file> [<file> ...]   # the named files
+```
+
+It runs each changed file under `resources/` through the project's own Vite config, in about 2 seconds, and fails on what `vite build` fails on for those files: a template, script, or style block that does not compile; an import that does not resolve; a named import the target module does not export. That last check also covers the files that import a changed `.ts`/`.js` module or a deleted file, so a rename that breaks an unchanged caller is caught. Report it as `check-changed: N files clean`.
+
+- A spec, plan, task, or skill step that says `npm run build` (or "builds") is satisfied by this check.
+- Run the full build **only** when the user asks for it, or when the change reaches the whole bundle: `vite.config.*`, `package.json` or the lock file, the entry (`main.ts` / `main.js`), or `resources/css/app.css`. On SubHRMS run it as `NODE_OPTIONS=--max-old-space-size=6144 npm run build`; the default heap is OOM-killed.
+- Neither this check nor `vite build` checks types. Where the project defines `npm run typecheck`, it still runs.
+- The script exits `2` when it cannot run (no `node_modules`, no `vite.config`, not a git repo). Report that with its message; do not fall back to the full build on your own.

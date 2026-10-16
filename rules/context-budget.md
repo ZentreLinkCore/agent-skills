@@ -13,22 +13,25 @@ Prefer summaries over raw history. A closed ticket's old reports are archive: re
 
 ## 2. Find code: Graphify first, then targeted search
 
-If `graphify-out/graph.json` exists at the project root, locate code through the graph **before** any grep or directory listing:
+When `graphify-out/graph.json` exists at the project root, answer "where is X, who calls / imports / uses X, what breaks if X changes" through the graph **before** any grep or directory listing. It is a local, code-only index (tree-sitter AST; nothing leaves the machine).
 
-```bash
-graphify query "<feature terms>" --budget 1500        # BFS from matching nodes; each NODE line has src=<file> loc=L<n>
-graphify query "<question>" --seed app/Models/Leave.php --budget 1500   # start from an exact file / node
-graphify explain "<NodeLabel>"                         # one node and its neighbours
-graphify path "<A>" "<B>"                              # how two nodes connect (route → controller → handler → model)
-graphify affected "<NodeLabel>" --depth 2              # reverse traversal: what a change here can break
-```
+| Command | Use for |
+| :--- | :--- |
+| `graphify explain "<ExactName>" --all` | Every caller and callee of a class, method, composable, or component |
+| `graphify path "<A>" "<B>"` | How two symbols connect (route → controller → Handler → model; page → composable → api) |
+| `graphify affected "<ExactName>" --depth 2` | Reverse traversal: what a change here can break |
+| `graphify query "<terms>" --seed <exact/path> --budget 1500` | Only to discover an exact label when you have none |
 
-1. **Query** to get node labels and their `src`/`loc`.
-2. **Identify the affected nodes**: `explain` / `path` / `affected` on the exact labels the query printed.
-3. **Open the exact files** at their `loc`, never whole folders.
-4. **Verify against source.** The graph is a map, not evidence: it was built at some commit and may be stale. Every claim and every reference still needs the real file.
+1. **Name it exactly**: a class, method, composable, component, or file name. A vague label resolves to the wrong node (`explain "Employee"` lands on a test method; `Employee.php` on the route file), so check the `Source:` line. Prose `query` is fuzzy and truncates at `--budget`: use it to find a label, never as a complete answer.
+2. **Identify the affected nodes** with `explain` / `path` / `affected`.
+3. **Open the exact files** at their line, never whole folders.
+4. **The graph locates; the file proves.** Read the file before relying on any result, as with a grep hit.
 
-Labels match by name, case-insensitively, and basenames collide (`employee.php` is a route file, `Employee.php` a model), so check the `Source:` line, and use `--seed <path>` when you need one exact node. Exit codes: `0` answer · `3` ambiguous (candidates listed: pick one, re-run) · `4` no match (fall back below). Keep `--budget` at 1500 or less; narrow the terms rather than raising it. Do not rebuild the graph as a side effect of another task. If it is missing or stale for the area, say so and fall back; refreshing it (`graphify update .`) is the user's call.
+**Blind spots: use grep and the [System Awareness scan](./conditional/system-awareness.md#2-the-scan) instead.** Route → controller method (`[X::class, 'index']`), a frontend `api/...` string → its backend route, table columns (migrations carry no columns in the graph), globally-registered components ((Vue): `StatusBadge`, `CSelect`, … have no import edge), and other string references.
+
+**Freshness.** The graph describes the checked-out tree as of its last build, not a branch analyzed without checkout ([ticket-numbering.md §8.3](./conditional/ticket-numbering.md#83-read-only-skills-stop-at-step-4)). A node missing from a stale graph is not evidence of absence, so a decision to **create** still needs a grep. Skills that edit code (`implement`, `fix`, `refactor`) run `graphify update .` (AST only, no API cost) after their last edit, and anyone may run it after large changes. **Never commit `graphify-out/`.**
+
+Exit codes: `0` answer · `3` ambiguous (candidates listed: pick one, re-run) · `4` no match (fall back below).
 
 **Fallback, and when there is no graph:** targeted `rg` for a specific symbol, route, or table, in this order, stopping at the first acceptable match:
 
