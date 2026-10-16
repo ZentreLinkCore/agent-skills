@@ -78,3 +78,18 @@ Always-on essentials — read if unsure: `authority-boundary.md` (each `/webkit-
 2. Scan before creating: `app/Models/`, `database/migrations/`, `routes/api/`. Reuse what exists.
 3. Work on a branch, not `main`.
 4. Match the surrounding file's conventions over any general guidance here.
+
+## 7. Code graph (graphify) — optional
+
+When `graphify-out/graph.json` exists at the project root, use it to answer **"who calls / imports / uses X?"** before grepping. It is a local, code-only index (tree-sitter AST; nothing leaves the machine).
+
+| Command | Use for |
+| :--- | :--- |
+| `graphify explain "<ExactName>" --all` | Every caller and callee of a class, method, composable, or component |
+| `graphify path "<A>" "<B>"` | How two symbols connect |
+
+- **Exact names only.** A vague label resolves to the wrong node (`explain "Employee"` lands on a test method). Skip prose `graphify query "…"`: it is fuzzy and truncates.
+- **The graph locates; the file proves.** Read the file before relying on a result, as with any grep hit.
+- **Blind spots — use grep and the System Awareness scan instead:** route → controller method (`[X::class, 'index']`), frontend API string → backend route, table columns (migrations carry no columns in the graph), and globally-registered components (`<source-path>` (Vue): `StatusBadge`, `CSelect`, … have no import edge).
+- **It goes stale.** Run `graphify update .` (AST only, no API cost) after large changes. A missing node in a stale graph is not evidence of absence.
+- **Never commit `graphify-out/`.**
