@@ -162,7 +162,7 @@ Finally, **check against the spec** when one exists: code deviating from the spe
 - **Affected files**: every file in the cause chain, with line numbers and its role (root cause, caller, symptom surface).
 - **Affected data**: tables and models, whether records are already wrong, and a **read-only** query that finds them.
 - **Affected endpoints and views**, and the **users, roles, or portals** that hit them.
-- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect ([system-awareness.md](../../rules/system-awareness.md)).
+- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect ([system-awareness.md](../../rules/system-awareness.md)). When `graphify-out/graph.json` exists, `graphify explain "<ExactName>" --all` on the root-cause method lists its callers and `graphify path "<A>" "<B>"` traces a call chain; confirm each in the file before citing it as evidence, and grep its blind spots (root `AGENTS.md`, **Code graph**).
 
 **Severity** (impact if left unfixed; the same scale as code-review):
 

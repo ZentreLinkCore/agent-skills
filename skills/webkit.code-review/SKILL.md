@@ -131,6 +131,8 @@ Scope, in this order:
 
 Group the changes into modified, added, and deleted files, and by area: database, API, frontend, backend, configuration. For each area, understand **what** changed, **why** (commit messages, the ticket's spec if one exists, the PR description), and the **possible impact** on callers and other modules. The spec explains intent here; it is not the yardstick. Spec conformance is `/webkit-verify`'s job.
 
+**Blast radius.** For each modified or deleted method, class, composable, or component, list its callers **outside the diff**: `graphify explain "<ExactName>" --all` when `graphify-out/graph.json` exists, otherwise grep. Read the callers whose contract changed (signature, return shape, removed export). The graph describes the checked-out tree as of its last build, not a branch analyzed without checkout (§8.3), and its blind spots (root `AGENTS.md`, **Code graph**) are grep-only: treat each hit as a pointer and confirm it in the file before citing it in a finding.
+
 ### Load the project's rules
 
 **Resolve the project first** with [Which Project Am I In?](../../rules/project-profile.md) and read only its sections. The projects differ on framework, database conventions, and component libraries; a rule cited from the wrong one turns correct code into a false finding.

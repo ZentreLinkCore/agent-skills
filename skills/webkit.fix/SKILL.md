@@ -133,6 +133,8 @@ Before modifying code, for each fix:
 
 If the fix needs a new column, route, model, or table, run the [System Awareness](../../rules/system-awareness.md) scan first. When an existing structure is simply used wrongly, **fix the usage, not the schema**. Never duplicate code ([duplicate-prevention.md](../../rules/duplicate-prevention.md)).
 
+**Callers first.** Before editing a method, class, composable, or component, list who calls it: `graphify explain "<ExactName>" --all` when `graphify-out/graph.json` exists, otherwise grep. Read each caller the fix could change (signature, return shape, side effect); those callers are the regression scope of Phase 5. The graph only locates, and its blind spots (root `AGENTS.md`, **Code graph**) are grep-only.
+
 ---
 
 ## Phase 4 — Apply Fixes
@@ -180,6 +182,8 @@ Run the checks the project actually has:
 - The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result. Its regression test is this check; a scenario that cannot be a test (device-only) is traced instead.
 
 A check that fails because of your change is fixed before moving on; a check that was already failing before your change is noted, not fixed.
+
+After the last fix, when `graphify-out/graph.json` exists, run `graphify update .` so the next skill sees the fixed code (AST only, no API cost; never commit `graphify-out/`).
 
 ---
 

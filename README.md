@@ -180,6 +180,64 @@ versioning:
 
 A project with no file runs in `recommend` mode. The version files, build numbers, and CHANGELOG path are declared per app; see the existing files in [config/](./config/) and [rules/versioning.md](./rules/versioning.md).
 
+## Code graph (optional)
+
+[graphify](https://github.com/Graphify-Labs/graphify) builds a local map of a project's code: which class, method, composable, or component calls or imports which. With it, an agent answers "who uses this?" with one command instead of a dozen greps. It is optional; a project without a graph works exactly as before.
+
+### Set it up
+
+Once per machine:
+
+```bash
+brew install uv
+uv tool install graphifyy     # the package has two y's; the command is `graphify`
+uv tool update-shell          # puts ~/.local/bin on PATH; open a new terminal afterwards
+```
+
+Once per project, from its root:
+
+```bash
+printf '/graphify-out/\n/.graphifyignore\n' >> .git/info/exclude   # local only: the graph is never committed
+printf 'public/\nstorage/\n' > .graphifyignore                       # skip static assets
+graphify extract . --code-only    # ~40 s; reads code only, needs no API key, nothing leaves the machine
+graphify hook install             # optional: rebuilds in the background after each commit, checkout, and merge
+```
+
+`graphify hook install` also appends `graphify-out/graph.json merge=graphify` to `.gitattributes`. The graph is never committed, so delete that line again: `git diff .gitattributes` must come back empty.
+
+### What the skills do with it
+
+Nothing to type. When `graphify-out/graph.json` exists, the skills use it on their own, and fall back to grep when it does not:
+
+| Skill | Uses the graph to |
+| :--- | :--- |
+| `/webkit-specify` | Fill the plan's Reuse Map |
+| `/webkit-implement` | Search before creating anything (the Reuse Ledger); refreshes the graph at the end |
+| `/webkit-fix` | List a method's callers before changing it; refreshes the graph at the end |
+| `/webkit-code-review` | Find callers outside the diff that a change could break |
+| `/webkit-investigate` | Trace callers and call chains from the root cause |
+| `/webkit-refactor` | Find every caller before moving code; refreshes the graph at the end |
+
+The rule behind it is the **Code graph** section of the root `AGENTS.md`, which every agent reads. To make sure an agent uses it outside a skill, say so: "use graphify to find who calls `X` first".
+
+### Use it yourself
+
+```bash
+graphify explain "rawTimesheetPeriods" --all              # every caller and callee
+graphify path "TimesheetController" "rawTimesheetPeriods"  # how two things connect
+graphify update .                                          # refresh after big changes (~30 s)
+open graphify-out/graph.html                               # visual map (heavy on a large project)
+```
+
+### Limits
+
+- **Exact names only.** A vague name lands on the wrong node (`"Employee"` finds a test method). Prose `graphify query "…"` is fuzzy and truncates.
+- **It finds; the file proves.** Read the file before relying on a result.
+- **Blind spots:** route → controller method, a frontend `api/...` URL → its backend route, table columns, and globally-registered components. Use grep for those.
+- **It is only as fresh as its last build.** Something missing from a stale graph may still exist.
+
+To remove it: `graphify hook uninstall`, `graphify uninstall --purge`, then delete `.graphifyignore` and the two lines added to `.git/info/exclude`.
+
 ## Change the kit
 
 - **A rule:** edit it in [rules/](./rules/), then copy it into [claude-adapter/rules/](./claude-adapter/rules/) so Claude Code loads the new text. When the code changes in a way that makes [rules/project-profile.md](./rules/project-profile.md) wrong, fix the profile.

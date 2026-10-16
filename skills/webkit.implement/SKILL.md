@@ -172,6 +172,8 @@ Search for reusable code before implementing. Review services, components, model
 
 **Search semantically.** A solution is often named for another domain or generically: `EmployeeTable` → `MemberTable` → `DataTable` → `Table`; `StatusBadge` → `Badge` → `Chip`; `CSelect` → `Select` → `Dropdown`. **Never search for a name you remember**: a component name from the other project returns nothing and produces a duplicate. A raw `<button>`, `<input>`, `<select>`, `<table>`, or hand-rolled modal is a reuse failure whenever the design system ships that primitive.
 
+**Code graph.** When `graphify-out/graph.json` exists, start each search with `graphify explain "<ExactName>" --all` (a class, method, composable, or component) to see where it lives and who uses it, and record the command in the Reuse Ledger's *Searched* column. It locates; the file proves: read the hit before deciding `REUSE` or `EXTEND`. A `CREATE` still needs a grep, because a node missing from a stale graph is not proof that nothing exists, and its blind spots (root `AGENTS.md`, **Code graph**) are grep-only. No graph → grep as above.
+
 **Budget.** Search targeted directories, not the whole repo; read at most two full files at once. When the budget runs out, use the best match found. Exhaustion means *unknown*, not *nothing exists*: never quietly create.
 
 ### Reuse Ledger (MANDATORY)
@@ -270,6 +272,7 @@ Before finishing, verify:
 - **Every test added in this run passes**, together with the existing tests of the areas touched: `php artisan test --testsuite=Unit`, the feature tests on a disposable database ([testing.md](../../rules/testing.md#backend-phpunit)), and each frontend app's `npm test`. A test that could not run leaves its task unticked, named in Notes with the command that runs it.
 - Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
 - Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.
+- The code graph is current: when `graphify-out/graph.json` exists, run `graphify update .` so the next skill sees this run's code (AST only, no API cost; never commit `graphify-out/`).
 - `task.md` is current, per [task.md upkeep](../../rules/ticket-numbering.md#taskmd-upkeep): §2 matches the plan's ticks, the §1 Implement row reads `<done>/<total> tasks`, §4 lists the plan's §9 Commands for the User still to run, **Next step** is `/webkit-verify <ticket>` (or the first unticked task's blocker), and §5 has one line for this run. A ticket with a spec but no `task.md`: create it from [the task-tracker template](../../template/task-tracker.md) first.
 
 ---

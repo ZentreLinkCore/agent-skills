@@ -129,7 +129,7 @@ Ask:
 1. **The goal and the target**: the path, the stated goal, or the named code-review findings (read `code-review.md` for their location and recommendation).
 2. **The ticket's documents**: its spec (the behavior to preserve), and any `investigation.md`, `verify.md`, or `code-review.md` for context. A report is optional.
 3. **The rules the target touches**: [laravel-standards.md](../../rules/laravel-standards.md) for PHP; your project's frontend standards ([vue-standards.md](../../rules/vue-standards.md) for Vue, your project's section of [project-profile.md](../../rules/project-profile.md) for React); [duplicate-prevention.md](../../rules/duplicate-prevention.md).
-4. **The callers**: every place that uses what you are about to move (grep the class, method, component, and route), so nothing is left pointing at the old location.
+4. **The callers**: every place that uses what you are about to move (grep the class, method, component, and route), so nothing is left pointing at the old location. When `graphify-out/graph.json` exists, start with `graphify explain "<ExactName>" --all`, then grep anyway: the graph misses route → method links, string references, and globally-registered components, and a missed caller is a regression. After the last step, run `graphify update .` so the graph shows the new locations.
 
 ---
 
