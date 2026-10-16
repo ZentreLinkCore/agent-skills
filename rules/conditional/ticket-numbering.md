@@ -202,7 +202,7 @@ git checkout -b T00001
 - **`/webkit-investigate` allocates a ticket but creates no branch.** It writes no application code, so there is nothing to isolate; the branch appears when `/webkit-fix` or an implement skill picks the ticket up.
 - **Work with genuinely no ticket** keeps the categorised form from [git-workflow.md](../core/git-workflow.md) Rule 1: `bugfix/<domain>-<feature-kebab>`, `refactor/…`, `hotfix/…`.
 - The ticket number goes in the **PR title** (`T00001 — Loan amortization schedule`) with the spec path in the body. Commit messages keep plain Conventional Commits — the branch already carries the ticket, so `feat(payroll): …` needs no ticket prefix.
-- The [Mandatory Branch Gate](../core/git-workflow.md#mandatory-branch-gate-for-implementing-skills) is what enforces this, and it is blocking. Creating the branch is compliance, not a decision that needs approval.
+- The [Mandatory Branch Gate](./branch-gate.md) is what enforces this, and it is blocking. Creating the branch is compliance, not a decision that needs approval.
 
 > [!IMPORTANT]
 > Numbers are per project (§1), so the same `T00001` branch name can exist in both repos for unrelated work. That is fine — each branch lives in its own repo. It does mean **never assume a `T00001` branch in one repo has anything to do with `T00001` in the other.**
@@ -289,7 +289,7 @@ Use **three dots** (`base...branch`) for the diff: it shows what the branch chan
 
 State the scope you found — branch, base, file count, commit count — before proceeding.
 
-**Step 5 — Then check out, under the [Mandatory Branch Gate](../core/git-workflow.md#mandatory-branch-gate-for-implementing-skills).**
+**Step 5 — Then check out, under the [Mandatory Branch Gate](./branch-gate.md).**
 
 ```bash
 git status --short                                      # say what is carried over first

@@ -28,7 +28,7 @@ Shared steps follow [skill-protocol.md](../../rules/conditional/skill-protocol.m
 1. **`task.md`**, if the ticket already has one (read `summary.md` first if it exists).
 2. **The existing `context.md`**, on a re-run: update it in place.
 3. **`spec.md` / `plan.md` only for an existing ticket**: the spec's Metadata and §1–§4 (what and scope); plan §3 File Change Map to compare. A new feature needs neither.
-4. **Source, located through Graphify first** ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then opened only at the lines a node names: a model's `$table` / `$fillable` / relations, a migration's `Schema` block, a route line, a Query or Handler signature. Never whole modules.
+4. **Source, located through Graphify first** ([code-search.md](../../rules/conditional/code-search.md)), then opened only at the lines a node names: a model's `$table` / `$fillable` / relations, a migration's `Schema` block, a route line, a Query or Handler signature. Never whole modules.
 
 Rules: [project-gate.md](../../rules/core/project-gate.md) and the router rows for the layers the request touches, used to classify files, not to design. In (React), only the one blueprint specification the feature needs. Templates at write time. **Avoid:** directory listings, whole-module reads, other tickets' reports, the whole blueprint, and any solution design.
 
@@ -48,10 +48,10 @@ When `graphify-out/graph.json` exists at the project root:
 2. **Explain each node**: `graphify explain "<ExactName>" --all` for every caller and callee; check `Source:` (basenames collide).
 3. **Trace the chains**: `graphify path "<page or route>" "<model>"` for route → controller → Query / Handler / Action → model, and page → composable / hook → api function → endpoint.
 4. **Find what a change would break**: `graphify affected "<node>" --depth 2` for every node likely to change. These callers go in the dependency map and, when their behavior must hold, in the do-not-touch list.
-5. **Grep the blind spots**: route → controller method, frontend `api/...` strings → backend routes, table columns, and globally-registered components are not in the graph ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
+5. **Grep the blind spots**: route → controller method, frontend `api/...` strings → backend routes, table columns, and globally-registered components are not in the graph ([code-search.md](../../rules/conditional/code-search.md)).
 6. **Check freshness**: a node whose file no longer exists, or whose `loc` does not match the file, means the graph is stale there. Note it, and use the fallback for that area (`graphify update .` refreshes it: AST only, no API cost).
 
-No graph, or no match (exit `4`): targeted search in the [context-budget.md](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search) order, stopping at the first acceptable match.
+No graph, or no match (exit `4`): targeted search in the [code-search.md](../../rules/conditional/code-search.md) order, stopping at the first acceptable match.
 
 ## Phase 4 — Verify in source
 

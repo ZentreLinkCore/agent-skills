@@ -4,4 +4,5 @@ Compatibility redirect for links written before the rules were split into `core/
 
 Canonical:
 
-- [core/git-workflow.md (Mandatory Branch Gate included)](./core/git-workflow.md)
+- [core/git-workflow.md](./core/git-workflow.md): branches, commits, never `main`
+- [conditional/branch-gate.md](./conditional/branch-gate.md): the Mandatory Branch Gate

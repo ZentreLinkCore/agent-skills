@@ -4,4 +4,5 @@ Compatibility redirect for links written before the rules were split into `core/
 
 Canonical:
 
-- [core/authority-boundary.md](./core/authority-boundary.md)
+- [core/authority-boundary.md](./core/authority-boundary.md): the rule
+- [conditional/skill-protocol.md §8–§9](./conditional/skill-protocol.md#9-who-owns-what): who owns what, and worked examples

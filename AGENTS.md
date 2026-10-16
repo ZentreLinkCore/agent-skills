@@ -11,7 +11,7 @@ What lives where in `.agents/`, and when to load it. This file states no rules; 
 | **A `/webkit-*` command runs** | its `skills/<skill>/SKILL.md`, plus [skill-protocol.md](./rules/conditional/skill-protocol.md) | Other agents: read the `SKILL.md` and follow it; the content is tool-neutral. |
 | **A skill writes a document** | that document's template in [template/](./template/) | Opened at write time, not at the start. |
 | **Resuming a ticket** | `specs/<project>/T#####/summary.md` (if any) → `task.md` → `context.md` → only the spec / plan sections needed | [context-budget.md §1](./rules/context-budget.md#1-read-in-this-order-and-stop-when-you-can-act) |
-| **Finding code** | Graphify (`graphify-out/` at the project root), then targeted search | [context-budget.md §2](./rules/context-budget.md#2-find-code-graphify-first-then-targeted-search) |
+| **Finding code** | Graphify (`graphify-out/` at the project root), then targeted search | [code-search.md](./rules/conditional/code-search.md) |
 
 The other `rules/*.md` files at the root are **compatibility redirects** for links written before the split. Never load them for new work.
 
@@ -32,7 +32,7 @@ The other `rules/*.md` files at the root are **compatibility redirects** for lin
 | [webkit.migrate](./skills/webkit.migrate/SKILL.md) | Move a feature into another project | the source chain | target code, `migrations/` |
 | [webkit.summarize](./skills/webkit.summarize/SKILL.md) | Compress a ticket's history | `task.md`, report summaries | `summary.md` |
 
-Who owns what, and the handoffs: [authority-boundary.md](./rules/core/authority-boundary.md).
+Who owns what, and the handoffs: [skill-protocol.md §9](./rules/conditional/skill-protocol.md#9-who-owns-what); the rule itself: [authority-boundary.md](./rules/core/authority-boundary.md).
 
 ## 3. The flow
 

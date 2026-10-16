@@ -30,7 +30,7 @@ The goal must be specific ("extract the leave-credit calculation shared by the t
 1. **`task.md`** (read `summary.md` first if it exists).
 2. **`context.md`** (if it exists): its `touched-files.md` §5 Tests names the area's existing tests for the Phase 2 baseline, and `dependency-map.md` §3 Callers That Must Keep Working is a starting list for Phase 1's callers.
 3. **`spec.md` only for the behavior to preserve**: the sections describing the code being moved, in Phase 1. No `plan.md`. A `--code-review Finding #n` input: only those findings in `code-review.md` (location and recommendation). An `investigation.md` or `verify.md` only for what it says about the target; a report is optional.
-4. **The target and its callers**: Graphify first (`affected` on what moves; [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted `rg` for the class, method, component, and route.
+4. **The target and its callers**: Graphify first (`affected` on what moves; [code-search.md](../../rules/conditional/code-search.md)), then targeted `rg` for the class, method, component, and route.
 
 Rules: per the [router](../../rules/rule-router.md), for the files the target touches, plus [system-awareness.md §4](../../rules/conditional/system-awareness.md#4-no-duplicate-logic) always (consolidation is this skill's main move). The template at Phase 6. **Avoid:** reading modules beyond the target and its callers, unrelated reports, all project documentation or the whole blueprint, re-reading rules.
 
@@ -90,7 +90,7 @@ List each move: what goes from where to where, and which rule the result follows
 > [!CAUTION]
 > **`app/Domain/` is retired and does not exist on disk.** Do not move code into it, and do not conclude "no existing Query" from an empty search of it: search `app/Queries/` and `app/Handlers/`. Correcting a stale `App\Domain\...` namespace in a file you touch is part of the refactor.
 
-**Find the shared version** with Graphify first (`explain --all` on candidate names, `query --seed` only to find a label, then `affected` on the candidate to see who already uses it), then targeted search ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
+**Find the shared version** with Graphify first (`explain --all` on candidate names, `query --seed` only to find a label, then `affected` on the candidate to see who already uses it), then targeted search ([code-search.md](../../rules/conditional/code-search.md)).
 
 **Before consolidating a duplicate**, confirm the shared version covers **every** behavior of the local copy (props, states, edge cases). A "duplicate" with an extra behavior is a feature: collapsing it changes behavior. Either fold that capability into the shared component, or leave the copy and record why.
 

@@ -4,4 +4,4 @@ Compatibility redirect for links written before the rules were split into `core/
 
 Canonical:
 
-- [context-budget.md §2 Find code (search order)](./context-budget.md#2-find-code-graphify-first-then-targeted-search)
+- [conditional/code-search.md](./conditional/code-search.md)
