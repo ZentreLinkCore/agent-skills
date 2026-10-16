@@ -2,20 +2,19 @@
 
 <!--
 TEMPLATE: task-tracker (task.md — created by /webkit-specify beside spec.md and plan.md; kept current by
-/webkit-implement, /webkit-verify, /webkit-fix, /webkit-code-review and /webkit-design-review)
+/webkit-implement, /webkit-verify, /webkit-fix, /webkit-code-review and /webkit-design-review; /webkit-context
+and /webkit-summarize add only a §5 line)
 
 The one page that answers "what is done, what is still open, what comes next" for this ticket. It is a VIEW: the
 sources stay plan.md (tasks), the reports (findings) and spec.md (status, open questions). Where this file and a
 source disagree, the source wins, and the next skill that touches this file re-syncs it from the source.
 
-Fill rules. Delete this comment and every other guide comment from the finished file.
-1. Keep this structure. Do not add, remove, rename, or reorder sections.
-2. Replace every {{PLACEHOLDER}}. A finished file contains no "{{". Never leave a cell blank: "—" for a stage
-   that has not run yet.
-3. One line per item. Detail lives in the source file; this file names the item by its ID.
-4. Each skill updates only: its own row in §1 (plus Done / Next step), the items it owns in §2–§4, the Metadata
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. A stage that has not run yet is "—", never blank.
+2. One line per item. Detail lives in the source file; this file names the item by its ID.
+3. Each skill updates only: its own row in §1 (plus Done / Next step), the items it owns in §2–§4, the Metadata
    Last Updated row, and one new line at the TOP of §5. A §5 line is never edited or deleted.
-5. A ticked item is never unticked. Work that turns out wrong comes back as a new finding in §3.
+4. A ticked item is never unticked. Work that turns out wrong comes back as a new finding in §3.
 -->
 
 ## Metadata

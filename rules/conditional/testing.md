@@ -1,26 +1,12 @@
-# Testing Standards
+# Testing
 
-## Purpose
+Discover the test setup before writing a test (`tests/`, `__tests__/`, `phpunit.xml`, each app's `test` script) and match its libraries and layout.
 
-This document defines testing architectures, library conventions, and execution rules to verify application correctness and prevent regressions.
-
-## Scope
-
-Applicable to all unit tests, integration tests, end-to-end (E2E) scripts, and testing setups.
-
-## Responsibilities
-
-- **AI Agent**: Discovers existing test frameworks (e.g. PHPUnit, Vitest, Jest) and writes conforming test classes with descriptive assertions.
-- **Developer/User**: Runs tests in CI pipelines and maintains coverage rules.
-
-## Actionable Rules
-
-1. **Discover Test Frameworks**: Inspect the folder structure to find testing folders (e.g., `tests/`, `__tests__/`). Match the testing libraries in use.
-2. **Standardize Test Types**:
-   - **Unit Tests**: Test logic in isolation from database connections or web APIs (e.g., calculations, custom parsers, data models).
-   - **Integration/Feature Tests**: Test validation layers, database transactions, route endpoints, and authentication guards.
-3. **Database Sandboxing**: Always use testing transactions or database refresh traits to ensure test database sandboxes are kept clean and reset after each test block.
-4. **Mock External Integrations**: Mock external APIs, messaging systems, or local file integrations to isolate logic execution.
+- **Unit tests** cover logic in isolation from the database and web APIs (calculations, parsers, mappings).
+- **Feature tests** cover validation, transactions, endpoints, and authorization guards.
+- **Sandbox the database**: transactions or refresh traits, reset after each test.
+- **Mock external integrations** (third-party APIs, messaging, file storage).
+- **Explicit assertions** on real values and boundaries (empty, null, maximum, division by zero), never a bare true/false; core business computations and access rules first. Updating a calculation also updates the tests that already cover it.
 
 ## Every Code Change Ships With a Test (MANDATORY)
 
@@ -77,13 +63,3 @@ When a frontend change needs a test and the app has no runner (no `test` script,
 - A task or fix is done only when its test passes. One whose test could not run stays not done, with the reason and the command.
 - A test that already failed before your change is noted, not fixed.
 - Never weaken an assertion, skip, or delete a test to get a green run.
-
-## Best Practices
-
-- **Edge-Case Validation**: Write assertions covering boundary parameters (e.g. empty arrays, null values, maximum inputs, division-by-zero limits).
-- **Core Business Test Cases**: Cover core business computations (calculations, access privileges, transaction workflows) with high-priority tests.
-
-## AI Behavior Expectations
-
-- **Coverage Focus**: Every backend and frontend change gets its test, per [Every Code Change Ships With a Test](#every-code-change-ships-with-a-test-mandatory). When updating calculation engines or logic layers, also update the tests that already cover them.
-- **Valid Assertions**: Write explicit assertions rather than generic true/false expectations.

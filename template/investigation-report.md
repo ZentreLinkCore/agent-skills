@@ -3,20 +3,11 @@
 <!--
 TEMPLATE: investigation-report (used by /webkit-investigate)
 
-Fill rules. Delete this comment and every other guide comment from the finished report — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished report contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". An empty list says "None."
-4. Every claim about the cause is backed by evidence: file:line, a log excerpt, a query result, a command's output,
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. Every claim about the cause is backed by evidence: file:line, a log excerpt, a query result, a command's output,
    or the code path traced. A hypothesis that was not proven is labelled as one.
-5. Separate the root cause from the symptom: the root cause explains every observed symptom, and fixing it
+2. Separate the root cause from the symptom: the root cause explains every observed symptom, and fixing it
    prevents the issue from recurring.
-
-The investigator must NOT:
-- modify application code, run migrations, or change data (read-only queries only),
-- propose new features or expand scope — unrelated problems go to §8 as separate tickets,
-- rewrite the specification — a spec problem is reported as "Specification clarification required".
 -->
 
 ## Metadata

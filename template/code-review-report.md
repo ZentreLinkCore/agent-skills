@@ -3,25 +3,14 @@
 <!--
 TEMPLATE: code-review-report (used by /webkit-code-review)
 
-Fill rules. Delete this comment and every other guide comment from the finished report — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished report contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". A severity with no findings keeps its
-   heading and says "None."
-4. Only real issues in the changed code, each traced to file and line, with a concrete failure for CRITICAL and
-   HIGH. Do not report personal preference, style without a project rule, hypothetical problems without
-   evidence, future features, new modules, or spec changes.
-5. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. What to report and how to grade it: the skill's
+Phases 2–4. A severity with no findings keeps its heading and says "None."
+1. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity
    into the next), so "Finding #3" always names one issue.
-6. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
+2. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
    when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
    and recomputes the verdict, the Final Recommendation and the Review Run row as a fix pass (vN.k). See
    ticket-numbering.md §5 "Fix pass".
-
-The reviewer must NOT update specs, create spec versions, request new features, or restart planning.
-If a code issue can only be resolved by changing a requirement, record it under INFO as
-"Specification clarification required: <what and why>" and leave the specification untouched.
 -->
 
 ## Metadata

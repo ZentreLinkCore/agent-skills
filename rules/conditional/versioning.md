@@ -173,6 +173,6 @@ backend  NONE    —                                    none             evidenc
 
 Then every `warnings` and `after_release` line of each bumped target, and any recommend-only reason from §2 or §3.
 
-The commit message `/webkit-implement` suggests matches the level: `feat(<scope>): …` for MINOR, `fix(<scope>): …` for PATCH, and `feat(<scope>)!: …` with a `BREAKING CHANGE:` footer for MAJOR ([git-workflow.md](./git-workflow.md)). `/webkit-fix` always suggests `fix(<scope>): …`: the commit type describes that commit, while the level describes the whole branch.
+The commit message `/webkit-implement` suggests matches the level: `feat(<scope>): …` for MINOR, `fix(<scope>): …` for PATCH, and `feat(<scope>)!: …` with a `BREAKING CHANGE:` footer for MAJOR ([git-workflow.md](../core/git-workflow.md)). `/webkit-fix` always suggests `fix(<scope>): …`: the commit type describes that commit, while the level describes the whole branch.
 
 Reviews (`/webkit-verify`, `/webkit-code-review`) treat version files and CHANGELOG edits made by this procedure as expected, not as scope expansion.

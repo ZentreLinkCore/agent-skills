@@ -10,30 +10,12 @@ description: |
 
 Acts as a senior engineer investigating a problem. It finds **why** something is broken, proves it with evidence, measures the impact, and recommends the minimal safe fix, before any code is changed.
 
-This skill only investigates. It is **not** responsible for:
-
-- fixing the problem (that is `/webkit-fix`),
-- planning or specifying new features (`/webkit-specify`),
-- reviewing a diff (`/webkit-code-review`) or checking spec conformance (`/webkit-verify`),
-- general cleanup with no defect behind it (`/webkit-refactor`).
-
 > [!IMPORTANT]
 > **This skill MUST NOT modify application code, run migrations, or change data.** Database access is read-only. Its only output is `investigation.md` in the ticket folder.
 
----
+Shared steps (gates, ticket resolution, templates, report persistence) follow [skill-protocol.md](../../rules/conditional/skill-protocol.md). **Authority:** finding and proving a root cause, and recommending the fix. Applying it → `/webkit-fix`; planning new behavior → `/webkit-specify`; cleanup with no defect behind it → `/webkit-refactor`; reviewing a diff → `/webkit-code-review`; spec conformance → `/webkit-verify`.
 
-## Authority Boundary
-
-This skill owns **only** finding and proving a root cause, and recommending the fix ([authority-boundary.md](../../rules/authority-boundary.md)). It does not perform another skill's responsibility. Tasks that belong to another workflow stage:
-
-- applying the fix → `/webkit-fix`
-- planning new behavior → `/webkit-specify`
-- cleanup with no defect behind it → `/webkit-refactor`
-- reviewing a diff → `/webkit-code-review`
-
-If a task belongs to another stage: **stop, report it, and do not continue** that task. Report it as `Authority boundary: <the task> belongs to /webkit-<skill>. Not done here.` Do not compensate for another skill, and do not generate work outside this authority.
-
----
+The report is a file on disk: `/webkit-fix` usually runs in a new session and can only act on what was saved.
 
 ## Inputs
 
@@ -45,7 +27,14 @@ If a task belongs to another stage: **stop, report it, and do not continue** tha
 
 Useful in the description: the error message or log lines, steps to reproduce, the affected user or record, and when it started.
 
----
+## Context Loading Priority
+
+1. **`task.md`**, when the issue sits in a ticket that has one (read `summary.md` first if it exists). A new bug ticket has neither.
+2. **`context.md`** (if it exists): its `touched-files.md` is a starting point for the code path, and `dependency-map.md` (Chains, Callers That Must Keep Working) for Phase 4. Leads, not evidence.
+3. **`spec.md` only for expected behavior**: the sections covering the symptom, in Phase 1 and for the Phase 3 Specification Check. No `plan.md`. On a re-run, the previous `investigation.md`'s Metadata, status, and Investigation Trail, so ruled-out hypotheses are not re-checked. A code-review finding passed as input: only that finding.
+4. **Source, logs, data, and history** at the lines the evidence points to: Graphify first ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then the targeted search order in Phase 2.
+
+Rules: per the [router](../../rules/rule-router.md), for the layers the cause chain crosses. The template at Phase 8. **Avoid:** reading whole modules or whole log files (search the error text and timestamp), unrelated tickets' reports, all project documentation or the whole blueprint, re-reading rules.
 
 ## Investigation Types
 
@@ -61,67 +50,38 @@ Useful in the description: the error message or log lines, steps to reproduce, t
 
 A request for a **new feature or enhancement** is not an investigation: say so and suggest `/webkit-specify`. A request to **review code quality** without a defect goes to `/webkit-code-review` or `/webkit-refactor`.
 
----
-
-## Workflow Integration
-
-```text
-          /webkit-investigate <issue>
-                     │
-                     ▼
-   investigation.md  (.agents/specs/<project>/T#####/investigation.md)
-                     │
-          ┌──────────┴──────────────────┐
-          ▼                             ▼
-     webkit-fix                 webkit-specify → webkit-implement
-     (the usual next step,      (only when the issue turns out
-      structural causes too)     to need new behavior)
-```
-
-The report is a file on disk; `/webkit-fix` usually runs in a new session and can only act on what was saved.
-
----
-
 ## Core Rules
 
 - **Evidence over intuition.** Every statement about the cause cites a file and line, a log excerpt, a query result, or a command's output. An unproven idea is written as a hypothesis, never as the cause.
 - **Root cause, not symptom.** The root cause explains every observed symptom, and fixing it prevents recurrence. "The value is null in the view" is a symptom; "the Query drops the `idacct` filter when `status = 0`" is a cause.
 - **No scope expansion.** Investigate the reported issue only. Other problems found along the way are listed under Other Findings as separate tickets, never folded into this fix.
-- **Read-only.** No code edits, no migrations, no writes to any database. Never run a destructive command; ask before running anything against a database you have not confirmed is disposable.
+- **Read-only** (the callout above). Never run a destructive command; ask before running anything against a database you have not confirmed is disposable.
 - **The spec is not rewritten.** If the issue is caused by the spec itself, report **Specification clarification required**.
 
-## Investigation Mindset
+**Mindset:** What exactly is the symptom, and can I reproduce it? What changed recently in this area? Which hypotheses explain *all* of the symptoms, and which evidence would rule each one out? Is this the root cause, or one more symptom of it? Who and what else is affected: other callers, already-saved data, other portals? What is the smallest safe change that removes the cause?
 
-Ask:
+## Phase 0 — Gates (BLOCKING)
 
-- What exactly is the symptom, and can I reproduce it?
-- What changed recently in this area?
-- Which hypotheses explain *all* of the symptoms, and which evidence would rule each one out?
-- Is this the root cause, or one more symptom of it?
-- Who and what else is affected: other callers, already-saved data, other portals?
-- What is the smallest safe change that removes the cause?
+Run protocol §1: project, ticket, and a ticket argument's branch analyzed **without checkout** ([ticket-numbering.md §8.3](../../rules/conditional/ticket-numbering.md#83-read-only-skills-stop-at-step-4)). No branch gate (Phase 8: no branch is created). Tracing a bug through the other project's conventions sends `/webkit-fix` to the wrong file: the projects have opposite database conventions, so a "missing FK" is a finding in one and correct in the other.
 
----
+**Ticket.** This skill starts bug work, so it may allocate ([ticket-numbering.md §2–§3](../../rules/conditional/ticket-numbering.md#2-allocating-a-number-the-increment)):
 
-## Phase 0 — Project Gate (BLOCKING)
-
-Run [Which Project Am I In?](../../rules/project-profile.md), **state the resolved project in your first message**, and read only that project's sections. An investigation that traces a React bug through Vue conventions, or blames the other project's schema rules, sends `/webkit-fix` to the wrong file. The projects have opposite database conventions (foreign keys, relationship-column naming, soft deletes), so a "missing FK" is a finding in one and correct in the other.
-
----
+1. **The input names a `T#####` ticket, or you are on a `T#####` branch** → that ticket. A defect found while implementing a feature belongs to that feature's ticket.
+2. **An existing ticket already covers this issue** → that ticket; its `investigation.md` is updated in place.
+3. **An `F####` ticket** → its branch, analyzed without checkout. It normally has no ticket folder; Phase 8 says where the report goes.
+4. **Nothing matches** → allocate the next number per §2. A bug ticket with no spec is normal. A request that is not an investigation (Investigation Types) is redirected instead and gets no ticket.
 
 ## Phase 1 — Understand the Issue
 
 Establish and record:
 
 1. **Reported symptom**: exact error message, log lines, screenshot description, or wrong value.
-2. **Expected vs actual behavior**, with the source of "expected": a spec section, a business rule ([hrms-rules.md](../../rules/hrms-rules.md)), or how it behaved before.
+2. **Expected vs actual behavior**, with the source of "expected": a spec section, a business rule ([payroll.md](../../rules/conditional/payroll.md)), or how it behaved before.
 3. **Steps to reproduce**, the affected user / role / record, frequency, and when it started.
-4. **Investigation type** (table above) and **affected area**: portal or domain (per the profile; not every project has portals), module, and layer.
-5. **Ticket and spec**: if the area has a spec (`.agents/specs/<project>/T#####/spec.md`, or `specs.md` on older tickets), read the relevant sections; it defines expected behavior.
+4. **Investigation type** (table above) and **affected area**: portal or domain (per [project-gate.md](../../rules/core/project-gate.md); not every project has portals), module, and layer.
+5. **Spec**: if the area has one (`spec.md`, or `specs.md` on older tickets), its relevant sections define expected behavior.
 
 When the symptom itself cannot be identified (no error, no steps, no affected record), **ask once** for what is missing. Otherwise proceed and record any assumption in the report.
-
----
 
 ## Phase 2 — Reproduce and Gather Evidence
 
@@ -130,21 +90,19 @@ Reproduce before theorizing. Use the cheapest reliable evidence first:
 | Evidence | How |
 | --- | --- |
 | Logs | `storage/logs/laravel.log` (search the error text and timestamp), browser console and network tab described by the user |
-| Code path | Trace from the route (`php artisan route:list --path=api/...`) → controller → Query / Handler / Action → model, and from the page → state → api layer |
+| Code path | `graphify path "<route or page>" "<model>"` first, then confirm in source: the route (`php artisan route:list --path=api/...`) → controller → Query / Handler / Action → model, and the page → state → api layer |
 | Data | Read-only queries (`SELECT` only), `php artisan tinker --execute="..."` for read-only inspection |
 | History | `git log --oneline -- <file>`, `git log -S '<code>'`, `git blame -L <a>,<b> <file>` to find when and why the behavior changed |
 | Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `npm run build`: only the checks the project actually defines (not every project has a JS test runner) |
 
-Search scope, in order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global ([context-loading.md](../../rules/context-loading.md)). Use repo-relative paths; `app/Domain/` is retired and exists in neither project.
-
----
+**Search:** Graphify first (`query`, then `explain` on the nodes it names; [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search in this order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global. Use repo-relative paths. The graph is a map, not evidence: every Evidence line cites the source file.
 
 ## Phase 3 — Root Cause Analysis
 
 1. **List hypotheses** that could explain the symptom.
 2. **Test each one** against evidence, and record the result: Confirmed, Ruled out, or Unverified. Keep the ruled-out ones in the report so nobody re-checks them.
 3. **State the root cause** precisely: which code does what wrong, under which condition.
-4. **Write the cause chain**: trigger → intermediate effect → observed symptom. If a link has no evidence, the cause is not yet confirmed.
+4. **Write the cause chain**: trigger → intermediate effect → observed symptom. `graphify path` between the trigger and the symptom surface finds candidate links; each link's evidence is the source. If a link has no evidence, the cause is not yet confirmed.
 5. **Set the status and confidence**:
 
 | Root Cause Status | Confidence | When |
@@ -155,14 +113,12 @@ Search scope, in order: the affected module → a sibling module with the same p
 
 Finally, **check against the spec** when one exists: code deviating from the spec → fix the code; the spec itself wrong or silent → **Specification clarification required**.
 
----
-
 ## Phase 4 — Scope & Impact
 
 - **Affected files**: every file in the cause chain, with line numbers and its role (root cause, caller, symptom surface).
 - **Affected data**: tables and models, whether records are already wrong, and a **read-only** query that finds them.
 - **Affected endpoints and views**, and the **users, roles, or portals** that hit them.
-- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect ([system-awareness.md](../../rules/system-awareness.md)).
+- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect. `graphify affected "<root-cause node>" --depth 2` first, then verify each in source ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), [system-awareness.md](../../rules/conditional/system-awareness.md)).
 
 **Severity** (impact if left unfixed; the same scale as code-review):
 
@@ -173,71 +129,32 @@ Finally, **check against the spec** when one exists: code deviating from the spe
 | **MEDIUM** | A contained bug with a workaround, or a secondary flow broken. |
 | **LOW** | Cosmetic, or a rare edge case with negligible impact. |
 
----
-
 ## Phase 5 — Recommended Solution
 
-- **Fix the root cause, not the symptom**, with the **minimal safe change**. Prefer extending existing code: search for the helper, Query, Handler, or component that already does this before proposing anything new ([duplicate-prevention.md](../../rules/duplicate-prevention.md)).
-- Follow the project's patterns ([project-profile.md](../../rules/project-profile.md)); never propose an architecture change unless the existing pattern is itself the cause.
+- **Fix the root cause, not the symptom**, with the **minimal safe change**. Prefer extending existing code: search (Graphify first) for the helper, Query, Handler, or component that already does this before proposing anything new ([system-awareness.md §4](../../rules/conditional/system-awareness.md#4-no-duplicate-logic)).
+- Follow the project's existing patterns (the router's rules for the layer the fix touches); never propose an architecture change unless the existing pattern is itself the cause.
 - List the exact changes per file, and why this approach.
 - Record the alternatives considered and why each was not chosen, briefly. One recommendation, not an option menu.
 - If data is already wrong, describe the **data correction** (script or steps) for a person to review and run. Never run it.
-
----
 
 ## Phase 6 — Risk Assessment
 
 For the recommended fix: regression risk, data / migration risk, deployment concerns (order, config, queues, cache), and rollback. Rate each Low / Medium / High with its mitigation.
 
----
-
 ## Phase 7 — Fix Plan
 
 A dependency-ordered checklist (`- [ ]`) of the changes, each naming its file, plus an effort estimate and a verification checklist: the automated checks the project actually has, the reproduction steps from Phase 1 now producing the expected behavior, and a regression check on each dependency. `/webkit-fix` ticks this plan as it applies it.
 
----
-
 ## Phase 8 — Write the Report
 
-Fill the template [.agents/template/investigation-report.md](../../template/investigation-report.md). Follow its exact structure: no custom format, no added, removed, renamed, or reordered sections. Follow the fill rules in its header comment, then delete every guide comment except the `<!-- Run history -->` marker. §9 Resolution starts as "Open — not fixed yet."; `/webkit-fix` fills it.
+Fill [investigation-report.md](../../template/investigation-report.md) per protocol §3, and persist it per protocol §4 as **`investigation.md`** (`<kind>` = `investigation` in `.agents/reports/` names). Skill-specific:
 
-### Persist the report (MANDATORY)
-
-**Step 1 — Resolve the project folder.** Restate the Phase 0 answer as the project's lower-case folder name under `.agents/specs/`. Ticket numbers are per project.
-
-**Step 2 — Reuse or allocate the ticket.** This skill starts bug work, so it may allocate ([ticket-numbering.md](../../rules/ticket-numbering.md) §2):
-
-1. **The input names a `T#####` ticket, or you are on a `T#####` branch** → write there. A defect found while implementing a feature belongs to that feature's ticket.
-2. **An existing ticket already covers this issue** → update its `investigation.md` in place:
-
-   ```bash
-   grep -ril '<issue|module|route|table>' ".agents/specs/$project" --include='*.md' 2>/dev/null
-   ```
-
-3. **An `F####` ticket** (the remote's branch convention) → analyze its branch without checking it out ([ticket-numbering.md §8](../../rules/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch), Steps 1–4). It normally has no ticket folder, so write to `.agents/reports/<scope>-investigation-<YYYYMMDD>.md` and name the branch in the Metadata.
-4. **Nothing matches** → allocate the next number in that project. Scan the disk; never guess:
-
-   ```bash
-   project="<project>"   # the folder name resolved in Step 1
-
-   max=$(find ".agents/specs/$project" -maxdepth 1 -type d -name 'T[0-9][0-9][0-9][0-9][0-9]' 2>/dev/null \
-         | sed 's#.*/T##' | sort -n | tail -1)
-   next=$(printf 'T%05d' $(( ${max:-0} + 1 )))
-   mkdir -p ".agents/specs/$project/$next"   # claim it before writing anything
-   echo "$project/$next"
-   ```
-
-   Always `max + 1`, never the first free gap. A bug ticket with no spec is normal.
-
-**Step 3 — Write the file.**
-
-- Write to `.agents/specs/<project>/<ticket>/investigation.md`: exactly that filename.
-- One issue per ticket. A second, unrelated defect is listed under Other Findings and gets its own ticket, never a second report in this folder.
-- Re-investigating **updates the file in place**. Before overwriting, append the previous run's **Investigation Run** value with its date and status (e.g. `- v1 — 2026-10-08 — initial — ⚠ PROBABLE ROOT CAUSE`) to the list under `<!-- Run history -->`. Then increment the Metadata **Investigation Run** row, set **Investigation Date** to today, and write one line on what changed.
-- **Create no branch.** This skill writes no application code; the `T#####` branch appears when `/webkit-fix` picks the ticket up.
-- State the ticket number in your closing message, so the user can hand that one token to the next skill.
-
----
+- **Where:** the Phase 0 ticket's folder. An `F####` ticket with no ticket folder → `.agents/reports/<scope>-investigation-<YYYYMMDD>.md`, with the branch named in the Metadata ([ticket-numbering.md §8.4](../../rules/conditional/ticket-numbering.md#84-where-the-report-goes)).
+- **One issue per ticket.** A second, unrelated defect is listed under Other Findings and gets its own ticket, never a second report in this folder.
+- **Re-run** updates the file in place (protocol §4): the run row is **Investigation Run**, its date **Investigation Date**.
+- **§9 Resolution** starts as "Open — not fixed yet."; `/webkit-fix` fills it.
+- **Create no branch** ([ticket-numbering.md §6](../../rules/conditional/ticket-numbering.md#6-the-branch-is-the-ticket)). This skill writes no application code; the `T#####` branch appears when `/webkit-fix` picks the ticket up.
+- End per protocol §7, stating the ticket number so the user can hand that one token to the next skill.
 
 ## Anti-Patterns
 
@@ -245,14 +162,7 @@ Fill the template [.agents/template/investigation-report.md](../../template/inve
 | --- | --- |
 | Naming a cause without evidence | `/webkit-fix` then fixes a guess, and the bug stays. |
 | Fixing the symptom (a null check in the view) | The cause keeps producing bad data elsewhere. |
-| Dropping ruled-out hypotheses from the report | The next person re-investigates them from scratch. |
-| Guessing a fix when the root cause is not found | Report ❌ ROOT CAUSE NOT FOUND and what is needed next. |
-| Bundling unrelated problems into one fix | One issue per ticket; list the rest under Other Findings. |
-| Planning a feature inside an investigation | That is `/webkit-specify`'s job. |
 | Editing code or running a data fix "to check" | The investigation becomes a change nobody reviewed. |
-| Citing the other project's conventions | A correct pattern in one project is a defect in the other. |
-
----
 
 ## Follow-up Commands
 

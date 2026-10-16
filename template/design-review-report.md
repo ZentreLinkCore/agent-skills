@@ -3,25 +3,16 @@
 <!--
 TEMPLATE: design-review-report (used by /webkit-design-review)
 
-Fill rules. Delete this comment and every other guide comment from the finished report — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished report contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". A severity with no findings keeps its
-   heading and says "None."
-4. Every finding names what the user actually sees and the authority it breaks (ui-design.md rule, theme token
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3.
+1. Every finding names what the user actually sees and the authority it breaks (ui-design.md §n, theme token
    with file:line, WCAG AA, or "inferred from N sibling files"). No taste, no "feels dated".
-5. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity into
+2. Finding numbers are unique across CRITICAL, HIGH, MEDIUM, and LOW (#1, #2, … continuing from one severity into
    the next), so "Finding #3" always names one issue.
-6. Fit findings and Modern Enhancement Ideas never mix. Ideas are optional and never change the verdict.
-7. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
+3. Fit findings and Modern Enhancement Ideas never mix. Ideas are optional and never change the verdict.
+4. Every CRITICAL, HIGH, MEDIUM, and LOW finding ends with "- **Resolution:** Open". /webkit-fix replaces that line
    when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
    and recomputes the verdict, the Final Recommendation and the Review Run row as a fix pass (vN.k). See
    ticket-numbering.md §5 "Fix pass".
-
-The reviewer must NOT edit code or theme files, update specs, request new features, or restart planning.
-If a visual problem can only be resolved by changing a requirement, record it under INFO as
-"Specification clarification required: <what and why>".
 -->
 
 ## Metadata
@@ -35,7 +26,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 | Project | {{project}} — resolved via {{evidence, e.g. "vue + pinia in package.json"}} |
 | Portal | {{portal, or "N/A — project has no portals"}} |
 | Scope | {{path or diff}} — {{n}} files |
-| Design Sources Read | {{`.agents/rules/ui-design.md`, `resources/css/theme.css:<lines>`, …}} |
+| Design Sources Read | {{`.agents/rules/conditional/ui-design.md`, `resources/css/theme.css:<lines>`, …}} |
 | Reviewer Role | Senior Designer Review |
 | Review Date | {{YYYY-MM-DD}} |
 | Review Run | v{{N}} — {{what changed since the previous run, or "initial"}} |
@@ -75,7 +66,7 @@ If a visual problem can only be resolved by changing a requirement, record it un
 - **Line:** {{42}}
 - **Issue:** {{what is wrong}}
 - **What the User Sees:** {{the visible symptom, in which mode / at which breakpoint / in which portal}}
-- **Authority:** {{ui-design.md rule · theme.css:NN · WCAG AA · inferred from N siblings}}
+- **Authority:** {{ui-design.md §n · theme.css:NN · WCAG AA · inferred from N siblings}}
 - **Recommended Fix:** `{{exact before}}` → `{{exact after}}`
 - **Resolution:** Open
 

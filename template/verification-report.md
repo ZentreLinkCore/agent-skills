@@ -3,32 +3,15 @@
 <!--
 TEMPLATE: verification-report (used by /webkit-verify)
 
-Fill rules. Delete this comment and every other guide comment from the finished report — except the
-"Run history" marker at the bottom, which stays.
-1. Follow this structure exactly. Do not create a custom format, add sections, remove sections, or reorder them.
-2. Replace every {{PLACEHOLDER}}. A finished report contains no "{{".
-3. Never leave a field blank. If it does not apply, write "N/A — <reason>". A finding category with no entries
-   keeps its heading and says "None."
-4. Only actual issues, each with evidence: file:line, command output, or the code path traced. No opinions.
-5. Finding numbers are unique across BLOCKER and REQUIRED FIX (#1, #2, … continuing from one category into the
+Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-specific:
+1. Only actual issues, each with evidence: file:line, command output, or the code path traced. No opinions.
+2. Finding numbers are unique across BLOCKER and REQUIRED FIX (#1, #2, … continuing from one category into the
    next), so "Finding #3" always names one issue.
-6. Every FAIL in §2, §4, and §5 names the finding in §3 that explains it.
-7. Every BLOCKER, REQUIRED FIX, and IMPROVEMENT ends with "- **Resolution:** Open". /webkit-fix replaces that line
+3. Every FAIL in §2, §4, and §5 names the finding in §3 that explains it.
+4. Every BLOCKER, REQUIRED FIX, and IMPROVEMENT ends with "- **Resolution:** Open". /webkit-fix replaces that line
    when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
    and recomputes §1, §2, §4, §5, §8 and the Verification Run row as a fix pass (vN.k). See
-   ticket-numbering.md §5 "Fix pass".
-
-The verifier must NOT:
-- create new features or expand scope,
-- rewrite the specification or create a new spec version (its only spec edit is a Case 1 Minor correction,
-  applied after this report is written and recorded in §7),
-- suggest architecture changes without evidence.
-
-The verifier must:
-- reference the existing specification (section and FR / AC / EC id),
-- explain findings clearly,
-- separate bugs (BLOCKER, REQUIRED FIX) from improvements,
-- identify whether spec changes are truly required (§7).
+   .agents/rules/conditional/ticket-numbering.md §5 "Fix pass".
 -->
 
 ## Metadata
@@ -60,12 +43,9 @@ The verifier must:
 
 ### Overall Status
 
-<!-- Choose one, derived from §3:
-     any BLOCKER → ❌ FAILED · REQUIRED FIX but no BLOCKER → ⚠ PASS WITH FIXES · neither, and every AC MET
-     (or UNVERIFIED with its manual check in §6) → ✅ PASS.
-     If an AC could only be verified by hand (§6), write "✅ PASS (n AC pending manual check)".
-     After a /webkit-fix pass the status is recomputed from the findings still open and ends
-     "(after fix pass vN.k)". -->
+<!-- Choose one, from §3 (full rule: /webkit-verify Phase 5): any BLOCKER → ❌ FAILED · else any REQUIRED FIX
+     → ⚠ PASS WITH FIXES · else, every AC MET or UNVERIFIED with its §6 check → ✅ PASS, written
+     "✅ PASS (n AC pending manual check)" while any is UNVERIFIED. A /webkit-fix pass appends "(after fix pass vN.k)". -->
 
 {{✅ PASS | ⚠ PASS WITH FIXES | ❌ FAILED}}
 
@@ -208,12 +188,10 @@ The verifier must:
 
 ## 7. Specification Impact Decision
 
-<!-- Mandatory. Keep exactly one of the two options below and delete the other.
-     SPEC UPDATE REQUIRED only for:
-       Case 1 — specification error: the spec conflicts with an existing business rule, is impossible, or
-                contradicts itself → corrected in place with /webkit-specify (Minor, no new version);
-       Case 2 — approved requirement change: a stakeholder changed the requirement → new spec version (Major).
-     Bug fixes (missing validation, wrong API response, UI alignment, typo, query optimization) never change the spec. -->
+<!-- Mandatory. Keep exactly one of the two options below and delete the other (full rule: /webkit-verify Spec Update Rules).
+     SPEC UPDATE REQUIRED only for Case 1 (spec error: conflicts with a business rule, impossible, or self-contradictory
+     → corrected in place by /webkit-verify, Minor, no new version) or Case 2 (approved requirement change → new spec
+     version via /webkit-specify, Major). Bug fixes never change the spec. -->
 
 ### NO SPEC CHANGE REQUIRED
 
