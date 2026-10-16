@@ -44,6 +44,7 @@ Secondary tells: `<source-path>` (React) has `app/Models/Organization.php` and `
 - **No API Resources.** Return `response()->json(...)` inside `try/catch`; errors as `['message' => $e->getMessage()]` with a status code.
 - **Reuse before creating.** Before writing a component, hook, util, Query, or Handler, search for an existing one — using a path that exists and the *generic* name (`Badge`, not just `StatusBadge`). An empty result from a wrong path is not evidence of absence.
 - **Never invent** a column, route, model, or env key. Verify against `app/Models/`, `database/migrations/`, and `routes/api/`.
+- **Build-check only what changed.** Never run the full `npm run build` as a check (minutes, and a 6 GB heap on SubHRMS). `node .agents/scripts/check-changed.mjs` compiles just the changed files, in seconds. The full build runs only when the user asks, or when `vite.config.*`, `package.json`, the entry file, or global CSS changed: [`testing.md`](./.agents/rules/testing.md#frontend-build-check-changed-files-only).
 
 ## 4. Read only when the task touches it
 

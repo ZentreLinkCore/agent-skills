@@ -178,7 +178,7 @@ After each fix, verify:
 Run the checks the project actually has:
 
 - PHP: `php -l <file>`, the regression tests you added and the affected area's existing tests (`php artisan test --filter <Name>`; feature tests on a disposable database per [testing.md](../../rules/testing.md#backend-phpunit)), `php artisan route:list --path=api` after a route change.
-- Frontend: the regression tests you added and the area's existing tests (`npm test -- <path>`), plus `npm run typecheck` and `npm run build` where defined.
+- Frontend: the regression tests you added and the area's existing tests (`npm test -- <path>`), plus `npm run typecheck` where defined and `node .agents/scripts/check-changed.mjs` (only the changed files; never the full `npm run build`: [testing.md](../../rules/testing.md#frontend-build-check-changed-files-only)).
 - The finding's own scenario (the report's failure scenario or reproduction steps) now produces the expected result. Its regression test is this check; a scenario that cannot be a test (device-only) is traced instead.
 
 A check that fails because of your change is fixed before moving on; a check that was already failing before your change is noted, not fixed.

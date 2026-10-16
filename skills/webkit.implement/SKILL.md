@@ -268,7 +268,7 @@ Before finishing, verify:
 - API responses, including error responses, are handled correctly.
 - Loading, error, and empty states exist.
 - Permission handling works for every role in the spec, including the roles that must be rejected.
-- Edited PHP files parse (`php -l <file>`); the frontend typechecks / builds where the project has those scripts.
+- Edited PHP files parse (`php -l <file>`); the frontend typechecks where the project has the script, and `node .agents/scripts/check-changed.mjs` is clean (only the changed files; never the full `npm run build`: [testing.md](../../rules/testing.md#frontend-build-check-changed-files-only)).
 - **Every test added in this run passes**, together with the existing tests of the areas touched: `php artisan test --testsuite=Unit`, the feature tests on a disposable database ([testing.md](../../rules/testing.md#backend-phpunit)), and each frontend app's `npm test`. A test that could not run leaves its task unticked, named in Notes with the command that runs it.
 - Walk the §10 Acceptance Criteria, using the plan's §8 Acceptance Walk for how each is exercised: check each row your code owns literally (status code, message, value), especially the rejection rows. Name any row you could not exercise and why.
 - Every `plan.md` task is ticked, or named in the summary's Notes with the reason it is not.

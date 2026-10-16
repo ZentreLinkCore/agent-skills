@@ -138,7 +138,7 @@ Ask:
 Before changing anything, run the checks the project actually has and record the results:
 
 - PHP: `php -l <file>` for files you will touch; `php artisan test --filter <area>` (PHPUnit exists in both projects; feature tests on a disposable database per [testing.md](../../rules/testing.md#backend-phpunit)).
-- Frontend: `npm test -- <path>`, `npm run typecheck`, `npm run build` where defined.
+- Frontend: `npm test -- <path>` and `npm run typecheck` where defined; after each move, `node .agents/scripts/check-changed.mjs` (only the changed files; never the full `npm run build`: [testing.md](../../rules/testing.md#frontend-build-check-changed-files-only)).
 - **No test covers the code you will move → write one now** (a characterization test: it pins today's behavior, including its odd cases), per [testing.md](../../rules/testing.md#every-code-change-ships-with-a-test-mandatory): a unit test for pure logic, a feature test for an endpoint, Handler, or Query, a component test for a frontend piece (a frontend app with no runner gets one set up first). It must pass **before** the first move; it is the proof the refactor changed nothing. A refactor of untested code proved only by typecheck is not proved.
 - **API payloads**: for every endpoint whose code you will touch, capture the response shape now (e.g. `php artisan tinker --execute="..."` against a read-only call, or the existing test's assertion).
 

@@ -133,7 +133,7 @@ Reproduce before theorizing. Use the cheapest reliable evidence first:
 | Code path | Trace from the route (`php artisan route:list --path=api/...`) → controller → Query / Handler / Action → model, and from the page → state → api layer |
 | Data | Read-only queries (`SELECT` only), `php artisan tinker --execute="..."` for read-only inspection |
 | History | `git log --oneline -- <file>`, `git log -S '<code>'`, `git blame -L <a>,<b> <file>` to find when and why the behavior changed |
-| Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `npm run build`: only the checks the project actually defines (not every project has a JS test runner) |
+| Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `node .agents/scripts/check-changed.mjs <files>`: only the checks the project actually defines (not every project has a JS test runner). The full `npm run build` only when the build itself is what is broken ([testing.md](../../rules/testing.md#frontend-build-check-changed-files-only)) |
 
 Search scope, in order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global ([context-loading.md](../../rules/context-loading.md)). Use repo-relative paths; `app/Domain/` is retired and exists in neither project.
 

@@ -65,7 +65,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 | Database conventions | {{FK style; relationship column style; soft-delete style}} |
 | Design system | `{{components directory / barrel}}` |
 | Reference implementation | `{{path to the closest sibling feature to copy the shape of}}` |
-| Checks | `{{lint / typecheck / build commands}}` |
+| Checks | `{{lint / typecheck commands}}` · build: `node .agents/scripts/check-changed.mjs` (changed files only; never the full `npm run build`, per testing.md) |
 | Tests | `{{backend: unit and feature test commands, and how feature tests get a disposable database}}` · `{{frontend: test command, or "no runner — set up in TASK-01"}}` |
 
 ---
@@ -125,7 +125,7 @@ Fill rules. Delete this comment and every other guide comment from the finished 
 ## 6. Phase 3 — Frontend Integration
 
 - **Goal:** {{goal}}
-- **Exit check:** {{e.g. every task's frontend test green; typecheck / build passes; the page loads and calls the endpoint}}
+- **Exit check:** {{e.g. every task's frontend test green; typecheck and `check-changed.mjs` pass; the page loads and calls the endpoint}}
 
 - [ ] **TASK-03 — {{title}}**
   - **Files:** `{{path}}` ({{Create / Modify}})
