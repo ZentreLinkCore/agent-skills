@@ -27,7 +27,7 @@ Shared steps (gates, ticket resolution, templates, `task.md`, code-writing runs)
 1. **`task.md`** (read `summary.md` first if it exists): ticked tasks, what the ticket waits on, the next step.
 2. **`context.md` and `touched-files.md`**, if `/webkit-context` wrote them: the verified files to modify, create, and reuse. **Respect the Do NOT touch list**: a task that needs a listed file is a [Specification clarification required](#if-the-specification-is-incomplete) stop, never a silent edit. `dependency-map.md` only when a task changes a node with callers.
 3. **`plan.md`**: Metadata, §1 Technical Context, §2 Reuse Map, and the current phase's unticked tasks; §8–§9 at Phase 6. **`spec.md`**: Metadata and §15 (the Phase 1 gates), then only the sections a task cites ([what binds](#phase-1--load-context)); §10 at Phase 6. No `plan.md`: the spec is the plan, so read it in full.
-4. **The task's files**, at the lines it changes, and the plan's §1 reference implementation. Reuse searches: Graphify first ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then the [Phase 2](#phase-2--analyze-existing-code) order.
+4. **The task's files**, at the lines it changes, and the plan's §1 reference implementation. Reuse searches: Graphify first ([code-search.md](../../rules/conditional/code-search.md)), then the [Phase 2](#phase-2--analyze-existing-code) order.
 
 Rules: the [router](../../rules/rule-router.md) rows for each task's layer, when that task starts; [versioning.md](../../rules/conditional/versioning.md) at Phase 7 only. Templates: [implementation-summary.md](../../template/implementation-summary.md) at output time; [task-tracker.md](../../template/task-tracker.md) only when `task.md` is missing. **Avoid:** the whole spec or every plan phase up front, whole modules or directories, other tickets, resolved findings in old reports, the whole blueprint, re-reading a rule already applied.
 
@@ -49,7 +49,7 @@ Per protocol §1: **state the resolved project in your first message**, and read
 > [!CAUTION]
 > **Do not create or edit a single application file until this is done.**
 
-Per protocol §1: a ticket or branch argument is fetched and analyzed first ([ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)), then the [Mandatory Branch Gate](../../rules/core/git-workflow.md#mandatory-branch-gate-for-implementing-skills) runs. This skill's own case: a legacy portal spec with no ticket branches as `feature/<domain>-<feature-kebab>` ([git-workflow.md](../../rules/core/git-workflow.md) Rule 1); say why.
+Per protocol §1: a ticket or branch argument is fetched and analyzed first ([ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)), then the [Mandatory Branch Gate](../../rules/conditional/branch-gate.md) runs. This skill's own case: a legacy portal spec with no ticket branches as `feature/<domain>-<feature-kebab>` ([git-workflow.md](../../rules/core/git-workflow.md) Rule 1); say why.
 
 ---
 
@@ -95,7 +95,7 @@ Older specs use other section names (Business Rules, Permissions, Non-Functional
 
 Search for reusable code before implementing: services, components, models, controllers, queries, actions, helpers, hooks, utilities, validation, middleware, and tables. For each need ask: *can this be reused? extended? can it replace duplicate logic?* Create only when nothing fits.
 
-**Code graph.** When `graphify-out/graph.json` exists, start each search with `graphify explain "<ExactName>" --all` (a class, method, composable, or component) to see where it lives and who uses it, and `graphify affected` before changing a shared class. Record the command in the Reuse Ledger's *Searched* column. It locates; the file proves: read the hit before deciding `REUSE` or `EXTEND`. A `CREATE` still needs a grep, because a node missing from a stale graph is not proof that nothing exists, and its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)) are grep-only. No graph → the targeted searches below.
+**Code graph.** When `graphify-out/graph.json` exists, start each search with `graphify explain "<ExactName>" --all` (a class, method, composable, or component) to see where it lives and who uses it, and `graphify affected` before changing a shared class. Record the command in the Reuse Ledger's *Searched* column. It locates; the file proves: read the hit before deciding `REUSE` or `EXTEND`. A `CREATE` still needs a grep, because a node missing from a stale graph is not proof that nothing exists, and its blind spots ([code-search.md](../../rules/conditional/code-search.md)) are grep-only. No graph → the targeted searches below.
 
 **Backend.** Run the [System Awareness](../../rules/conditional/system-awareness.md#2-the-scan) scan (models → migrations → routes → controllers → Query / Handler / Action classes). Existing model or table covers the data → reuse it, never a new migration. Existing controller or route covers the module → add a method, never a parallel controller or duplicate route.
 

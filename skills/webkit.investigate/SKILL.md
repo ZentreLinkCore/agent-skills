@@ -32,7 +32,7 @@ Useful in the description: the error message or log lines, steps to reproduce, t
 1. **`task.md`**, when the issue sits in a ticket that has one (read `summary.md` first if it exists). A new bug ticket has neither.
 2. **`context.md`** (if it exists): its `touched-files.md` is a starting point for the code path, and `dependency-map.md` (Chains, Callers That Must Keep Working) for Phase 4. Leads, not evidence.
 3. **`spec.md` only for expected behavior**: the sections covering the symptom, in Phase 1 and for the Phase 3 Specification Check. No `plan.md`. On a re-run, the previous `investigation.md`'s Metadata, status, and Investigation Trail, so ruled-out hypotheses are not re-checked. A code-review finding passed as input: only that finding.
-4. **Source, logs, data, and history** at the lines the evidence points to: Graphify first ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then the targeted search order in Phase 2.
+4. **Source, logs, data, and history** at the lines the evidence points to: Graphify first ([code-search.md](../../rules/conditional/code-search.md)), then the targeted search order in Phase 2.
 
 Rules: per the [router](../../rules/rule-router.md), for the layers the cause chain crosses. The template at Phase 8. **Avoid:** reading whole modules or whole log files (search the error text and timestamp), unrelated tickets' reports, all project documentation or the whole blueprint, re-reading rules.
 
@@ -95,7 +95,7 @@ Reproduce before theorizing. Use the cheapest reliable evidence first:
 | History | `git log --oneline -- <file>`, `git log -S '<code>'`, `git blame -L <a>,<b> <file>` to find when and why the behavior changed |
 | Tests and builds | `vendor/bin/phpunit --filter ...`, `npm run typecheck`, `node .agents/scripts/check-changed.mjs <files>`: only the checks the project actually defines (not every project has a JS test runner). The full `npm run build` only when the build itself is what is broken ([testing.md](../../rules/conditional/testing.md#frontend-build-check-changed-files-only)) |
 
-**Search:** Graphify first (`explain "<ExactName>" --all` on the classes and methods the symptom names; `query --seed` only to find a label; [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search in this order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global. Use repo-relative paths. The graph is a map, not evidence: every Evidence line cites the source file.
+**Search:** Graphify first (`explain "<ExactName>" --all` on the classes and methods the symptom names; `query --seed` only to find a label; [code-search.md](../../rules/conditional/code-search.md)), then targeted search in this order: the affected module → a sibling module with the same pattern → shared helpers, layouts, and traits → the wider project, only when the issue is global. Use repo-relative paths. The graph is a map, not evidence: every Evidence line cites the source file.
 
 ## Phase 3 — Root Cause Analysis
 
@@ -118,7 +118,7 @@ Finally, **check against the spec** when one exists: code deviating from the spe
 - **Affected files**: every file in the cause chain, with line numbers and its role (root cause, caller, symptom surface).
 - **Affected data**: tables and models, whether records are already wrong, and a **read-only** query that finds them.
 - **Affected endpoints and views**, and the **users, roles, or portals** that hit them.
-- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect. `graphify explain "<ExactName>" --all` on the root-cause method lists its callers, `graphify affected` widens that, and `graphify path "<A>" "<B>"` traces a call chain; confirm each in the file before citing it as evidence, and grep its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), [system-awareness.md](../../rules/conditional/system-awareness.md)).
+- **Dependencies**: callers, jobs, reports, and modules that a change at the root cause would also affect. `graphify explain "<ExactName>" --all` on the root-cause method lists its callers, `graphify affected` widens that, and `graphify path "<A>" "<B>"` traces a call chain; confirm each in the file before citing it as evidence, and grep its blind spots ([code-search.md](../../rules/conditional/code-search.md), [system-awareness.md](../../rules/conditional/system-awareness.md)).
 
 **Severity** (impact if left unfixed; the same scale as code-review):
 

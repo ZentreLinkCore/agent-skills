@@ -33,7 +33,7 @@ Shared steps (gates, ticket resolution, scan, tests, version step, templates, `t
 1. **`task.md`**: the source report's status and open items, the Fix row, **Next step**. Read `summary.md` first if it exists.
 2. **`context.md`** (if it exists), plus `touched-files.md` to see whether a cited file is in the ticket's intended scope and `dependency-map.md` for the callers of a construct a fix changes.
 3. **The source report, in full** (Phase 1): it is the source of truth for what to fix. `spec.md` only for the sections covering what the fixes change (a fix must not contradict them; a verify finding names its section), then §14, §15 Open Questions, §16, and the Metadata Status in Phase 8. `plan.md` only in Phase 8: the tasks a closed finding completes, and Plan Status.
-4. **Source**: the cited files at the cited lines; the callers of each changed construct for the regression check (Graphify `affected` first, per [context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), then targeted `rg`); the area's existing tests. The source file is the evidence, never the graph.
+4. **Source**: the cited files at the cited lines; the callers of each changed construct for the regression check (Graphify `affected` first, per [code-search.md](../../rules/conditional/code-search.md), then targeted `rg`); the area's existing tests. The source file is the evidence, never the graph.
 
 Rules: the router's [By files in a diff](../../rules/rule-router.md#by-files-in-a-diff-reviews-fixes) rows for the files the fixes touch; [versioning.md](../../rules/conditional/versioning.md) only at Phase 7. Open [fix-summary.md](../../template/fix-summary.md) at the end. **Avoid:** the ticket's other reports beyond their status and open CRITICAL / HIGH (Phase 8 Step 5); code the report does not cite, beyond the callers the regression check needs; unrelated modules and tickets; the whole blueprint.
 
@@ -51,7 +51,7 @@ Never invent additional work. A finding the report does not contain is not a fix
 
 ## Phase 0 — Gates (BLOCKING)
 
-Run protocol §1 **before editing any file**: the project gate, the ticket, the ticket argument's branch fetched and analyzed, then checked out ([ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)), and the [Mandatory Branch Gate](../../rules/core/git-workflow.md#mandatory-branch-gate-for-implementing-skills). Fix-specific:
+Run protocol §1 **before editing any file**: the project gate, the ticket, the ticket argument's branch fetched and analyzed, then checked out ([ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch)), and the [Mandatory Branch Gate](../../rules/conditional/branch-gate.md). Fix-specific:
 
 - Fixes for a ticket's findings belong **on that ticket's existing branch** (`T#####`): continue there; never open a separate `bugfix/` branch for them.
 - Fix work with no ticket branches as `bugfix/<domain>-<slug>`, or `hotfix/…` for a critical production patch.
@@ -81,7 +81,7 @@ Build the list from the report only, using the table in [Core Principle](#core-p
 
 ## Phase 3 — Validate Existing Code
 
-**Callers first.** Before editing a method, class, composable, or component, list who calls it: `graphify explain "<ExactName>" --all` when `graphify-out/graph.json` exists, otherwise grep. Read each caller the fix could change (signature, return shape, side effect); those callers are the regression scope of Phase 5. The graph only locates, and its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)) are grep-only.
+**Callers first.** Before editing a method, class, composable, or component, list who calls it: `graphify explain "<ExactName>" --all` when `graphify-out/graph.json` exists, otherwise grep. Read each caller the fix could change (signature, return shape, side effect); those callers are the regression scope of Phase 5. The graph only locates, and its blind spots ([code-search.md](../../rules/conditional/code-search.md)) are grep-only.
 
 Before modifying code, for each fix (Graphify first, then targeted search):
 

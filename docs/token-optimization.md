@@ -8,12 +8,12 @@ Sizes are measured from git (`origin/main` before, this branch after), line endi
 
 | Area | Before | After |
 | :--- | :--- | :--- |
-| **Always-on rules** (Claude Code, every turn) | `claude-adapter/rules/` held a second, full copy of the rule library (22 files). A fresh install loaded all of it on every turn. | Six files, **symlinked** from their single canonical copy: [rules/core/](../rules/core/) (project gate, authority boundary, git workflow, security baseline), [context-budget.md](../rules/context-budget.md), [rule-router.md](../rules/rule-router.md). The adapter holds no rules. |
+| **Always-on rules** (Claude Code, every turn) | `claude-adapter/rules/` held a second, full copy of the rule library (22 files). A fresh install loaded all of it on every turn. | Six files, **symlinked** from their single canonical copy: [rules/core/](../rules/core/) (project gate, authority boundary, git workflow, security baseline), [context-budget.md](../rules/context-budget.md), [rule-router.md](../rules/rule-router.md). The adapter holds no rules. Each holds only its rules; the procedures they used to carry (the branch gate, the ownership table, the Graphify commands) are conditional files that skills open. |
 | **Rule layout** | 22 flat files, each in a six-heading template (Purpose / Scope / Responsibilities / Rules / Best Practices / AI Behavior) that restated itself; "search before create" in four files; one 27 KB profile covering every project. | [core/](../rules/core/) (always on) and [conditional/](../rules/conditional/) (loaded by the router): overlapping rules merged, the profile split by topic, boilerplate dropped. Old paths are one-line redirects. |
 | **Rule routing** | Each skill carried its own "load these rules" table. | One [rule router](../rules/rule-router.md): by task, and by the paths in a diff. |
 | **Shared skill steps** | Every skill restated the authority boundary, a workflow diagram, the project gate, the branch gate, ticket resolution (one copied the allocation script verbatim), template fill rules, report persistence with run history, `task.md` upkeep, and versioning. | Written once in [skill-protocol.md](../rules/conditional/skill-protocol.md); each skill keeps only what is specific to its stage. |
 | **Context priority** | Implicit; skills read the spec, plan, and reports in full. | Every `SKILL.md` has a **Context Loading Priority** section: `task.md` (and `summary.md` first) → `context.md` → only the spec / plan sections the step needs → only the source files named. |
-| **Finding code** | Graphify was optional (a root `AGENTS.md` section and a line in six skills); otherwise agents grepped and listed directories. | **Graphify recommended first**: `explain --all` / `path` / `affected` on exact names → the exact file at its line → verify in source; `query` only to discover a label; the graph's blind spots (route → method, API strings, columns, global components) stay on grep; skills that edit code refresh it with `graphify update .`. Then targeted search in a fixed order ([context-budget.md §2](../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)). |
+| **Finding code** | Graphify was optional (a root `AGENTS.md` section and a line in six skills); otherwise agents grepped and listed directories. | **Graphify recommended first**: `explain --all` / `path` / `affected` on exact names → the exact file at its line → verify in source; `query` only to discover a label; the graph's blind spots (route → method, API strings, columns, global components) stay on grep; skills that edit code refresh it with `graphify update .`. Then targeted search in a fixed order ([code-search.md](../rules/conditional/code-search.md)). |
 | **Ticket memory** | Reports accumulated; a later session re-read them. | New [/webkit-summarize](../skills/webkit.summarize/SKILL.md) compresses a ticket into `summary.md`, which later sessions read **instead of** the old reports. |
 | **Before the spec** | `/webkit-specify` scanned the codebase itself, and `/webkit-implement` re-scanned it. | New [/webkit-context](../skills/webkit.context/SKILL.md) writes `context.md`, `dependency-map.md`, and `touched-files.md` (modify / create / reuse / **do not touch**) once; specify and implement start from it. |
 | **Templates** | All 13 headers repeated the same generic fill rules, and several repeated their skill's scope rules. | Generic rules live in protocol §3; each template keeps only its own field rules. Four new templates for the new ticket files. |
@@ -24,17 +24,17 @@ Sizes are measured from git (`origin/main` before, this branch after), line endi
 
 | Old file (now a redirect) | Canonical home |
 | :--- | :--- |
-| `authority-boundary.md`, `git-workflow.md` | `core/` (same names) |
+| `authority-boundary.md`, `git-workflow.md` | `core/` (same names). The branch gate moved to `conditional/branch-gate.md`, the ownership table to `conditional/skill-protocol.md` §9 |
 | `security.md` | `core/security-baseline.md` |
 | `project-profile.md` | `core/project-gate.md` (detection, differences) · `conditional/backend.md` (Query / Handler / Action, controllers, routes, portals, (React) known drift) · `conditional/database.md` · `conditional/frontend-vue.md` · `conditional/frontend-react.md` |
-| `context-loading.md`, `execution-strategy.md` | `context-budget.md` |
+| `context-loading.md`, `execution-strategy.md` | `context-budget.md` (the search procedure: `conditional/code-search.md`) |
 | `system-awareness.md`, `anti-hallucination.md`, `duplicate-prevention.md` | `conditional/system-awareness.md` |
 | `coding-standards.md`, `naming-convention.md`, `incremental-generation.md`, `project-structure.md`, `documentation.md` | `conditional/code-quality.md` |
 | `laravel-standards.md` | `conditional/backend.md` + `conditional/database.md` |
 | `vue-standards.md` | `conditional/frontend-vue.md` (shared rules in `conditional/frontend.md`) |
 | `hrms-rules.md` | `conditional/payroll.md` |
 | `ui-design.md`, `testing.md`, `performance.md`, `ticket-numbering.md`, `versioning.md` | `conditional/` (same names; testing and ticket-numbering anchors unchanged) |
-| (new) | `conditional/mobile.md`, `conditional/realtime.md`, `conditional/frontend.md`, `conditional/skill-protocol.md`, `rule-router.md` |
+| (new) | `conditional/mobile.md`, `conditional/realtime.md`, `conditional/frontend.md`, `conditional/skill-protocol.md`, `conditional/branch-gate.md`, `conditional/code-search.md`, `rule-router.md` |
 
 The redirects exist because hundreds of historical specs and reports, and older installs, link to the old paths. Nothing loads them automatically; delete them once every installed copy is refreshed and no document you still use links to them.
 
@@ -43,7 +43,7 @@ The redirects exist because hundreds of historical specs and reports, and older 
 `main` gained two features during this pass; both are kept, in their new homes:
 
 - **Changed-files build check** (`scripts/check-changed.mjs`; never the full `npm run build` as a routine check): [testing.md](../rules/conditional/testing.md#frontend-build-check-changed-files-only), the always-on [project gate §4](../rules/core/project-gate.md#4-working-discipline), protocol §6, the implementation-plan template, and each skill's check step.
-- **Graphify guidance from use** (exact names, `explain --all`, blind spots, staleness, `graphify update .`, never commit `graphify-out/`): moved from the root `AGENTS.md` into [context-budget.md §2](../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search) and [system-awareness.md §2](../rules/conditional/system-awareness.md#2-the-scan), plus the caller and blast-radius steps in code-review, fix, implement, investigate, refactor, and specify. Prose `query` is demoted to discovering a label, as that guidance found.
+- **Graphify guidance from use** (exact names, `explain --all`, blind spots, staleness, `graphify update .`, never commit `graphify-out/`): moved from the root `AGENTS.md` into [code-search.md](../rules/conditional/code-search.md) and [system-awareness.md §2](../rules/conditional/system-awareness.md#2-the-scan), plus the caller and blast-radius steps in code-review, fix, implement, investigate, refactor, and specify. Prose `query` is demoted to discovering a label, as that guidance found.
 - **Browser checks** (Playwright or any browser tool) in verify and design-review, using the dev login documented in the project's own root `AGENTS.md`.
 
 ### Corrections made while consolidating
@@ -71,7 +71,7 @@ resume:      re-read spec, plan, and every report in the ticket folder
 **After**:
 
 ```text
-every turn:  always-on set (6 files, ~6.1k tokens): gate · authority · git · security · budget · router
+every turn:  always-on set (6 files, ~2.7k tokens): gate · authority · git · security · budget · router
 skill run:   SKILL.md (shared steps removed) + skill-protocol.md
              → ticket memory: summary.md (if any) → task.md → context.md / touched-files.md
              → only the spec / plan sections the step needs
@@ -99,17 +99,17 @@ flowchart LR
 
 | What is loaded every turn | Before | After |
 | :--- | :--- | :--- |
-| Rules, fresh install of `main` (the full copy in `claude-adapter/rules/`) | 136,659 B ≈ 34,200 tokens | 24,230 B ≈ **6,100 tokens** (−82%) |
-| Rules, the older pointer-stub install hrms runs today | 10,953 B ≈ 2,700 tokens | 24,230 B ≈ 6,100 tokens (+3,400: core rules are now global by design, see §5) |
+| Rules, fresh install of the original kit (the full copy in `claude-adapter/rules/`) | 136,659 B ≈ 34,200 tokens | 10,721 B ≈ **2,700 tokens** (−92%) |
+| Rules, the older pointer-stub install hrms used to run | 10,953 B ≈ 2,700 tokens | 10,721 B ≈ 2,700 tokens (about the same, with the core rules now global) |
 | Skill `description:` frontmatter (command discovery) | 6,008 B ≈ 1,500 tokens | 7,330 B ≈ 1,800 tokens (two new skills) |
 
-**Per skill run.** Files the skill directs the agent to read, on top of the always-on set. Before = the `SKILL.md`, `project-profile.md` and `ticket-numbering.md` it pointed to, its template, and its rule table's picks. After = the `SKILL.md`, `skill-protocol.md`, the ticket-numbering sections it names, its template, and the router's picks:
+**Per skill run.** The always-on set **plus** the files the skill directs the agent to read, so content moved between the two is counted where it is paid. Before = the original kit: the `SKILL.md`, `project-profile.md` and `ticket-numbering.md` it pointed to, its template, and its rule table's picks. After = the `SKILL.md`, `skill-protocol.md`, the ticket-numbering sections it names, its template, the router's picks, and `code-search.md` / `branch-gate.md` where the run needs them:
 
 | Run | Before | After | Change |
 | :--- | :--- | :--- | :--- |
-| `/webkit-code-review T#####`, (Vue) full-stack diff | 111,414 B ≈ 27,900 tokens | 66,422 B ≈ 16,600 tokens | −40% |
-| `/webkit-implement T#####`, (Vue) full-stack ticket | 135,586 B ≈ 33,900 tokens | 93,112 B ≈ 23,300 tokens | −31% |
-| `/webkit-fix T##### --code-review`, (Vue) backend finding | 122,319 B ≈ 30,600 tokens | 83,737 B ≈ 20,900 tokens | −32% |
+| `/webkit-code-review T#####`, (Vue) full-stack diff | ≈ 62,000 tokens | ≈ 20,900 tokens | −66% |
+| `/webkit-implement T#####`, (Vue) full-stack ticket | ≈ 68,100 tokens | ≈ 28,200 tokens | −59% |
+| `/webkit-fix T##### --code-review`, (Vue) backend finding | ≈ 64,700 tokens | ≈ 25,900 tokens | −60% |
 
 The saving comes mostly from what a run no longer has to open: the 27 KB two-project profile is now five topic files the router picks from, and the shared steps a run needs from the 30 KB ticket rule are in the 9.5 KB protocol, with the rest read by section.
 
@@ -169,8 +169,8 @@ Graphify bounds a search by `--budget`. For the hrms notification feature, `grap
 
 ## 5. Rolling it out, and what is still open
 
-- **Existing installs must re-run `bash .agents/setup.sh`.** In hrms, `.claude/rules/` still holds the older pointer stubs (they now resolve through the redirects), and `.claude/skills/` is a real directory with an older skill set (`webkit.spec`, `webkit.frontend-implement`, `webkit.backend-implement`) that `setup.sh` will not replace while those folders exist only there. Decide whether to keep or remove them before re-running it.
-- **The always-on set grew compared with the older pointer-stub install** (≈ 2,700 → ≈ 6,100 tokens/turn), because the git workflow, authority boundary, and security baseline are now global by design. It is ≈ 82% smaller than a fresh install of `main`, and as a stable prefix it is cached. If a smaller per-turn cost matters more, the branch-gate procedure is the first candidate to move out of `core/`.
+- **Existing installs must re-run `bash .agents/setup.sh`** after each kit update; Windows installs hold copies, not symlinks. In hrms, `.claude/rules/` still holds the older pointer stubs (they now resolve through the redirects), and `.claude/skills/` is a real directory with an older skill set (`webkit.spec`, `webkit.frontend-implement`, `webkit.backend-implement`) that `setup.sh` will not replace while those folders exist only there. Decide whether to keep or remove them before re-running it.
+- **The always-on set is as small as the older pointer-stub install** (≈ 2,700 tokens/turn) while the git workflow, authority boundary, and security baseline stay global: each core file holds only its rules, and the procedures they carried live in `conditional/branch-gate.md`, `skill-protocol.md` §9, and `conditional/code-search.md`, read only by the runs that need them. It is ≈ 92% smaller than a fresh install of the original kit.
 - **`ticket-numbering.md` is still the largest rule** (≈ 31 KB). Its §8 branch-resolution procedure is most of it; skills now read sections, not the file, but splitting §8 out would make that structural.
 - **The largest skills** (`document` ≈ 30 KB, `migrate` ≈ 32 KB, `specify` ≈ 25 KB) are mostly skill-specific reference: mermaid worked examples, translation maps, "must hold" tables. Moving each phase's reference block into its own file, opened only when that phase runs, is the next structural saving.
 - **The (Expo) project has no recorded profile**, and (React) design tokens are not documented anywhere; both are discovered from sibling files for now.

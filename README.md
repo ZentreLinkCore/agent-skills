@@ -6,7 +6,7 @@ Rules, workflow commands, and document templates that make AI coding agents (Cla
 
 Three things, used together:
 
-- **Rules** ([rules/](./rules/)): what is always true in our codebases and how code must be written there. A small **core** set is loaded on every turn ([rules/core/](./rules/core/): the project gate, authority boundary, branch gate, security baseline), plus the [context budget](./rules/context-budget.md) and the [rule router](./rules/rule-router.md); everything else lives in [rules/conditional/](./rules/conditional/) (backend, database, frontend, mobile, realtime, payroll, testing, …) and is read only when the router says the task needs it.
+- **Rules** ([rules/](./rules/)): what is always true in our codebases and how code must be written there. A small **core** set is loaded on every turn ([rules/core/](./rules/core/): the project gate, authority boundary, git workflow, security baseline), plus the [context budget](./rules/context-budget.md) and the [rule router](./rules/rule-router.md); everything else lives in [rules/conditional/](./rules/conditional/) (backend, database, frontend, mobile, realtime, payroll, testing, …) and is read only when the router says the task needs it.
 - **Skills** ([skills/](./skills/)): twelve `/webkit-*` commands, one per stage of the work: context, specify, implement, verify, code-review, design-review, fix, investigate, refactor, document, migrate, summarize. Each one is a written procedure the agent follows step by step; the steps they all share are written once in [skill-protocol.md](./rules/conditional/skill-protocol.md).
 - **Templates** ([template/](./template/)): the fixed format of every document a skill writes (spec, plan, task tracker, reports, summaries), so every ticket's documents look the same and a later skill knows where to find each fact.
 
@@ -230,7 +230,7 @@ Nothing to type. When `graphify-out/graph.json` exists, the skills use it on the
 | `/webkit-refactor` | Find every caller before moving code; refreshes the graph at the end |
 | `/webkit-verify` | Find where each spec rule's code would live (the absence sweep) |
 
-The rule behind it is [context-budget.md §2](./rules/context-budget.md#2-find-code-graphify-first-then-targeted-search), part of the always-on set every agent loads. To make sure an agent uses it outside a skill, say so: "use graphify to find who calls `X` first".
+The rule behind it is [code-search.md](./rules/conditional/code-search.md), part of the always-on set every agent loads. To make sure an agent uses it outside a skill, say so: "use graphify to find who calls `X` first".
 
 ### Use it yourself
 

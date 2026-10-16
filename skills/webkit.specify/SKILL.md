@@ -31,7 +31,7 @@ Shared steps (gates, ticket resolution, templates, `task.md`) follow [skill-prot
 1. **`task.md`** of an existing ticket (read `summary.md` first if it exists): spec version, plan revision, open questions, what is built.
 2. **`context.md`, `touched-files.md`, `dependency-map.md`**, if `/webkit-context` wrote them: Phases 1–2 start from them.
 3. **`spec.md` / `plan.md`**: none for a new ticket. A spec change: its Metadata, §15, §16, and the sections the change touches, then the plan's Metadata, §10, and the affected tasks ([Keep the plan in step](#keep-the-plan-in-step)). `--plan` mode: the whole spec, since the plan derives from all of it.
-4. **Source**, only what the context map does not cover: Graphify first ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search; models, migrations, and routes at their defining lines; the closest sibling feature as the reference implementation.
+4. **Source**, only what the context map does not cover: Graphify first ([code-search.md](../../rules/conditional/code-search.md)), then targeted search; models, migrations, and routes at their defining lines; the closest sibling feature as the reference implementation.
 
 Rules: the [router](../../rules/rule-router.md) rows for the layers the feature touches. Templates: in the phase that fills them. **Avoid:** directory listings, whole modules, other tickets' specs and reports, the whole blueprint, re-scanning what `context.md` verified.
 
@@ -78,7 +78,7 @@ Inspect, Graphify first, then targeted search (`graphify path` for the reference
 Rules:
 
 - **Reuse before create** ([system-awareness.md §3](../../rules/conditional/system-awareness.md#3-reuse-vs-create)). If an existing model, table, route, controller, or component covers the same domain entity, spec it as **Reused** or **Extended**. Never spec a parallel table or a duplicate endpoint. Spec something **New** only when the scan finds nothing, or the user explicitly asked for a separate one.
-- **Record the search.** Note what you searched and what it found for every component, class, and table: these become the plan's §2 Reuse Map, so `/webkit-implement` does not repeat the scan blind. A row taken from the context map says so in its Searched cell (`context.md v<N> — <its evidence>`). When `graphify-out/graph.json` exists, `graphify explain "<ExactName>" --all` shows where a candidate class, composable, or component lives and who uses it; record the command as the search, read the file before listing it as **Reused**, and grep its blind spots ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)).
+- **Record the search.** Note what you searched and what it found for every component, class, and table: these become the plan's §2 Reuse Map, so `/webkit-implement` does not repeat the scan blind. A row taken from the context map says so in its Searched cell (`context.md v<N> — <its evidence>`). When `graphify-out/graph.json` exists, `graphify explain "<ExactName>" --all` shows where a candidate class, composable, or component lives and who uses it; record the command as the search, read the file before listing it as **Reused**, and grep its blind spots ([code-search.md](../../rules/conditional/code-search.md)).
 - **Real names only.** Every table, column, class, route, and component named in the spec either exists (verified here) or is marked **(new)**.
 - If project information cannot be detected, use only the prompt context and record that limit as an assumption in §15.
 
@@ -252,4 +252,4 @@ End by stating the ticket and the three saved paths, with the plan's size, e.g. 
 - Conformance against the spec: `/webkit-verify <ticket>` (writes `verify.md` in the same folder)
 - Diff review: `/webkit-code-review <ticket>` (writes `code-review.md` in the same folder)
 
-This skill creates no branch; `/webkit-implement` branches on the ticket number under the [Mandatory Branch Gate](../../rules/core/git-workflow.md#mandatory-branch-gate-for-implementing-skills).
+This skill creates no branch; `/webkit-implement` branches on the ticket number under the [Mandatory Branch Gate](../../rules/conditional/branch-gate.md).

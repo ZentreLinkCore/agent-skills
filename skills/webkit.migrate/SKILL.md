@@ -32,7 +32,7 @@ Two repos, source (read-only) and target; protocol §2, narrowed:
 1. **`task.md`** of the target ticket the user names, if any (its `summary.md` first). The source feature's ticket (Phase 1 step 2): its `summary.md` first, when it exists.
 2. **The source ticket's `context.md`**, if `/webkit-context` wrote one, with `dependency-map.md` and `touched-files.md` as a start for Phase 1 steps 4 and 6 (a map: the code decides).
 3. **The source spec in full**, and its `investigation.md` (Phase 1 steps 2–3): unlike most skills, this one needs the whole spec. No `plan.md`.
-4. **Source: the feature's full chain** (Phase 1 step 4). Reading every file on it is this skill's job; reading the whole repository is not. Graphify `path` / `affected` first when `<source root>/graphify-out/` exists ([context-budget.md §2](../../rules/context-budget.md#2-find-code-graphify-first-then-targeted-search)), then targeted search; the file, not the graph, is the evidence. **Target** (Phase 2): its profile, closest sibling module, and scan directories, the same way via `<target root>/graphify-out/`.
+4. **Source: the feature's full chain** (Phase 1 step 4). Reading every file on it is this skill's job; reading the whole repository is not. Graphify `path` / `affected` first when `<source root>/graphify-out/` exists ([code-search.md](../../rules/conditional/code-search.md)), then targeted search; the file, not the graph, is the evidence. **Target** (Phase 2): its profile, closest sibling module, and scan directories, the same way via `<target root>/graphify-out/`.
 
 Rules: per the [rule router](../../rules/rule-router.md), for the **target's** project when writing target code; the source's sections only to read the source. Templates: at Phase 5 and at the end. **Avoid:** either repository whole or whole-directory listings; the source's unrelated tickets and reports; all project documentation or a whole blueprint; re-reading a rule already applied.
 
@@ -75,7 +75,7 @@ Rules: per the [rule router](../../rules/rule-router.md), for the **target's** p
 
 **Branch gate (target repo).** After confirmation, run the branch gate (protocol §1) **in the target repo**, before creating or editing its first file. Skill-specific:
 
-- The branch is `T#####` only when the user names a ticket **of the target project** (fetched and analyzed first, per [ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch); several matching branches: **stop and ask**); otherwise `feature/<portal-or-domain>-<feature-kebab>` ([git-workflow.md](../../rules/core/git-workflow.md#rules) Rule 1). Never name it after a source ticket: ticket numbers are per project.
+- The branch is `T#####` only when the user names a ticket **of the target project** (fetched and analyzed first, per [ticket-numbering.md §8](../../rules/conditional/ticket-numbering.md#8-resolving-a-ticket-argument-to-its-branch); several matching branches: **stop and ask**); otherwise `feature/<portal-or-domain>-<feature-kebab>` ([git-workflow.md](../../rules/core/git-workflow.md) Rule 1). Never name it after a source ticket: ticket numbers are per project.
 - The source repo gets no branch: its only write is the contract.
 - **Ticket:** this skill never allocates one ([ticket-numbering.md §2](../../rules/conditional/ticket-numbering.md#2-allocating-a-number-the-increment)); it records the one the user names, or "None".
 
