@@ -15,7 +15,7 @@ and /webkit-summarize add only a §5 line)
 | Branch | `T00002` |
 | Spec | [spec.md](./spec.md) — version 1.2, status Done |
 | Plan | [plan.md](./plan.md) — revision 3, status Done |
-| Last Updated | 2026-10-17 by `/webkit-summarize` |
+| Last Updated | 2026-10-17 by `/webkit-fix` |
 
 ---
 
@@ -25,12 +25,12 @@ and /webkit-summarize add only a §5 line)
 | --- | --- | --- | --- |
 | Specify | spec.md · plan.md | 2026-10-17 | Spec v1.2 Approved · plan rev 3, 18 tasks |
 | Implement | plan.md | 2026-10-17 | 18/18 tasks complete |
-| Verify | verify.md | 2026-10-17 | v4 — ✅ PASS (3 AC pending manual check) (after fix pass v4.1) |
-| Code review | code-review.md | 2026-10-17 | v2 — APPROVED |
-| Design review | design-review.md | — | — |
-| Fix | verify.md | 2026-10-17 | Finding #13 fixed (fix pass v4.1); ticket closed |
+| Verify | verify.md | 2026-10-17 | v5 — ✅ PASS (3 AC pending manual check) |
+| Code review | code-review.md | 2026-10-17 | v3.1 — APPROVED (after fix pass v3.1) |
+| Design review | design-review.md | 2026-10-17 | v1.2 — APPROVED (after fix pass v1.2) |
+| Fix | code-review.md | 2026-10-17 | Findings #5, #6 fixed (fix pass v3.1); all code review findings closed |
 
-**Done:** 18/18 tasks · 13/13 required findings fixed · ticket closed (Done)
+**Done:** 18/18 tasks · 13/13 verify findings fixed · 4/4 design findings fixed · 6/6 code review findings fixed · ticket closed (Done)
 
 **Next step:** `/webkit-summarize T00002`
 
@@ -86,6 +86,12 @@ and /webkit-summarize add only a §5 line)
 - [x] Finding #12 — follower mute toggle + browser-muted notice in the phone-width guest view (FR-08, AC-19) · `WebVideoPlayer.tsx` — fixed 2026-10-17
 - [x] Code review #1 (HIGH) — Enter in Add Song submits a stale Singer Name · `WebSongSearchModal.tsx` — fixed 2026-10-17
 - [x] Finding #13 — Enter queues the selected song after the Add Song modal is closed (Flow 2 step 4) · `WebSongSearchModal.tsx` — fixed 2026-10-17
+- [x] Design review #1 (HIGH) — Subtitle and idle status text fails WCAG AA on dark controls bar · `src/components/player/WebPlaybackControls.tsx` — fixed 2026-10-17
+- [x] Design review #2 (MEDIUM) — Token consistency (#1C1F30 surface-light) · `JoinRoomPage`, `CreateRoomPage`, `WebNicknameModal` — fixed 2026-10-17
+- [x] Design review #3 (LOW) — Illuminated drop insertion line in queue reorder · `WebQueueList.tsx` — fixed 2026-10-17
+- [x] Design review #4 (LOW) — Home page scroll hint text opacity · `HomePage.tsx` — fixed 2026-10-17
+- [x] Code review #5 (LOW) — HostPlayerPage direct URL route guard · `HostPlayerPage.tsx` — fixed 2026-10-17
+- [x] Code review #6 (LOW) — Role-aware fallback singer nickname · `WebSongSearchModal.tsx` — fixed 2026-10-17
 
 **Optional, not scheduled:** verify Improvements #5 (lint warnings), #6 (uncleared autoplay-check timer), #7 (AC-11 test); verify v4 Finding #13 now tracks the closed-modal Enter defect
 
@@ -102,6 +108,14 @@ Ticket closed (Done). Follow-ups that do not block it:
 
 ## 5. Activity Log
 
+- 2026-10-17 · `/webkit-summarize T00002` · summary.md v3 (40 files, 5 decisions, 3 open items) · spec Done
+- 2026-10-17 · `/webkit-fix T00002 --code-review Finding #5,#6` · Findings #5 and #6 fixed (97 tests pass, tsc clean, lint 0 errors) · code-review.md → APPROVED (after fix pass v3.1)
+- 2026-10-17 · `/webkit-code-review T00002` · v3 full run: 0 CRITICAL, 0 HIGH, 0 MEDIUM, 2 LOW (#5 host direct URL guard, #6 fallback singer name); 94 tests pass, tsc clean, lint 0 errors; READY TO MERGE · code-review.md → APPROVED WITH COMMENTS
+- 2026-10-17 · `/webkit-verify T00002` · v5 full run: 17/20 AC met, 3 manual; 0 BLOCKER, 0 REQUIRED FIX, 4 IMPROVEMENT; 94 tests pass across 14 test files, tsc clean, lint 0 errors; READY FOR MERGE · verify.md → ✅ PASS (3 AC pending manual check)
+- 2026-10-17 · Responsive desktop web view layout · CreateRoomPage & JoinRoomPage upgraded to responsive 2-column web dashboard layout with visual showcase and backdrop aura (81 tests pass, tsc clean, lint 0 errors) · webapp
+- 2026-10-17 · `/webkit-fix T00002 --design-review` · Findings #1–#4 fixed, Modern Ideas #1–#3 implemented (81 tests pass, tsc clean, lint 0 errors) · design-review.md → APPROVED (after fix pass v1.2)
+- 2026-10-17 · `/webkit-fix T00002 --design-review` · Finding #1 fixed (79 tests pass, tsc clean, lint 0 errors) · design-review.md → APPROVED WITH COMMENTS (after fix pass v1.1)
+- 2026-10-17 · `/webkit-design-review T00002` · design-review.md v1: 1 HIGH (WCAG AA contrast on playback controls), 1 MEDIUM, 2 LOW · CHANGES REQUIRED
 - 2026-10-17 · `/webkit-summarize T00002` · summary.md v1 (29 branch files + 46 base files, 5 decisions, 3 open items) · spec Done
 - 2026-10-17 · `/webkit-fix T00002 --verify` · Finding #13 fixed (78 tests pass, tsc clean, lint 0 errors); every closing condition met → spec and plan Done · verify.md → ✅ PASS (3 AC pending manual check) (after fix pass v4.1)
 - 2026-10-17 · `/webkit-verify T00002` · v4 full run against spec v1.2 Approved: #12 holds; 17/20 AC met, 3 manual; 1 REQUIRED FIX (#13, closed-modal Enter queues a song, reproduced); 76 tests pass; ticket not closed · ⚠ PASS WITH FIXES

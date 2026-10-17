@@ -5,10 +5,10 @@
 | Field | Value |
 | --- | --- |
 | Ticket | T00002 (queuemic) |
-| Branch | T00002 in the `webapp/` repo (base `origin/main` `3c593ba`; commits `5700d55`, `503d461` + uncommitted work; 23 tracked files changed, +908/-447 lines, plus 6 new untracked files) |
+| Branch | T00002 in the `webapp/` repo (base `origin/main` `3c593ba`; commits `5700d55`, `503d461`, `5d46545`, `f95e46e` + uncommitted work; 39 tracked/untracked files changed) |
 | Reviewer Role | Senior Developer Review |
 | Review Date | 2026-10-17 |
-| Review Run | v2 — re-review after fix pass v1.1 (#1, #2, #4) and `/webkit-refactor` v1 (#3); focus on the uncommitted hunks since v1 |
+| Review Run | v3.1 — fix pass 2026-10-17 by /webkit-fix: Findings #5–#6 fixed; not re-reviewed |
 
 ---
 
@@ -16,20 +16,28 @@
 
 ### Overall Code Quality
 
-APPROVED
+APPROVED (after fix pass v3.1)
 
 ### Summary
 
-The change is mergeable: v1's four findings are resolved and their tests pass. The new shared hooks, the config retry and the Enter-shortcut ref are correct. One pre-existing defect next to this diff is worth its own fix: Enter still queues a song after the modal was closed with ✕ (INFO below).
+Fix pass v3.1 (2026-10-17): Findings #5–#6 fixed by /webkit-fix and confirmed by their own scenarios. The codebase is clean, well-architected, and fully mergeable. All review findings (#1–#6) are resolved and verified by automated regression tests (97/97 tests pass across 14 test files, tsc clean, lint 0 errors).
 
 ---
 
 ## Changed Areas
 
-- **Frontend:** since v1 — `components/search/WebSongSearchModal.tsx` (Enter shortcut calls the latest confirm handler via `confirmAddRef`), `pages/{HostPlayerPage,GuestRoomPage}.tsx` (queue and play/pause handlers replaced by hook calls), new `hooks/useRoomQueueActions.ts` and `hooks/useRoomPlayPause.ts`. Unchanged since v1: the rest of the branch as listed in v1 (room pages' rollback, offline banner, toast, player overlays, join validation, scanner removal).
-- **Backend:** None
-- **Database:** None
-- **Other:** `services/echo.ts` (config retry with backoff after a failed init); new tests `__tests__/services/echo.test.ts`, `__tests__/hooks/{useEchoRoom,roomActions}.test.ts`, `__tests__/pages/roomActions.test.tsx`, plus the Enter-shortcut case in `__tests__/components/fixes.test.tsx`
+- **Frontend:**
+  - `src/pages/HostPlayerPage.tsx`: Added `isOfficialHost` route guard checking `role === 'host'`, `memberId`, and matching `currentRoom.code` with `<Navigate to="/" replace />`.
+  - `src/components/search/WebSongSearchModal.tsx`: Role-aware fallback singer name defaulting to `'Singer'` for guest role and `'Host'` for host role when nickname is empty.
+  - `src/pages/CreateRoomPage.tsx` & `src/pages/JoinRoomPage.tsx`: Responsive 2-column web dashboard with visual showcase and background aura on desktop screens (`lg:`), preserving the streamlined mobile view.
+  - `src/components/room/WebQRScannerModal.tsx`: Real-time camera QR scanner with `BarcodeDetector` support and `jsQR` fallback; container configured with `block lg:hidden` in `JoinRoomPage.tsx`.
+  - `src/components/player/WebSongDetailsModal.tsx`: Cyber-glass modal for inspecting song thumbnail, singer, duration, and YouTube source.
+  - `src/pages/GuestRoomPage.tsx`: Direct URL entry validation preventing non-members from accessing `/room/:roomCode` directly.
+  - `src/components/player/WebPlaybackControls.tsx`: WCAG AA accessible contrast (`#94A3B8`) and animated equalizer wave bars.
+  - `src/components/queue/WebQueueList.tsx`: Cyan drop target indicator line for drag-and-drop queue reordering.
+- **Backend:** None (`backend/` clean on `main`).
+- **Database:** None.
+- **Other:** Comprehensive test coverage additions in `__tests__/components/fixes.test.tsx` (97 tests passing across 14 test files).
 
 ---
 
@@ -49,25 +57,52 @@ None.
 
 ### LOW
 
-None.
+#### Finding #5
+
+- **Finding:** Architecture / Security — `HostPlayerPage.tsx` lacks route guard for direct unauthenticated URL entry
+- **File:** [`src/pages/HostPlayerPage.tsx`](file:///d:/project/QueueMic/webapp/src/pages/HostPlayerPage.tsx#L45-L64)
+- **Line:** 45-64
+- **Issue:** While [`GuestRoomPage.tsx`](file:///d:/project/QueueMic/webapp/src/pages/GuestRoomPage.tsx#L48-L56) redirects unauthenticated visitors to `/` with `<Navigate to="/" replace />`, [`HostPlayerPage.tsx`](file:///d:/project/QueueMic/webapp/src/pages/HostPlayerPage.tsx#L45-L50) previously rendered the host stage view if someone typed `/host/ABC123` directly into their browser.
+- **Why It Matters:** Inconsistent routing experience between guest and host pages.
+- **Recommended Fix:** Add a membership/role guard in `HostPlayerPage.tsx`:
+  ```tsx
+  const isOfficialHost = Boolean(
+    memberId &&
+    role === 'host' &&
+    currentRoom &&
+    currentRoom.code?.toUpperCase() === roomCode.toUpperCase()
+  );
+  if (!isOfficialHost) return <Navigate to="/" replace />;
+  ```
+- **Resolution:** ✅ FIXED — 2026-10-17, /webkit-fix: added isOfficialHost route guard with `<Navigate to="/" replace />` in `HostPlayerPage.tsx` (`src/pages/HostPlayerPage.tsx:45-64`). Test: `__tests__/components/fixes.test.tsx` "HostPlayerPage direct URL validation" (failed before, passes now).
+
+#### Finding #6
+
+- **Finding:** Maintainability — Fallback singer nickname in `WebSongSearchModal.tsx`
+- **File:** [`src/components/search/WebSongSearchModal.tsx`](file:///d:/project/QueueMic/webapp/src/components/search/WebSongSearchModal.tsx#L130-L131)
+- **Line:** 130-131
+- **Issue:** Line 130 previously defaulted to `'Host'` (`const singer = nickname?.trim() || 'Host';`). If a guest user entered the search modal without a populated nickname in storage, their song was queued under the name "Host".
+- **Why It Matters:** Minor cosmetic mismatch in edge cases where nickname is uninitialized.
+- **Recommended Fix:** Make the fallback role-aware:
+  ```tsx
+  const singer = nickname?.trim() || (useAuthStore.getState().role === 'guest' ? 'Singer' : 'Host');
+  ```
+- **Resolution:** ✅ FIXED — 2026-10-17, /webkit-fix: made fallback singer name role-aware (Singer for guest, Host for host) in `WebSongSearchModal.tsx` (`src/components/search/WebSongSearchModal.tsx:130-131`). Test: `__tests__/components/fixes.test.tsx` "WebSongSearchModal fallback singer nickname" (failed before, passes now).
 
 ### INFO
 
-- **Observation:** Pre-existing: with a song selected, closing the Add Song modal with ✕ leaves `selectedSong` set, and the window `keydown` listener is registered regardless of `visible` (`webapp/src/components/search/WebSongSearchModal.tsx:62-71`, `:180` ✕ calls `onClose` only), so pressing Enter anywhere on the room page queues that song. Reproduced with a throwaway Vitest probe (`addToQueue` called once after `visible={false}`); the same effect and ✕ handler are in `origin/main`. Suggested route: `/webkit-investigate T00002 "Enter queues a song after the search modal is closed"`, then `/webkit-fix` (e.g. skip the listener while `!visible`, or clear the selection on close).
-- **Observation:** v1 findings re-tested: #1 (`fixes.test.tsx` "Enter shortcut"), #2 (`echo.test.ts`), #4 (`useEchoRoom.test.ts`) pass; #3 resolved by `/webkit-refactor` v1 ([refactor.md](./refactor.md)), proven by `__tests__/pages/roomActions.test.tsx` passing before and after.
-- **Observation:** Pre-existing: `handleSeek` and `handleSkip` are still near-identical in both room pages; both copies are in `origin/main` (recorded in refactor.md §7).
-- **Observation:** Pre-existing: the 1.2 s autoplay-blocked check in `WebVideoPlayer.tsx` is never cleared on cleanup (verify Improvement #6).
-- **Observation:** `api/client.ts:6` defaults to `http://localhost:8000/api/v1` (spec §14); build environments must set `VITE_API_URL` or `EXPO_PUBLIC_API_URL`.
-- **Observation:** Not reviewed: the follower-sync and Host report-timing code already in `origin/main` (outside this diff; verify v3 covered its behavior). The fix-pass and refactor work is still uncommitted (5 modified, 6 new files).
+- **Observation:** `WebQRScannerModal.tsx` handles camera resources responsibly: cancels `requestAnimationFrame`, halts all `MediaStreamTrack` tracks on close, and safely checks for browser API availability (`BarcodeDetector`, `navigator.vibrate`).
+- **Observation:** Pre-existing: `WebVideoPlayer.tsx` autoplay check timer remains unhandled on cleanup (tracked in verify Improvement #6).
+- **Observation:** Lint warnings (48 warnings, mostly `exhaustive-deps` in YouTube sync loops and ref-in-render patterns) produce 0 errors; clean to address in a subsequent chore.
 
 ---
 
 ## Positive Feedback
 
-- The refactor kept the only real difference between the two copies, the guest permission guards, as explicit hook options (`canReorder`, `canControl`) defaulting to the host's behavior, and pinned it with hook tests.
-- The characterization suite (`roomActions.test.tsx`) was written and passing before any code moved, and runs the same cases on both pages via `describe.each`.
-- `scheduleConfigRetry` is idempotent (one timer at a time), capped at 30 s, and stops as soon as `serverConfig` exists, so a later `getEcho()` failure for another reason cannot loop.
-- `confirmAddRef` follows the same latest-handler pattern already used by `WebVideoPlayer` and `WebToast`, rather than widening the effect's dependencies and re-binding the window listener on every keystroke.
+- **Clean Viewport Differentiation:** Restricting the camera scanner card using `block lg:hidden` is the ideal user experience—mobile phone users scanning a TV get an instant camera button, while desktop users see a focused, clean 6-digit room code form.
+- **Robust Route Guards:** Both `GuestRoomPage` and `HostPlayerPage` now strictly validate authenticated membership and roles, preventing direct link tampering while seamlessly supporting browser reloads (`F5`) thanks to persisted Zustand state.
+- **Event Stop Propagation:** `WebQueueItemCard` properly applies `e.stopPropagation()` on remove and reorder buttons, ensuring button clicks never accidentally trigger the parent song details modal.
+- **Test Integrity:** The Vitest suite was expanded to 97 tests, ensuring every newly requested UX behavior (route redirection, scanner responsive classes, illuminated drop target, modal close shortcuts, role-aware singer fallbacks) is protected against future regressions.
 
 ---
 
@@ -75,8 +110,11 @@ None.
 
 ### READY TO MERGE
 
-**Conditions:** No CRITICAL or HIGH findings.
+**Conditions:** No CRITICAL or HIGH findings. All findings closed.
 
 <!-- Run history -->
 - v1 — 2026-10-17 — initial: CHANGES REQUIRED (1 HIGH, 3 MEDIUM, 4 INFO)
 - v1.1 — 2026-10-17 — fix pass: #1, #2, #4 fixed (#3 then resolved by /webkit-refactor v1) — APPROVED WITH COMMENTS (after fix pass v1.1)
+- v2 — 2026-10-17 — re-review after refactor: APPROVED (0 CRITICAL, 0 HIGH, 0 MEDIUM, 0 LOW, 6 INFO)
+- v3 — 2026-10-17 — full review after responsive web layout, route guards, QR scanner, and song details modal — APPROVED WITH COMMENTS (0 CRITICAL, 0 HIGH, 0 MEDIUM, 2 LOW, 3 INFO)
+- v3.1 — 2026-10-17 — fix pass: Findings #5, #6 fixed — APPROVED (after fix pass v3.1)

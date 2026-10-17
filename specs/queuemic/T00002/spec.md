@@ -412,6 +412,12 @@ Defined in [`plan.md`](./plan.md) in this ticket folder: the file-by-file task l
   - verify v3 #12 — the follower mute toggle and the "Audio Muted by Browser" notice are reachable in the phone-width guest view, not only fullscreen (FR-08, AC-19) → fixed 2026-10-17
   - code review v1 #1 — confirming Add Song with Enter submits the Singer Name as currently typed (AC-10) → fixed 2026-10-17
   - verify v4 #13 — closing the Add Song modal cancels the selection; nothing is queued without the confirm step (Flow 2 step 4) → fixed 2026-10-17
+  - design-review v1 #1 — subtitle and idle status text must use accessible text-[#94A3B8] contrast (≥ 4.5:1 WCAG AA) on dark controls bar → fixed 2026-10-17
+  - design-review v1 #2 — surface-light tokens and input backgrounds are consolidated to #1C1F30 → fixed 2026-10-17
+  - design-review v1 #3 — queue drag-and-drop renders illuminated cyan drop target insertion line (border-t-2 border-[#06B6D4]) → fixed 2026-10-17
+  - design-review v1 #4 — home page scroll hint text upgraded to text-slate-400 opacity-90 for mobile readability → fixed 2026-10-17
+  - code review v3 #5 — HostPlayerPage direct URL entry requires an official host session or redirects to / → fixed 2026-10-17
+  - code review v3 #6 — WebSongSearchModal fallback singer nickname is role-aware (Singer for guest, Host for host) → fixed 2026-10-17
 
 ---
 
@@ -458,3 +464,5 @@ Defined in [`plan.md`](./plan.md) in this ticket folder: the file-by-file task l
 | 1.2 | 2026-10-17 | Minor | Specification approved by the stakeholder | Approval recorded; no requirement changed; Open Questions empty (Q-01 resolved by D-05) | Metadata (Status) |
 | 1.2 | 2026-10-17 | Minor | Review findings recorded — /webkit-fix T00002 --verify (run v4): #13 | Fix pass; no requirement changed | §14 |
 | 1.2 | 2026-10-17 | Minor | Ticket closed — verify ✅ PASS (after fix pass v4.1), code review APPROVED, 18/18 tasks, no open questions | Closing a ticket (ticket-numbering §5) | Metadata (Status) |
+| 1.2 | 2026-10-17 | Minor | Review findings recorded — /webkit-fix T00002 --design-review (run v1): #1–#4 + Modern Enhancements #1–#3 | Fix pass; all design findings resolved; no requirement changed | §14 |
+| 1.2 | 2026-10-17 | Minor | Review findings recorded — /webkit-fix T00002 --code-review (run v3): #5, #6 | Fix pass; no requirement changed | §14 |
