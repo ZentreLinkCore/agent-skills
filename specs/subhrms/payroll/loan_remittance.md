@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (New loan deduction consolidation report & electronic remittance export module).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines` frontend module).  
 > **Route:** `/payroll/government-routines/loan-remittance` (`payroll_government_routines_loan_remittance`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models reused (`PayrollLoan`, `PayrollLoanSchedule`, `LoanTypes`, `PayrollRun`, `PayrollRunDetail`, `PayPeriod`, `Account`, `AccountDetailVW`, `Company`); Tables reused (`payroll_loan`, `payroll_loan_schedule`, `loantype`, `payroll_run`, `payroll_run_detail`, `pay_period`, `vw_accounts_details`, `company`); Routes created (`/payroll-reports/loan-remittance`, `/payroll-reports/loan-remittance/export`); New migration: no (uses existing `payroll_loan`, `payroll_loan_schedule`, and `payroll_run_detail`).
 
 ---
@@ -173,7 +173,7 @@ No new database tables or column migrations are required. The module reads from 
 
 ## 4. Backend Implementation Plan
 
-Following the **thin-controller + Query/Handler/Action pattern** ([project-profile.md](../../rules/project-profile.md)):
+Following the **thin-controller + Query/Handler/Action pattern** ([project-gate.md](../../../rules/core/project-gate.md)):
 
 ### 4.1 Query Class: `GetLoanRemittanceQuery`
 

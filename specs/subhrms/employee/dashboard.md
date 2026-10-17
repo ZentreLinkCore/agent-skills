@@ -4,7 +4,7 @@
 > **Portal:** **Employee Portal** (`/api/employee/dashboard` routes, `resources/views/web/src/module/employee/dashboard` frontend module).
 > **Version:** v1 — 2026-08-14 — initial
 > **Route:** `/employee/dashboard` (`employee_dashboard`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:**
 > - Models Reused: `AccountDetailVW`, `AccountJob`, `AppLeave`, `AppOvertime`, `AppChangeShift`, `AppAdjustment`, `AppOfficialBusinessTrip`, `Timesheet`, `PayrollRunDetail`, `PayPeriod`, `YtdDetail`, `EmpLoan`, `Announcement`, `Holiday`.
 > - Tables Reused: `account_details_vw`, `accountjob`, `tbl_app_leave`, `tbl_app_overtime`, `tbl_app_changeshift`, `tbl_app_adjustment`, `tbl_app_obtrip`, `tbl_timesheet`, `payroll_run_detail`, `payroll_period`, `ytd_details`, `tbl_emp_loan`, `announcements`, `holiday`.
@@ -121,7 +121,7 @@ This spec defines the architecture for **rebuilding and replacing the Employee D
 | Pros | Cons |
 |---|---|
 | Maximizes scannability; puts actionable and time-sensitive data above the fold. | Requires responsive breakpoint testing (`sm`, `md`, `lg`, `xl`). |
-| Consistent with SubHRMS visual standards ([ui-design.md](../../rules/ui-design.md)). | |
+| Consistent with SubHRMS visual standards ([ui-design.md](../../../rules/conditional/ui-design.md)). | |
 
 **Option B — Flat Single-Column Vertical Feed**
 - Simple stacked cards one after another.

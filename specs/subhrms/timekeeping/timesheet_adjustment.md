@@ -3,7 +3,7 @@
 > **Kind:** Standalone module in `module/timekeeping/timesheet_adjustment/` — leaves `timekeeping/applications` untouched and cleans up the orphaned `TimesheetAdjustmentController` / `adjustment_processing` stubs.
 > **Portal:** **Timekeeping** (`/api/timekeeping/timesheet-adjustments` backend routes, `timekeeping/timesheet_adjustment` frontend module).
 > **Route:** `/timekeeping/timesheet-adjustment` (`tk_timesheet_adjustment`) — directly linked to the Timekeeping Sidebar menu under *Timekeeping > Reports > Timesheet Adjustment*.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models reused (`AppAdjustment`, `AppChangeShift`, `AppOvertime`, `AppOfficialBusinessTrip`, `AppLeave`, `AccountDetailVW`, `PayPeriod`); Tables reused only (`app_adjustment`, `app_shift`, `app_overtime`, `app_obt`, `app_leave`); Routes: `GET /api/timekeeping/timesheet-adjustments` (+ `/statistics`, `/{id}`); New migration: **no**.
 
 ---

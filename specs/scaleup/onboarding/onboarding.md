@@ -3,7 +3,7 @@
 > **Kind:** Greenfield
 > **Portal:** Onboarding
 > **Route:** `/onboarding` (`user_onboarding`), `/onboarding/create-business` (`onboarding_create_business`), `/onboarding/join-business` (`onboarding_join_business`)
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (backend Query/Handler/Action pattern, thin controllers, `response()->json(...)`, no DB foreign keys), [system-awareness.md](../../../rules/system-awareness.md), [duplicate-prevention.md](../../../rules/duplicate-prevention.md), [security.md](../../../rules/security.md). Frontend is **React 19 + Tailwind CSS v4** — the Vue-specific parts of project-profile.md do not apply to this spec; the ScaleUP frontend module convention (`resources/views/web/src/module/<domain>/<feature>/` with `index.jsx`, `api/<feature>.api.js`, `pages/`, `components/`) is used instead.
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (backend Query/Handler/Action pattern, thin controllers, `response()->json(...)`, no DB foreign keys), [system-awareness.md](../../../rules/conditional/system-awareness.md), [system-awareness.md](../../../rules/conditional/system-awareness.md), [security-baseline.md](../../../rules/core/security-baseline.md). Frontend is **React 19 + Tailwind CSS v4** — the Vue-specific parts of project-profile.md do not apply to this spec; the ScaleUP frontend module convention (`resources/views/web/src/module/<domain>/<feature>/` with `index.jsx`, `api/<feature>.api.js`, `pages/`, `components/`) is used instead.
 > **System Awareness:** Models — none reused (only stock `User.php` exists), `Organization`/`OrganizationUser`/`OrganizationInvitation` **created**. Tables — none reused, `organizations`/`organization_users`/`organization_invitations` **created**, `users` **extended** (new `onboarding_step`/`current_organization_id` columns). Routes — none reused, `routes/api/onboarding.php` and `routes/api/organizations.php` **created**, loaded from `routes/api.php`. New migrations: **yes** — no onboarding/organization schema exists anywhere in the codebase yet.
 
 ---
@@ -137,7 +137,7 @@ Without this spec, there is nowhere in the codebase for "which business is this 
 
 ## 3. Database
 
-All new tables. Per [project-profile.md](../../../rules/project-profile.md): **no `->foreign()->references()` constraints** — relationship columns are `id`-prefixed, `unsignedBigInteger`, plain `->index()`; soft-delete via a `status` column, not `SoftDeletes`; always `timestamps()`.
+All new tables. Per [project-gate.md](../../../rules/core/project-gate.md): **no `->foreign()->references()` constraints** — relationship columns are `id`-prefixed, `unsignedBigInteger`, plain `->index()`; soft-delete via a `status` column, not `SoftDeletes`; always `timestamps()`.
 
 ### 3.1 `users` (extend — new columns only, existing columns untouched)
 
@@ -194,7 +194,7 @@ Composite unique index on (`id_organization`, `id_user`) to prevent duplicate me
 
 ## 4. Backend
 
-Namespaces per [project-profile.md](../../../rules/project-profile.md): top-level `App\Queries\<Domain>`, `App\Handlers\<Domain>`, `App\Actions\<Domain>` — domain folders `Onboarding` and `Organization`. Thin controllers under `App\Http\Controllers\onboarding` and `App\Http\Controllers\organization`. No API Resources — raw `response()->json(...)`.
+Namespaces per [project-gate.md](../../../rules/core/project-gate.md): top-level `App\Queries\<Domain>`, `App\Handlers\<Domain>`, `App\Actions\<Domain>` — domain folders `Onboarding` and `Organization`. Thin controllers under `App\Http\Controllers\onboarding` and `App\Http\Controllers\organization`. No API Resources — raw `response()->json(...)`.
 
 ### 4.1 Models (new)
 
@@ -213,7 +213,7 @@ Namespaces per [project-profile.md](../../../rules/project-profile.md): top-leve
 ### 4.3 Handlers (writes) + Actions
 
 - `App\Handlers\Onboarding\AdvanceOnboardingStepHandler` — bumps `users.onboarding_step`; called at the end of each step's submit.
-- `App\Handlers\Organization\CreateOrganizationHandler` (Step 2/3/4/5 "Create Business" path) — wraps in `DB::transaction`: creates the `organizations` row, an `organization_users` row for the creator with `role = owner`, sets `users.id_current_organization`, advances onboarding step. Delegates slug generation to `App\Actions\Organization\GenerateOrganizationSlugAction` (reusable — any future "rename business" flow needs the same uniqueness-checked slugging logic, per [duplicate-prevention.md](../../../rules/duplicate-prevention.md)).
+- `App\Handlers\Organization\CreateOrganizationHandler` (Step 2/3/4/5 "Create Business" path) — wraps in `DB::transaction`: creates the `organizations` row, an `organization_users` row for the creator with `role = owner`, sets `users.id_current_organization`, advances onboarding step. Delegates slug generation to `App\Actions\Organization\GenerateOrganizationSlugAction` (reusable — any future "rename business" flow needs the same uniqueness-checked slugging logic, per [system-awareness.md](../../../rules/conditional/system-awareness.md)).
 - `App\Handlers\Organization\InviteMemberHandler` (Step 6, and later reused from an in-app "Invite Team" settings screen) — validates the inviter's role permits inviting (`owner`/`administrator` only), creates an `organization_invitations` row, delegates sending to `App\Actions\Organization\SendInvitationEmailAction` (queued notification).
 - `App\Handlers\Organization\AcceptInvitationHandler` — validates token (not expired/not already accepted), creates/reactivates the `organization_users` row, marks the invitation `accepted`, sets `id_current_organization` if the user has none yet.
 - `App\Handlers\Organization\RemoveMemberHandler` — soft-removes (`status = 0`) an `organization_users` row; enforced sole-owner protection (see §6).
@@ -336,7 +336,7 @@ organization/
 ```
 
 - `OrganizationSwitcherDropdown.jsx` calls `GET /api/organizations` on mount, shows the active org (bold) + others, and on selection calls `POST /api/organizations/{id}/switch` then updates the `X-Organization-Id` header default used by the shared axios instance for all subsequent requests (Design Decision §2 — header-based context resolution).
-- `InviteMemberModal.jsx` is intentionally built once here and reused by both the onboarding wizard's Step 6 and any later "Team" settings page — per [duplicate-prevention.md](../../../rules/duplicate-prevention.md), do not re-implement invite UI a second time in Settings.
+- `InviteMemberModal.jsx` is intentionally built once here and reused by both the onboarding wizard's Step 6 and any later "Team" settings page — per [system-awareness.md](../../../rules/conditional/system-awareness.md), do not re-implement invite UI a second time in Settings.
 
 ### 5.3 API contract summary
 
@@ -369,7 +369,7 @@ organization/
 - **Industry taxonomy**: a fixed, backend-owned list (e.g. Retail, Food & Beverage, Professional Services, Technology & Software, Manufacturing, Construction, Healthcare, Education, Real Estate, Finance & Insurance, Logistics & Transportation, Hospitality & Tourism, Agriculture, Other) seeded as static frontend options in Step 4 for v1 (no admin-managed taxonomy table yet — adding one is a fast-follow if industries need to be curated dynamically).
 - **Business-size taxonomy**: fixed brackets — `Just me (solo)`, `2–10 employees`, `11–50 employees`, `51–200 employees`, `201+ employees` — stored as the literal string in `organizations.size`; not a normalized lookup table (too small/stable a set to warrant one, consistent with keeping onboarding lightweight).
 - **Re-running "Create Business" after already owning one**: a user who already owns/belongs to at least one organization but revisits `/onboarding` (e.g. to create a *second* business deliberately) is a distinct, later flow — not the initial 7-step wizard, which only ever runs once per user (guarded by `onboarding_step`). Creating additional businesses post-onboarding is out of scope here (see §8) and belongs to a "Create another business" action inside the Organization Switcher.
-- **Authorization on every organization-scoped write**: every Handler in §4.3 must call `ResolveActiveOrganizationQuery` (or receive an already-resolved, membership-checked organization) before writing — a user must never be able to modify an organization they aren't an active member of, per [security.md](../../../rules/security.md)'s "users can only modify their own resources."
+- **Authorization on every organization-scoped write**: every Handler in §4.3 must call `ResolveActiveOrganizationQuery` (or receive an already-resolved, membership-checked organization) before writing — a user must never be able to modify an organization they aren't an active member of, per [security-baseline.md](../../../rules/core/security-baseline.md)'s "users can only modify their own resources."
 
 | Edge Case | Handling |
 |---|---|

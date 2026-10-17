@@ -4,7 +4,7 @@
 > **Portal:** **HR** (`/api/hr/activityorEvent...` today, renamed to `/api/hr/activity-events...` by this spec — see Decision 5; `resources/views/web/src/module/hr/company_events/` frontend module).
 > **Version:** v1 — 2026-08-21 — initial.
 > **Route:** `hr/company-events` (`hr_company_events`) — unchanged.
-> **Conventions:** [project-profile](../../../rules/project-profile.md), [hrms-rules](../../../rules/hrms-rules.md), [ui-design](../../../rules/ui-design.md), [vue-standards](../../../rules/vue-standards.md), [duplicate-prevention](../../../rules/duplicate-prevention.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md), [duplicate-prevention](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models **reused** `ActivityorEvents`, `TransLog`; no new models. Table **reused** `activity_event` (currently untracked by any migration — see Decision 1); no new table. Routes **reused/renamed** — `apiResource('activityorEvent', ...)` becomes `apiResource('activity-events', ...)`, same four verbs, no new endpoint. Queries: none exist today; none added — the model's static `getActorEvents()` is kept as-is (Decision 6). New migration: **yes** — one, to give the live table a migration file for the first time.
 
 ---
@@ -23,12 +23,12 @@ The module **cannot render today**. It looks complete (calendar-badge event card
 | G4 | **Filing an empty form silently no-ops instead of failing.** Every rule in `StoreActivityEventRequest` is `sometimes`/`nullable` — including `title`. An empty `POST` passes validation, `$validated` is `[]` (PHP-falsy), and the entire `if ($validated)` body in `store()` is skipped — no row is created, and the endpoint still returns nothing but a bare `200`. A payload that omits `title` but has other fields hits an undefined-array-key access at `'title' => $validated['title']`. | [StoreActivityEventRequest.php:24-34](../../../../app/Http/Requests/StoreActivityEventRequest.php#L24-L34), [ActivityorEventController.php:49](../../../../app/Http/Controllers/hr/ActivityorEventController.php#L49) | Every other `Store*Request` in the repo (`StorePositionRequest`, etc.) marks the fields the entity cannot exist without as `required`. |
 | G5 | **The delete audit-log message is copy-pasted from a different module.** `"$userName deleted position → $actEventLabel"` — for deleting an *event*, not a position. | [ActivityorEventController.php:146](../../../../app/Http/Controllers/hr/ActivityorEventController.php#L146) | Every other `TransLog::logAction` message in this controller (create/update) correctly names "Activity/Event". |
 | G6 | **No error path in the UI reads field-level validation errors.** `showAlert()` only reads `error.response.data.message`; a `422` with `{errors: {title: [...]}}` shows a generic warning toast with no field feedback. | [useCompanyEvents.ts:213-216, 240-243](../../../../resources/views/web/src/module/hr/company_events/composables/useCompanyEvents.ts#L213-L216) | `IncidentCreateModal`-style modules (per the incident_report spec) surface `errors` per field; this module has no equivalent. |
-| G7 | **Route casing is inconsistent with every recently redesigned HR route.** `apiResource('activityorEvent', ...)` — camelCase — vs. `position`, `device-management`, `incident-reports` — all kebab-case. | [routes/api/hr.php:127](../../../../routes/api/hr.php#L127) | [naming-convention](../../../rules/naming-convention.md) and the sibling redesigned modules. |
+| G7 | **Route casing is inconsistent with every recently redesigned HR route.** `apiResource('activityorEvent', ...)` — camelCase — vs. `position`, `device-management`, `incident-reports` — all kebab-case. | [routes/api/hr.php:127](../../../../routes/api/hr.php#L127) | [naming-convention](../../../rules/conditional/code-quality.md) and the sibling redesigned modules. |
 | G8 | **Types are stubs.** `CompanyEventsItem { [key: string]: any }`. | [types.company_events.ts](../../../../resources/views/web/src/module/hr/company_events/types/types.company_events.ts) | Same defect class as `incident_report`'s pre-rework `IncidentReportItem`. |
 | G9 | **`seened_by` is dead.** Present in `$fillable`, never set or read by any controller method, never surfaced in the frontend. | `ActivityorEvents::$fillable` | Looks like a "seen/read receipt" feature that was never built; currently just unused column weight. |
 | G10 | **The default list silently scopes to the current year** when no `start_date`/`end_date` filter is supplied (`whereYear('start_date', '=', Carbon::now()->year)`), with no indication of this in the UI. | [ActivityorEvents.php:44-46](../../../../app/Models/ActivityorEvents.php#L44-L46) | Not necessarily wrong, but undocumented — flagged here so it's a stated business rule (§6a) rather than a bug someone "fixes" later by accident. |
 
-**What this spec does not change:** the visual design (calendar-badge cards, teal accent, modal/detail-panel treatment). Those already conform to [ui-design](../../../rules/ui-design.md) at the CSS-class level; the work here is making the module actually run, closing the filing/validation gaps, and giving the table a migration.
+**What this spec does not change:** the visual design (calendar-badge cards, teal accent, modal/detail-panel treatment). Those already conform to [ui-design](../../../rules/conditional/ui-design.md) at the CSS-class level; the work here is making the module actually run, closing the filing/validation gaps, and giving the table a migration.
 
 ---
 
@@ -66,7 +66,7 @@ The module **cannot render today**. It looks complete (calendar-badge event card
 | Pros | Cons |
 |---|---|
 | Matches the repo's own `types/`+`utils/` split (see `incident_report`'s `utils/incident_report.utils.ts` for style/icon maps) | One more file |
-| Keeps the composable focused on data + actions, per [vue-standards](../../../rules/vue-standards.md) | |
+| Keeps the composable focused on data + actions, per [vue-standards](../../../rules/conditional/frontend-vue.md) | |
 | Pure functions are trivially unit-testable in isolation | |
 
 **Recommendation: Option B.**
@@ -149,7 +149,7 @@ public function rules(): array
 | Pros | Cons |
 |---|---|
 | Smallest diff that still gets the controller thin | The read path is a static model method rather than a `Query` class — a minor asymmetry with `incident_report`'s fuller rework |
-| Matches [project-profile](../../../rules/project-profile.md)'s "not every Handler needs an Action" guidance in the mirror direction — this read genuinely doesn't need a `Query` wrapper, it's a single filter+paginate | |
+| Matches [project-profile](../../../rules/core/project-gate.md)'s "not every Handler needs an Action" guidance in the mirror direction — this read genuinely doesn't need a `Query` wrapper, it's a single filter+paginate | |
 
 **Option B — Full `GetCompanyEventsQuery` + three `Handlers`, mirroring `incident_report` exactly**
 | Pros | Cons |
@@ -208,7 +208,7 @@ public function rules(): array
 | `time_start` | reuse | time nullable | |
 | `timestamps` | reuse | | |
 
-No new columns, no dropped columns. Add a plain index on `start_date` (the default sort/scope column) if not already present — cheap, matches [performance](../../../rules/performance.md).
+No new columns, no dropped columns. Add a plain index on `start_date` (the default sort/scope column) if not already present — cheap, matches [performance](../../../rules/conditional/performance.md).
 
 ### 3b. Migration
 

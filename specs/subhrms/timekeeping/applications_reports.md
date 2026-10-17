@@ -4,7 +4,7 @@
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `timekeeping/applications` frontend module — controller namespace is `tk`, URL prefix is `timekeeping`).
 > **Routes (frontend, ALREADY REGISTERED — do not edit the route file):**
 > `timekeeping/applications/leaves` (`tk_applications_leaves`), `.../logsheet` (`tk_applications_logsheet`), `.../official-business-trip` (`tk_applications_official_business_trip`), `.../overtime` (`tk_applications_overtime`), `.../cancelled-applications` (`tk_applications_cancelled_applications`).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md), [hrms-rules.md](../../../rules/hrms-rules.md), [ui-design.md](../../../rules/ui-design.md), [vue-standards.md](../../../rules/vue-standards.md), [duplicate-prevention.md](../../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models **reused** (`AppLeave`, `AppAdjustment`, `AppOfficialBusinessTrip`, `AppOvertime`, `AppChangeShift`, `Shift`, `PayPeriod`, `Leave`); Tables **reused** (`app_leave`, `app_adjustment`, `app_obt`, `app_overtime`, `app_shift`, `shift`, `leaves`, `payroll_period`, view `vw_accounts_details`); Routes **created** (one new `applications` group in `routes/api/timekeeping.php`); **New migration: NO** — every table already exists.
 
 > [!IMPORTANT]
@@ -40,7 +40,7 @@ The scan found that `app/Queries/Payroll/` **already contains a report query for
 
 | Pros | Cons |
 |---|---|
-| Zero duplicated SQL — one source of truth per report ([duplicate-prevention.md](../../../rules/duplicate-prevention.md) rule 3). | A `tk` controller importing from the `Payroll` query namespace reads slightly odd. |
+| Zero duplicated SQL — one source of truth per report ([system-awareness.md](../../../rules/conditional/system-awareness.md) rule 3). | A `tk` controller importing from the `Payroll` query namespace reads slightly odd. |
 | Filters, joins, and pagination are already battle-tested in the payroll reports. | Payload carries payroll-only extras (`payroll_status`, `timesheet` join) the tk pages ignore. |
 | Fastest path to working pages; any join fix benefits both portals. | Changing the shared query later requires re-checking the payroll report screens. |
 
@@ -50,7 +50,7 @@ The scan found that `app/Queries/Payroll/` **already contains a report query for
 | Pros | Cons |
 |---|---|
 | Architecturally cleanest — domain-owned queries, portal-neutral. | Touches working payroll controllers — regression risk on shipped screens. |
-| Namespace matches [project-profile.md](../../../rules/project-profile.md)'s domain-folder convention. | Bigger diff than the feature needs; violates minimal-diff for unrelated files. |
+| Namespace matches [project-gate.md](../../../rules/core/project-gate.md)'s domain-folder convention. | Bigger diff than the feature needs; violates minimal-diff for unrelated files. |
 
 **Option C — New `tk`-only query classes per type**
 - Write five fresh `Get<Type>ApplicationsQuery` classes under the domain folders.
@@ -188,7 +188,7 @@ GET /api/timekeeping/applications/{type}/{id}
 
 | Pros | Cons |
 |---|---|
-| List stays flat and fast regardless of page size ([performance.md](../../../rules/performance.md)). | The chain is only visible after opening the modal (acceptable — it's a detail). |
+| List stays flat and fast regardless of page size ([performance.md](../../../rules/conditional/performance.md)). | The chain is only visible after opening the modal (acceptable — it's a detail). |
 | One lookup per opened record, never per row. | Adds one endpoint (already in Decision 3's trio). |
 
 **Option B — Enrich the chain in the list response**
@@ -279,7 +279,7 @@ DB::table('app_leave AS a')                                        // swap table
 Search covers `wad.empid`, `wad.fullname`, `wad.unit`, `wad.position`, `a.docnumber`, `a.remarks`.
 
 ### Controller: `App\Http\Controllers\tk\ApplicationsController` (new, thin)
-Per [project-profile.md](../../../rules/project-profile.md): static Query calls, `try/catch (Exception $e)`, raw `response()->json(...)`, **no API Resources**, no FormRequest (siblings use inline `$request->all()`).
+Per [project-gate.md](../../../rules/core/project-gate.md): static Query calls, `try/catch (Exception $e)`, raw `response()->json(...)`, **no API Resources**, no FormRequest (siblings use inline `$request->all()`).
 
 | Method | Route | Query called |
 |---|---|---|
@@ -352,7 +352,7 @@ module/timekeeping/applications/
     ├── overtime/{Overtime.vue, config/overtime.config.ts, index.ts}
     └── cancelled_applications/{CancelledApplications.vue, config/cancelled.config.ts, index.ts}
 ```
-TypeScript throughout, `<script setup>`, PascalCase components, `use*` composables, kebab-case emits — per [vue-standards.md](../../../rules/vue-standards.md). **No Pinia store**: state does not leave a single page tree.
+TypeScript throughout, `<script setup>`, PascalCase components, `use*` composables, kebab-case emits — per [frontend-vue.md](../../../rules/conditional/frontend-vue.md). **No Pinia store**: state does not leave a single page tree.
 
 ### Global components — MANDATORY, use without importing
 Registered in `resources/views/web/main.ts`: **`CSelect`, `Pagination`, `Spinner`, `Loading`, `VDatePicker`, `StatusBadge`, `EmptyState`, `TableSkeleton`**. Directives: `v-click-outside`, `v-offcanvas-back`.
@@ -417,7 +417,7 @@ Statistics response: `{ total, pending, approved, disapproved, cancelled }`.
 
 ## 6. Business Rules & Edge Cases
 
-### HRMS domain rules ([hrms-rules.md](../../../rules/hrms-rules.md))
+### HRMS domain rules ([payroll.md](../../../rules/conditional/payroll.md))
 - **Portal separation:** these endpoints sit under the `timekeeping` prefix inside the `auth:sanctum` group and return **all employees'** filings. The employee-portal controllers (`LeaveStatusController`, `OvertimeStatusController`, `OBTripStatusController`, `LogsheetStatusController`) stay self-scoped by `Auth::id()` — never widen them, and never expose payroll amounts on these pages.
 - **Read-only:** no leave-credit locking/restoring, no timesheet sync, no OT rate computation (125% / 130% / 200%) and no NSD math happens here. Hours are **displayed as stored**.
 - **Audit trail:** these pages are themselves the audit view; they must not mutate `approvers`, `cancel_*`, or `status`.

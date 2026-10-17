@@ -3,7 +3,7 @@
 > **Kind:** Extension — redesign of an existing, **already backend-wired** module (unusual: most redesign candidates in this codebase are still mock-only; this one has a real, live `nsd_logs`/`nsd_policies` schema and real Query/Handler classes already).
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `timekeeping/night_differential` frontend module).
 > **Route:** `timekeeping/night-differential` (`tk_night_differential`) — unchanged.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models reused (`Timesheet`, `NsdLog`, `NsdPolicy`, `AccountDetailVW`, `Shift`, `PayPeriod`); Tables reused only (`timesheet`, `nsd_logs`, `nsd_policies`); Routes reused (`/api/timekeeping/nsd/*`, extended with pagination params — no new endpoints); New migration: **no**.
 
 ---
@@ -91,7 +91,7 @@ Unlike [daily_monitoring.md](./daily_monitoring.md) (100% mock), this module's b
 | Real pagination scales with the table (858 rows today, growing) | Touches `App\Queries\Nsd\GetNsdLogsQuery` and `App\Handlers\Nsd\*` — backend, not purely visual |
 | Removes fake code instead of just hiding it in the UI | Slightly larger diff than a pure frontend pass |
 
-**Recommendation:** **Option B.** Because this module (unlike Daily Monitoring) already has a live backend, a "redesign" that leaves a known-fake handler in place and an unpaginated query growing unbounded isn't actually done. The pagination change is additive params on an existing method (no new Query class, no schema change) — it's an extension, not new backend surface, per [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+**Recommendation:** **Option B.** Because this module (unlike Daily Monitoring) already has a live backend, a "redesign" that leaves a known-fake handler in place and an unpaginated query growing unbounded isn't actually done. The pagination change is additive params on an existing method (no new Query class, no schema change) — it's an extension, not new backend surface, per [system-awareness.md](../../../rules/conditional/system-awareness.md).
 
 ---
 
@@ -100,7 +100,7 @@ Unlike [daily_monitoring.md](./daily_monitoring.md) (100% mock), this module's b
 Payroll's `GetNightDifferentialReportQuery` already produces employee-summary and department-breakdown tabs from the same `timesheet.np` data. Timekeeping's `GetNsdLogsQuery`/`GetNsdStatsQuery` only return the flat log list + 4 headline stats.
 
 **Option A — Keep Timekeeping's page to 1 tab (NSD Logs) + Policy Settings; do not rebuild the summary/department tabs here (Recommended)**
-- Timekeeping's page stays focused on the day-to-day log/record view (its own domain: monitoring + policy config); Payroll already owns the aggregated employee/department breakdown report, and duplicating that grouping logic in a second Query would violate [duplicate-prevention.md](../../rules/duplicate-prevention.md) rule 3 ("No Duplicate Logic").
+- Timekeeping's page stays focused on the day-to-day log/record view (its own domain: monitoring + policy config); Payroll already owns the aggregated employee/department breakdown report, and duplicating that grouping logic in a second Query would violate [system-awareness.md](../../../rules/conditional/system-awareness.md) rule 3 ("No Duplicate Logic").
 
 | Pros | Cons |
 |---|---|
@@ -111,7 +111,7 @@ Payroll's `GetNightDifferentialReportQuery` already produces employee-summary an
 
 | Pros | Cons |
 |---|---|
-| Timekeepers get the full picture without needing Payroll access | Two Queries (`Nsd` domain and `Payroll` domain) computing the same groupings from the same table — exactly the drift risk [duplicate-prevention.md](../../rules/duplicate-prevention.md) warns about; real scope growth beyond "redesign" |
+| Timekeepers get the full picture without needing Payroll access | Two Queries (`Nsd` domain and `Payroll` domain) computing the same groupings from the same table — exactly the drift risk [system-awareness.md](../../../rules/conditional/system-awareness.md) warns about; real scope growth beyond "redesign" |
 
 **Recommendation:** **Option A.** This is a portal-ownership call, not a technical default — flag for explicit confirmation if Timekeepers are expected to need the aggregated view without Payroll access; if so, the correct fix is extracting `GetNightDifferentialReportQuery`'s grouping into a shared method both portals call (per the `HandlePayPeriodQuery::rawTimesheetPeriods()` precedent in this project's own conventions), not a second parallel implementation.
 

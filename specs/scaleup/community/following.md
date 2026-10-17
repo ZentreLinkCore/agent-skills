@@ -4,7 +4,7 @@
 > **Portal:** **Community** (`/api/community/follows/...` routes, `community` frontend module).
 > **Version:** v1 — 2026-08-14 — initial.
 > **Route:** `/network` with `?tab=following` (Decision 8), plus a new `following` section on the existing `/feed` (`GET /api/community/feed?section=following`).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (ScaleUP Profile — React 19, `<parent>_id`, `deleted_at`), [ui-design.md](../../../rules/ui-design.md), [design_system.md](../design/design_system.md), [FOLLOWING.md](../../../blueprint/scaleup/docs/specifications/community/FOLLOWING.md), [ORGANIZATION_DISCOVERY.md](../../../blueprint/scaleup/docs/specifications/community/ORGANIZATION_DISCOVERY.md), [DATABASE_SCHEMA.md §5](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [connections.md](./connections.md), [community_home.md](./community_home.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (ScaleUP Profile — React 19, `<parent>_id`, `deleted_at`), [ui-design.md](../../../rules/conditional/ui-design.md), [design_system.md](../design/design_system.md), [FOLLOWING.md](../../../blueprint/scaleup/docs/specifications/community/FOLLOWING.md), [ORGANIZATION_DISCOVERY.md](../../../blueprint/scaleup/docs/specifications/community/ORGANIZATION_DISCOVERY.md), [DATABASE_SCHEMA.md §5](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [connections.md](./connections.md), [community_home.md](./community_home.md).
 > **System Awareness:** Models — **reused** `User`, `Organization`, `Post`; **created** `Follow`. Tables — **created** `follows`; `user_blocks` is **owned by [connections.md](./connections.md)** (Decision 5). Routes — **extended** [`routes/api/community.php`](../../../../routes/api/community.php), already mounted under `auth:sanctum` + `community`. Queries — **extended** `GetCommunityFeedQuery` and `GetCommunityDiscoveryQuery`; **created** `GetUserFollowsQuery`, `GetFollowStatusQuery`. Controller — **created** `Community/FollowController`. New migration: **yes** — one.
 
 ---
@@ -53,7 +53,7 @@ Consequences that are **not** negotiable in this spec, because changing them wou
 
 ### Decision 1: Polymorphic `follows`, or two typed tables
 
-A follow targets either a `User` or an `Organization`. The [ScaleUP profile](../../../rules/project-profile.md) says **real foreign keys, `foreignId()->constrained()`** — and a polymorphic column cannot have one. This is a genuine conflict between the repo convention and the blueprint, so it must be decided rather than assumed.
+A follow targets either a `User` or an `Organization`. The [ScaleUP profile](../../../rules/core/project-gate.md) says **real foreign keys, `foreignId()->constrained()`** — and a polymorphic column cannot have one. This is a genuine conflict between the repo convention and the blueprint, so it must be decided rather than assumed.
 
 **Option A — One polymorphic `follows` table: `follower_id` + `followable_type` + `followable_id` (Recommended)**
 
@@ -205,7 +205,7 @@ The source doc's edge case *"User blocks a followed account"* needs a blocks tab
 | Sorting by popularity becomes an indexed column | Needs an observer on every write path plus a reconciliation command; the seeder's `bulkInsert` bypasses Eloquent events entirely, so seeded counts would be **zero** until reconciled |
 | | Adds columns to two tables that the blueprint does not list |
 
-**Recommendation: Option A** for v1, with a `withCount` on batched reads so a feed page costs one aggregate query rather than fifteen. Revisit against [performance.md](../../../rules/performance.md) when a real account crosses ~50k followers; Option B is then a migration plus a backfill, not a redesign.
+**Recommendation: Option A** for v1, with a `withCount` on batched reads so a feed page costs one aggregate query rather than fifteen. Revisit against [performance.md](../../../rules/conditional/performance.md) when a real account crosses ~50k followers; Option B is then a migration plus a backfill, not a redesign.
 
 ---
 
@@ -362,10 +362,10 @@ Step order matters: the block check yields `404`, never a distinguishable messag
 
 | Class | Returns |
 | :--- | :--- |
-| `GetUserFollowsQuery` (new) | `['follows' => [...], 'total' => int]`. Joins each row to its target by **type and id together**, dropping targets that are missing, inactive, or soft-deleted (AC-19, AC-20). Optional `followable_type` filter (AC-30); `per_page` clamped 1–50 (AC-29). Resolves users via `full_name` and organizations via `name`, batched per type — never one query per row ([performance.md](../../../rules/performance.md)). |
+| `GetUserFollowsQuery` (new) | `['follows' => [...], 'total' => int]`. Joins each row to its target by **type and id together**, dropping targets that are missing, inactive, or soft-deleted (AC-19, AC-20). Optional `followable_type` filter (AC-30); `per_page` clamped 1–50 (AC-29). Resolves users via `full_name` and organizations via `name`, batched per type — never one query per row ([performance.md](../../../rules/conditional/performance.md)). |
 | `GetFollowStatusQuery` (new) | `['following' => bool]`, plus `followers_count` **only** when the target is an organization (AC-21, AC-22). Powers every Follow button. |
 | `GetCommunityFeedQuery` (**extend**) | Adds `section = 'following'`: restricts to authors the user follows, matched on `(author_type, author_id)` against `(followable_type, followable_id)` (AC-12, AC-17). Applies the `visibility = 'public'` filter per Decision 4 (AC-13, and AC-15 under Option A). `status = 'published'` and the `SoftDeletes` global scope already cover AC-14 and AC-16 — verify, do not re-add. |
-| `GetCommunityDiscoveryQuery` (**extend**) | Populates `is_following` on each `suggested_orgs` entry (AC-23) and replaces `'members_count' => rand(15, 120)` with the real follower count (Decision 6). Minimal diff — [incremental-generation](../../../rules/incremental-generation.md). |
+| `GetCommunityDiscoveryQuery` (**extend**) | Populates `is_following` on each `suggested_orgs` entry (AC-23) and replaces `'members_count' => rand(15, 120)` with the real follower count (Decision 6). Minimal diff — [incremental-generation](../../../rules/conditional/code-quality.md). |
 
 ### 4.4 Handlers — `app/Handlers/Community/`
 
@@ -430,7 +430,7 @@ module/community/network/
 
 **Existing file to make real.** [`SuggestedOrgsCard.jsx`](../../../../resources/views/web/src/module/community/home/components/rail/SuggestedOrgsCard.jsx) holds follow state in `useState` and discards it on refresh. Replace `handleToggleFollow` with `FollowButton`, seeded from the `is_following` field AC-23 adds. Delete the local `followingMap` — it is the stub this spec exists to retire.
 
-**Design system.** Reuse `@/src/components/ui` primitives and the tokens in [`resources/css/app.css`](../../../../resources/css/app.css). No new primitives, no new colors — [ui-design.md](../../../rules/ui-design.md).
+**Design system.** Reuse `@/src/components/ui` primitives and the tokens in [`resources/css/app.css`](../../../../resources/css/app.css). No new primitives, no new colors — [ui-design.md](../../../rules/conditional/ui-design.md).
 
 **API contract** (`follow.api.ts` — same `ApiResponse<T>` envelope and mock-fallback pattern as [`community.api.ts`](../../../../resources/views/web/src/module/community/home/api/community.api.ts)):
 
@@ -553,7 +553,7 @@ Dependency-first. Steps 1–3 are Gate 1 (design against fixtures); 4–10 are G
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed — answered or explicitly `N/A because ...`
 - [ ] BR-3 and BR-4 verified by inspection: no policy, gate, middleware, or membership check anywhere reads the `follows` table, and no query outside `app/{Models,Queries,Handlers,Actions,Http}/**/Community*` touches it
 - [ ] `SuggestedOrgsCard`'s local `followingMap` state is gone, and its Follow button survives a page refresh
-- [ ] `npm run typecheck` passes (ScaleUP has no Vitest configured — see [project-profile.md](../../../rules/project-profile.md))
+- [ ] `npm run typecheck` passes (ScaleUP has no Vitest configured — see [project-gate.md](../../../rules/core/project-gate.md))
 - [ ] The migration runs and rolls back cleanly on MySQL **and** SQLite
 - [ ] No open findings from adversarial verification — see the latest `.agents/reports/community-following-verify-<date>.md`
 

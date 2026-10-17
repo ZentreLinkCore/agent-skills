@@ -1,10 +1,10 @@
 # Spec — Manager Dashboard
 
 > **Kind:** Extension — the frontend module **already exists** at [`resources/views/web/src/module/manager/dashboard/`](../../../../resources/views/web/src/module/manager/dashboard/) but is still in **Gate 1 (design-only)** state: every widget renders from `MOCK_*` constants in [`dashboard.store.ts:15-56`](../../../../resources/views/web/src/module/manager/dashboard/store/dashboard.store.ts#L15), and **all 10 endpoints its api layer calls do not exist** in [`routes/api/manager.php`](../../../../routes/api/manager.php). This spec wires it to real data. Nothing here creates a parallel dashboard, a second approval engine, or a duplicate team-scoping helper.
-> **Portal:** **Manager** (`/api/manager/...` routes, `manager/dashboard` frontend module). Accent: **Red (`red-600`)** per [ui-design](../../../rules/ui-design.md) — already used by the existing header/refresh control, so no accent change is in scope.
+> **Portal:** **Manager** (`/api/manager/...` routes, `manager/dashboard` frontend module). Accent: **Red (`red-600`)** per [ui-design](../../../rules/conditional/ui-design.md) — already used by the existing header/refresh control, so no accent change is in scope.
 > **Version:** v1 — 2026-08-26 — initial.
 > **Route:** Reuses `manager/dashboard` (`manager_dashboard`) — unchanged, already registered in [`dashboard.routes.ts`](../../../../resources/views/web/src/module/manager/dashboard/route/dashboard.routes.ts) and already the first sidebar entry ([`useSidebarLinks.ts:88`](../../../../resources/views/web/src/composables/useSidebarLinks.ts#L88)).
-> **Conventions:** [project-profile](../../../rules/project-profile.md), [hrms-rules](../../../rules/hrms-rules.md), [ui-design](../../../rules/ui-design.md), [vue-standards](../../../rules/vue-standards.md), [duplicate-prevention](../../../rules/duplicate-prevention.md), [laravel-standards](../../../rules/laravel-standards.md), [performance](../../../rules/performance.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md), [duplicate-prevention](../../../rules/conditional/system-awareness.md), [laravel-standards](../../../rules/conditional/backend.md), [performance](../../../rules/conditional/performance.md).
 > **System Awareness:**
 > - **Models reused:** `AccountDetailVW`, `Timesheet`, `AppLeave`, `AppChangeShift`, `AppAdjustment`, `AppOvertime`, `AppOfficialBusinessTrip`, `Unit`, `PayPeriod`, `Holiday`, `Announcement`, `AnnouncementRead`. **Created:** none.
 > - **Tables reused:** `vw_accounts_details`, `accountjob`, `accounts`, `units`, `timesheet`, `shift`, `app_leave`, `app_shift`, `app_adjustment`, `app_overtime`, `app_obt`, `payroll_period`, `holidays`, `announcements`, `announcement_reads`. **Created:** none.
@@ -58,7 +58,7 @@ The Manager Dashboard is the landing page for every Department Head / Supervisor
 
 | Pros | Cons |
 |---|---|
-| Zero frontend churn — the api layer and store keep their current shape | Nine new endpoints, of which **three duplicate engines that already exist**: `approve`/`decline` duplicate `POST /api/manager/approveRequest`, and `announcements/{id}/read` duplicates `POST /api/employee/announcements/{id}/read` — a direct [duplicate-prevention](../../../rules/duplicate-prevention.md) violation |
+| Zero frontend churn — the api layer and store keep their current shape | Nine new endpoints, of which **three duplicate engines that already exist**: `approve`/`decline` duplicate `POST /api/manager/approveRequest`, and `announcements/{id}/read` duplicates `POST /api/employee/announcements/{id}/read` — a direct [duplicate-prevention](../../../rules/conditional/system-awareness.md) violation |
 | Per-widget skeletons come free | Breaks the one-endpoint-per-dashboard convention the other four portals all follow |
 | | Widgets can disagree with each other (team size from one request, attendance from another) |
 
@@ -122,7 +122,7 @@ The bucket logic (`timein && late > 0` → late; `timein` → present; approved 
 |---|---|
 | The dashboard's counts and the My Team Attendance page's `statistics` block are guaranteed identical — today they would be two independent implementations of the same four rules | Refactors a shipped 160-line controller method; needs a before/after comparison on the same date + unit to prove parity |
 | Kills the existing in-method duplication at the same time | Slightly larger diff than Option B |
-| Puts business logic in a Query where [laravel-standards](../../../rules/laravel-standards.md) says it belongs, not in a controller | — |
+| Puts business logic in a Query where [laravel-standards](../../../rules/conditional/backend.md) says it belongs, not in a controller | — |
 
 **Option B — Recompute the buckets inside `GetManagerDashboardQuery`**
 
@@ -152,7 +152,7 @@ The bucket logic (`timein && late > 0` → late; `timein` → present; approved 
 
 | Pros | Cons |
 |---|---|
-| One request, matching Decision 1 with no exception | Puts a ~50 000-row PHP transform on the critical path of the portal's landing page — a direct [performance](../../../rules/performance.md) violation |
+| One request, matching Decision 1 with no exception | Puts a ~50 000-row PHP transform on the critical path of the portal's landing page — a direct [performance](../../../rules/conditional/performance.md) violation |
 | | One slow department makes the whole dashboard feel broken |
 
 **Option C — Write light period-scoped SQL aggregates for the dashboard and link out to the YTD page for depth**
@@ -196,7 +196,7 @@ The eight widget components currently sit in `dashboard/pages/` alongside the ac
 
 | Pros | Cons |
 |---|---|
-| Matches the layout mandated by [project-structure](../../../rules/project-structure.md) and used by all four sibling dashboards | Seven file moves + import updates in `Dashboard.vue`, all mechanical |
+| Matches the layout mandated by [project-structure](../../../rules/conditional/code-quality.md) and used by all four sibling dashboards | Seven file moves + import updates in `Dashboard.vue`, all mechanical |
 | `pages/` regains its meaning: "things a route points at" | Churns `git log --follow` on seven files |
 
 **Option B — Leave them in `pages/`**
@@ -216,7 +216,7 @@ The eight widget components currently sit in `dashboard/pages/` alongside the ac
 
 | Pros | Cons |
 |---|---|
-| No duplicate controller, query or route for content that is identical for every portal | A manager-portal screen posting to an `/api/employee/...` URL reads oddly against [hrms-rules](../../../rules/hrms-rules.md) portal separation |
+| No duplicate controller, query or route for content that is identical for every portal | A manager-portal screen posting to an `/api/employee/...` URL reads oddly against [hrms-rules](../../../rules/conditional/payroll.md) portal separation |
 | Read state stays in one `announcement_reads` row per account — a manager marking an item read on the dashboard sees it read everywhere | — |
 
 **Option B — Alias one manager route onto the same controller**
@@ -283,7 +283,7 @@ The eight widget components currently sit in `dashboard/pages/` alongside the ac
 | `announcements` | `id`, `title`, `summary`, `content`, `category`, `importance`, `pinned`, `published_at`, `author_name`, `author_role` | `active()` scope | Announcements feed |
 | `announcement_reads` | `id`, `idacct`, `idannouncement` | `idacct = Auth::id()` | Unread dot |
 
-> Approver membership is stored **inside** the `approvers` JSON column on each `app_*` table and is read with MySQL `JSON_TABLE` — there is no join table to add, and no denormalized "manager_id" column is introduced anywhere. [project-profile](../../../rules/project-profile.md): SubHRMS has **zero DB-level foreign keys** — nothing in this spec adds one.
+> Approver membership is stored **inside** the `approvers` JSON column on each `app_*` table and is read with MySQL `JSON_TABLE` — there is no join table to add, and no denormalized "manager_id" column is introduced anywhere. [project-profile](../../../rules/core/project-gate.md): SubHRMS has **zero DB-level foreign keys** — nothing in this spec adds one.
 
 ---
 

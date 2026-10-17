@@ -3,7 +3,7 @@
 > **Kind:** Redesign / migrate the **existing** feature to the modern TS module + modern UI. **Backend already exists** — do not rebuild it.
 > **Portal:** Payroll (`payroll` namespace + URL prefix + module folder).
 > **Current state:** Fully working **legacy monolith** page (1,300 lines) at [account_classification/pages/chart_of_account/ChartOfAccount.vue](../../../resources/views/web/src/module/payroll/account_classification/pages/chart_of_account/ChartOfAccount.vue) using the old `@public/assets/css/payroll/main_payroll.css` + `page-content`/`Spinner` structure.
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [ui-design](../../rules/ui-design.md), [vue-standards](../../rules/vue-standards.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md).
 
 ---
 
@@ -121,7 +121,7 @@ Drop the `main_payroll.css` import; use Tailwind utilities only (valid tokens �
 6. **Tab state** — filters, pagination, and modals are per-tab; switching tabs must not leak one tab's filter state into the other.
 7. **Dropped legacy features** — the legacy page also had Export-to-Excel, print layouts, and "download import template" per tab. The three already-shipped sibling redesigns ([transaction_class](../../../resources/views/web/src/module/payroll/account_classification/pages/transaction_class/TransactionClass.vue), transaction_types, loan_types) **dropped all three**, so this redesign follows suit for consistency. Flag it to the user at Gate 1 — payroll users did use the export.
 8. **Audit trail** — already handled server-side; no client action needed.
-9. **Authorization** — payroll-portal only ([hrms-rules](../../rules/hrms-rules.md) §4).
+9. **Authorization** — payroll-portal only ([hrms-rules](../../../rules/conditional/payroll.md) §4).
 
 ---
 

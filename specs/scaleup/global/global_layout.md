@@ -3,7 +3,7 @@
 > **Kind:** Greenfield
 > **Portal:** Global
 > **Route:** N/A — cross-cutting shell mounted around all authenticated routes under `/app`.
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md), [ui-design.md](../../../rules/ui-design.md), [duplicate-prevention.md](../../../rules/duplicate-prevention.md) — these were authored against the SubHRMS Vue codebase; this spec applies their *architectural intent* (thin-controller + Query/Handler/Action, no API Resources, responsive/dark-mode discipline) translated to ScaleUP's actual stack: **React 19 + Tailwind CSS v4**, module folders using `.jsx`/`.js` instead of `.vue`/`.ts`.
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [system-awareness.md](../../../rules/conditional/system-awareness.md) — these were authored against the SubHRMS Vue codebase; this spec applies their *architectural intent* (thin-controller + Query/Handler/Action, no API Resources, responsive/dark-mode discipline) translated to ScaleUP's actual stack: **React 19 + Tailwind CSS v4**, module folders using `.jsx`/`.js` instead of `.vue`/`.ts`.
 > **System Awareness:** Models — **reused** `App\Models\User.php` only (already `use Notifiable`), none created. Tables — **reused** the framework's stock, not-yet-published `notifications` table (via `Notifiable`); no custom table created. Routes — **created** `routes/api/global.php` (new file, loaded from `routes/api.php`); the existing `routes/web.php` `/app` route needs **extending** to a catch-all so client-side deep links survive a full-page refresh (see §6). New migration: **yes** — the stock `php artisan notifications:table` publish only; no custom schema is authored by this spec.
 
 ---
@@ -150,7 +150,7 @@ Today `resources/views/web/App.jsx` renders `null` and `routes/web.php` exposes 
 
 | Pros | Cons |
 |---|---|
-| Zero custom schema to design — avoids inventing a parallel table (exactly what [duplicate-prevention.md](../../../rules/duplicate-prevention.md) warns against, and the `Notifiable` trait is already sitting on `User` unused) | `data` is a schemaless JSON blob — every future producer (Dashboard, Onboarding, Settings) must agree on a shape by convention, not DB constraints |
+| Zero custom schema to design — avoids inventing a parallel table (exactly what [system-awareness.md](../../../rules/conditional/system-awareness.md) warns against, and the `Notifiable` trait is already sitting on `User` unused) | `data` is a schemaless JSON blob — every future producer (Dashboard, Onboarding, Settings) must agree on a shape by convention, not DB constraints |
 | Framework-idiomatic: any future domain can `->notify(...)` without this shell needing to know about it | One migration still needs to be run before real data exists |
 | Read/unread + polymorphic source already solved (`unreadNotifications()`, `markAsRead()`) | |
 
@@ -245,7 +245,7 @@ No new custom tables are designed by this spec.
 
 This is primarily a **frontend-chrome spec** — the only backend surface truly needed for the shell itself is the Notification Center's read/mark-read endpoints. Everything else (Organization Switcher data, active org, theme preference table) is deliberately **not** owned here; it's consumed from the Auth/Onboarding specs once written.
 
-**Portal / namespace** (per [project-profile.md](../../../rules/project-profile.md)'s Global row): controller namespace `global`, route prefix `global` (explicit, unlike SubHRMS's top-level Global — chosen for clarity as more portals land; see note below).
+**Portal / namespace** (per [project-gate.md](../../../rules/core/project-gate.md)'s Global row): controller namespace `global`, route prefix `global` (explicit, unlike SubHRMS's top-level Global — chosen for clarity as more portals land; see note below).
 
 **Query**
 ```php

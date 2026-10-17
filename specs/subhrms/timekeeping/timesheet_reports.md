@@ -3,7 +3,7 @@
 > **Kind:** Extension — pure frontend refactor of five already-shipped pages onto one shared, config-driven layer (mirrors the completed `applications/shared/` migration). **No backend changes.**
 > **Portal:** **Timekeeping** (`/api/timekeeping/timesheet-reports/...` routes, `timekeeping/timesheet_reports` frontend module — controller namespace is `tk`, URL prefix is `timekeeping`).
 > **Route(s) (frontend, ALREADY REGISTERED — do not edit the route file):** `timekeeping/timesheet-reports/absences` (`timesheet_reports_absences`), `.../tardiness` (`timesheet_reports_tardiness`), `.../undertime` (`timesheet_reports_undertime`), `.../overtime` (`timesheet_reports_overtime`), `.../night-premium` (`timesheet_reports_night_premium`).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md), [hrms-rules.md](../../../rules/hrms-rules.md), [ui-design.md](../../../rules/ui-design.md), [vue-standards.md](../../../rules/vue-standards.md), [duplicate-prevention.md](../../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models **reused** (`AccountDetailVW`/`vw_accounts_details`, `TimesheetSummary`, `employee_status`); Backend **fully reused, zero changes** — `App\Http\Controllers\tk\TimesheetReportsController`, `App\Queries\Timesheet\{GetAbsencesReportQuery, GetTardinessReportQuery, GetUndertimeReportQuery, GetOvertimeReportQuery, GetNightPremiumReportQuery}`, and their shared builder `App\Queries\Timesheet\BuildTimesheetReportRowsQuery`; Routes **reused** (`routes/api/timekeeping.php` `timesheet-reports` group, already registered); **New migration: NO.**
 
 ---
@@ -38,7 +38,7 @@ This is exactly the duplication problem the **Application module redesign** ([ap
 
 | Pros | Cons |
 |---|---|
-| Smaller diff per page; no shared abstraction to design. | **Every future fix (a filter bug, a new column, a pagination tweak) must be applied five times** — the exact problem this spec exists to avoid; violates [duplicate-prevention.md](../../../rules/duplicate-prevention.md). |
+| Smaller diff per page; no shared abstraction to design. | **Every future fix (a filter bug, a new column, a pagination tweak) must be applied five times** — the exact problem this spec exists to avoid; violates [system-awareness.md](../../../rules/conditional/system-awareness.md). |
 | | Doesn't satisfy the definition doc's explicit ask: "Create a single shared component that can support multiple timesheet report types." |
 
 **Option C — One generic page bound to a `:type` route param**
@@ -108,7 +108,7 @@ All five tables currently hand-roll a pill (`bg-slate-100 ... <i class="mdi mdi-
 
 | Pros | Cons |
 |---|---|
-| Removes 5× duplicated badge markup; matches [ui-design.md](../../../rules/ui-design.md) and the Applications precedent (`getStatusKey`/`getStatusLabel` + `StatusBadge`). | `StatusBadge` has no icon slot — the current lock/lock-open `mdi` icon (a meaningful "this period is closed" cue) is lost unless a small wrapper adds an icon beside the badge. |
+| Removes 5× duplicated badge markup; matches [ui-design.md](../../../rules/conditional/ui-design.md) and the Applications precedent (`getStatusKey`/`getStatusLabel` + `StatusBadge`). | `StatusBadge` has no icon slot — the current lock/lock-open `mdi` icon (a meaningful "this period is closed" cue) is lost unless a small wrapper adds an icon beside the badge. |
 | One place to fix if status colors/labels ever change. | |
 
 **Option B — Keep the current hand-rolled badge, centralize it as one shared render function**
@@ -124,7 +124,7 @@ All five tables currently hand-roll a pill (`bg-slate-100 ... <i class="mdi mdi-
 
 ### Decision 5: Filter controls — native inputs vs. global `CSelect`
 
-Department and Employment Type filters are currently native `<select>` elements; `CSelect` is a **mandatory, globally-registered** component per [project-profile.md](../../../rules/project-profile.md) ("Globally-registered components — use WITHOUT importing: `CSelect`...").
+Department and Employment Type filters are currently native `<select>` elements; `CSelect` is a **mandatory, globally-registered** component per [project-gate.md](../../../rules/core/project-gate.md) ("Globally-registered components — use WITHOUT importing: `CSelect`...").
 
 **Option A — Replace both selects with `CSelect` (Recommended)**
 
@@ -198,7 +198,7 @@ Current pages use a translucent overlay + spinner during `isLoading` (no `TableS
 
 | Pros | Cons |
 |---|---|
-| No change needed. | Doesn't use the two global components ([ui-design.md](../../../rules/ui-design.md) mandates matching existing loader/empty-state components) that every other redesigned report page (Applications) already uses. |
+| No change needed. | Doesn't use the two global components ([ui-design.md](../../../rules/conditional/ui-design.md) mandates matching existing loader/empty-state components) that every other redesigned report page (Applications) already uses. |
 
 **Recommendation:** **Option A.**
 
@@ -224,7 +224,7 @@ Current pages use a translucent overlay + spinner during `isLoading` (no `TableS
 
 **Fully reused, zero changes.** Confirmed present and correct:
 
-- `App\Http\Controllers\tk\TimesheetReportsController` — `absences()`, `tardiness()`, `undertime()`, `overtime()`, `nightPremium()`, each a thin `try/catch` around its Query class, raw `response()->json($data, 200)` (no API Resources) — matches [project-profile.md](../../../rules/project-profile.md) exactly.
+- `App\Http\Controllers\tk\TimesheetReportsController` — `absences()`, `tardiness()`, `undertime()`, `overtime()`, `nightPremium()`, each a thin `try/catch` around its Query class, raw `response()->json($data, 200)` (no API Resources) — matches [project-gate.md](../../../rules/core/project-gate.md) exactly.
 - `App\Queries\Timesheet\BuildTimesheetReportRowsQuery::build($params)` — the single shared builder every report query calls, then filters with its own `> 0` predicate (`GetAbsencesReportQuery`, `GetTardinessReportQuery`, `GetUndertimeReportQuery`, `GetOvertimeReportQuery`, `GetNightPremiumReportQuery`).
 - Routes already registered in `routes/api/timekeeping.php`:
   ```php
@@ -270,7 +270,7 @@ module/timekeeping/timesheet_reports/
 │   ├── overtime/{Overtime.vue, config/overtime.config.ts, index.ts}
 │   └── night_premium/{NightPremium.vue, config/night_premium.config.ts, index.ts}
 ```
-TypeScript throughout the new `shared/` layer, `<script setup>`, PascalCase components — per [vue-standards.md](../../../rules/vue-standards.md). **No Pinia store**: state does not leave a single page tree (matches the Applications precedent).
+TypeScript throughout the new `shared/` layer, `<script setup>`, PascalCase components — per [frontend-vue.md](../../../rules/conditional/frontend-vue.md). **No Pinia store**: state does not leave a single page tree (matches the Applications precedent).
 
 ### Global components — MANDATORY, use without importing
 `CSelect`, `Pagination`, `Spinner`, `Loading`, `VDatePicker` *(not used here, see Decision 7)*, `StatusBadge`, `EmptyState`, `TableSkeleton`. Directives: `v-click-outside`, `v-offcanvas-back`.
@@ -322,7 +322,7 @@ This is a **pure refactor of already-wired endpoints** — there is no Gate 1 (m
 
 ## 6. Business Rules & Edge Cases
 
-### HRMS domain rules ([hrms-rules.md](../../../rules/hrms-rules.md))
+### HRMS domain rules ([payroll.md](../../../rules/conditional/payroll.md))
 - **Read-only reports:** none of the five pages write anything — no timesheet edits, no re-processing trigger. The shared layer must not add any write action beyond the existing Excel export.
 - **No client-side re-derivation of payroll math:** grace-period lateness, OT multipliers (125%/130%/200%), and night differential (110%, 10PM–6AM) are computed once in `HandleTimesheet`/`ComputeNightPremiumAction`. The shared components only *format and group* already-computed numbers — never recompute them.
 - **Portal separation:** `timesheet-reports/*` sits under the `timekeeping` prefix + `auth:sanctum` and returns **all** active employees for the period — this is timekeeper-only visibility; never reuse these endpoints/components from the employee or manager portal.

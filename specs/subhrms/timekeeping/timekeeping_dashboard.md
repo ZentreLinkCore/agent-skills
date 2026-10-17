@@ -3,7 +3,7 @@
 > **Kind:** Extension — the `timekeeping/dashboard` module already exists but is a **dummy/mock design**. Every widget is fed by hard-coded fixtures inside `api/dashboard.api.ts` (Unsplash avatars, invented employees "Alexander Wright"/"Sarah Jenkins", a hand-written June 2026 shift calendar). This spec re-bases the same dashboard on the **real implementations of the existing Timekeeping pages** so each widget mirrors a page that is already live.
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, controller namespace `tk`, frontend module `timekeeping`).
 > **Route:** `timekeeping/dashboard` (`timekeeping_dashboard`) — **reused, unchanged**.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:**
 > - **Models Reused:** `AccountDetailVW`, `Timesheet`, `TimesheetSummary`, `AttendanceException`, `AttendanceDispute`, `AppLeave`, `AppOvertime`, `AppChangeShift`, `AppAdjustment`, `AppOfficialBusinessTrip`, `Shift`, `AccountJob`, `PayPeriod`, `Holiday`, `TransLog`. **Models Created:** none.
 > - **Tables Reused:** `vw_accounts_details`, `timesheet`, `timesheet_summary`, `attendance_exceptions`, `attendance_disputes`, `app_leave`, `app_overtime`, `app_shift`, `app_adjustment`, `app_obt`, `shift`, `accountjob`, `payroll_period`, `holidays`, `translog`. **Tables Created:** none.
@@ -247,7 +247,7 @@ It is a **composer**. Its body must not contain SQL for anything below; it calls
 | `activity` | `GetTransactionLogsQuery::execute(['per_page' => 8, ...])` | Timekeeping modules only. |
 
 > [!IMPORTANT]
-> Per [duplicate-prevention.md](../../rules/duplicate-prevention.md) and the project CLAUDE.md rule: if a needed shape is *close but not exact* (e.g. `GetDutyRosterQuery` returns per-employee rows and the widget wants per-day counts), **extract the shared core into a reusable method on the existing query class** and call it from both sites — do not copy the builder into the dashboard query.
+> Per [system-awareness.md](../../../rules/conditional/system-awareness.md) and the project CLAUDE.md rule: if a needed shape is *close but not exact* (e.g. `GetDutyRosterQuery` returns per-employee rows and the widget wants per-day counts), **extract the shared core into a reusable method on the existing query class** and call it from both sites — do not copy the builder into the dashboard query.
 
 **Caching:** wrap the composed result in `Cache::remember("tk_dashboard:{$periodId}:{$targetDate}", 60, fn() => …)` per Decision 5.
 

@@ -3,7 +3,7 @@
 > **Kind:** Extension & Architecture Refactoring — Modernizing legacy single-file profile component and fat controller into a clean modular TypeScript frontend and top-level Query/Handler backend.
 > **Portal:** **Employee** (`/api/employee/...` routes, `employee_details` frontend module).
 > **Route:** `/employee/employee-details` (`employee_employee_details`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [laravel-standards.md](../../rules/laravel-standards.md), [hrms-rules.md](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [backend.md](../../../rules/conditional/backend.md), [payroll.md](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models reused (`Account`, `ChangeRequest`, `TransLog`, `SchoolBackground`, `WorkExperience`, `TrainingModel`, `ExamsTakenModel`, `Awards`, `Unit`); Tables/Views reused (`vw_accounts_details`, `vw_site`, `change_requests`, `trans_logs`); Routes reused (`api/employee/profileDetails`, `api/employee/empOtherDetails`, `api/employee/uploadProfileImage`); New migration: **No**.
 
 ---
@@ -12,7 +12,7 @@
 
 The `employee_details` module provides employees with a comprehensive view of their profile information: personal details, contact numbers, government IDs, background details (education, work experience, trainings, exams, awards), job assignment, leave entitlements, and compensation/benefits summary. It also enables employees to apply for profile data change requests (with file attachments) and upload/remove their profile picture.
 
-This specification defines the architectural refactoring and visual design modernization of the `employee_details` module to conform strictly to the ground-truth project standards ([project-profile.md](../../rules/project-profile.md)).
+This specification defines the architectural refactoring and visual design modernization of the `employee_details` module to conform strictly to the ground-truth project standards ([project-gate.md](../../../rules/core/project-gate.md)).
 
 ---
 
@@ -42,7 +42,7 @@ This specification defines the architectural refactoring and visual design moder
 | Pros | Cons |
 |---|---|
 | Single file to inspect. | Extremely difficult to maintain, test, or debug (1,200+ lines). |
-| | Violates [vue-standards.md](../../rules/vue-standards.md) component scoping rules. |
+| | Violates [frontend-vue.md](../../../rules/conditional/frontend-vue.md) component scoping rules. |
 
 **Recommendation:** **Option A**. Decomposing into subcomponents eliminates legacy debt, removes jQuery runtime coupling, and brings the frontend into full alignment with standard Vue 3 Composition API practices.
 
@@ -83,7 +83,7 @@ This specification defines the architectural refactoring and visual design moder
 
 | Pros | Cons |
 |---|---|
-| Strictly complies with [project-profile.md](../../rules/project-profile.md) Query/Handler architecture. | Scaffolds 4 new Query/Handler classes. |
+| Strictly complies with [project-gate.md](../../../rules/core/project-gate.md) Query/Handler architecture. | Scaffolds 4 new Query/Handler classes. |
 | Thin controller (~40 lines total). | |
 | Highly testable business logic isolated from HTTP concerns. | |
 

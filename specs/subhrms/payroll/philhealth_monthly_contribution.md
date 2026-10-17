@@ -3,7 +3,7 @@
 > **Kind:** Greenfield / Extension (Statutory PhilHealth monthly remittance consolidation report & electronic RF-1 / EPRiS export module).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines/pages/philhealth/monthly_contribution` frontend module).  
 > **Route:** `/payroll/phil-health/monthly-contribution` (`payroll_government_routines_philhealth_monthly_contribution`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models reused (`PayrollRun`, `PayrollRunDetail`, `PayPeriod`, `Account`, `AccountDetailVW`, `Company`); Tables reused (`payroll_run`, `payroll_run_detail`, `pay_period`, `vw_accounts_details`, `company`); Routes created (`/payroll/government-routines/philhealth/monthly-contribution`, `/payroll/government-routines/philhealth/export-rf1`); New migration: no.
 
 ---
@@ -263,7 +263,7 @@ resources/views/web/src/module/payroll/government_routines/pages/philhealth/mont
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Historic Non-Recomputation Rule:**
    - Report queries `payroll_run_detail` directly.

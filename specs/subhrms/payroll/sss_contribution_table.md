@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (New master reference table & integration into Payroll Calculation & Government Routines SSS).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines/pages/sss` frontend module).  
 > **Route:** `/payroll/government-routines/sss` (`payroll_government_routines_sss`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models created (`SssContributionTable`); Tables created (`sss_contribution_table`), extended (`payroll_run_detail`); Routes created (`/payroll/sss-contribution-table`); New migration: yes.
 
 ---
@@ -228,7 +228,7 @@ resources/views/web/src/module/payroll/government_routines/pages/sss/
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Table Lookup Matching Algorithm:**
    - Given gross contributable salary $S$:

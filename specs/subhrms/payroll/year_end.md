@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (page is a 4-line placeholder). Sibling cycle of Regular Cycle — reuses the processing infrastructure in [timesheet_summary.md](./timesheet_summary.md).
 > **Portal:** Payroll. **Route:** `payroll/year-end` (`payroll_year_end`) — already registered → [year_end/YearEnd.vue](../../../resources/views/web/src/module/payroll/payroll_processing/pages/year_end/YearEnd.vue).
 > **`payroll_run.cycle = 'year_end'`.**
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

@@ -4,7 +4,7 @@
 > **Portal:** **Employee** (`/api/employee/...` routes, `profile` mobile module).
 > **Version:** v1 — 2026-08-31 — initial.
 > **Route:** `/(app)/profile` (`ProfileScreen`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [laravel-standards.md](../../rules/laravel-standards.md), [hrms-rules.md](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [backend.md](../../../rules/conditional/backend.md), [payroll.md](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models reused (`Account`, `Unit`); Views/Tables reused (`vw_accounts_details`, `vw_site`); Routes reused (`api/employee/profileDetails`, `api/employee/dashboard`, `api/auth/logout`); New migration: **No**.
 
 ---

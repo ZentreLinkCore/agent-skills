@@ -3,7 +3,7 @@
 > **Kind:** Extension & Architecture Refactoring
 > **Portal:** **Employee** (`/api/employee/...` routes, `timekeeping_applications` frontend module).
 > **Route:** `/employee/timekeeping-applications` (`employee_timekeeping_applications`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [vue-standards.md](../../rules/vue-standards.md), [laravel-standards.md](../../rules/laravel-standards.md), [ui-design.md](../../rules/ui-design.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [backend.md](../../../rules/conditional/backend.md), [ui-design.md](../../../rules/conditional/ui-design.md).
 > **System Awareness:**
 > - **Models Reused:** `AppChangeShift`, `AppAdjustment`, `AppOvertime`, `AppOfficialBusinessTrip`, `AppLeave`, `PayPeriod`, `Timesheet`, `AccountDetailVW`.
 > - **Tables Reused:** `app_changeshift`, `app_adjustment`, `app_overtime`, `app_obtrip`, `app_leaves`, `payperiods`, `timesheets`.
@@ -43,7 +43,7 @@ This specification defines the modern architectural design, frontend DTO typing,
 |---|---|
 | • No need to update child component prop definitions. | • High coupling, fragile debugging, no type safety for injected dependencies. |
 
-**Recommendation:** **Option A**. Strong typing, explicit props/emits, and clean composables align with [vue-standards.md](../../rules/vue-standards.md).
+**Recommendation:** **Option A**. Strong typing, explicit props/emits, and clean composables align with [frontend-vue.md](../../../rules/conditional/frontend-vue.md).
 
 ---
 

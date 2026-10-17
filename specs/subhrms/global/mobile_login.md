@@ -4,7 +4,7 @@
 > **Portal:** **Global / Mobapp** (`/api/login`, `/api/biometric/*`, `/api/account` backend routes; `resources/views/mobapp` mobile client).
 > **Version:** v1 — 2026-08-28 — initial
 > **Route:** `(auth)/login` (Expo Router path: `/login` or root auth stack).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:**
 > - Models Reused: `App\Models\Account` (`tbl_account` / `accounts`), `App\Models\UserBiometricDevice`, `App\Models\BiometricAuthLog`.
 > - Tables Reused: `tbl_account`, `user_biometric_devices`, `biometric_auth_logs`.

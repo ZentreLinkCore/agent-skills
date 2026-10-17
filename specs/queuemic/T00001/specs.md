@@ -6,7 +6,7 @@
 > **Version:** v3 — 2026-10-07 — §2.13 decided by the product owner: YouTube Data API only (the results-page scraper is removed); `HEARTBEAT_FAILED` added to the error-code table.
 >
 > **Route:** `/api/v1/rooms`, `/api/v1/rooms/{code}/*`, `/api/v1/songs/search`.
-> **Conventions:** Clean Architecture (thin controllers; Actions / Queries / Services), event-driven WebSocket streaming, dark glassmorphic UI. QueueMic is **not** covered by [project-profile.md](../../../rules/project-profile.md) (which profiles SubHRMS and ScaleUP only). Its conventions are this spec plus `backend/AGENTS.md` and `mobapp/AGENTS.md`.
+> **Conventions:** Clean Architecture (thin controllers; Actions / Queries / Services), event-driven WebSocket streaming, dark glassmorphic UI. QueueMic is **not** covered by [project-gate.md](../../../rules/core/project-gate.md) (which profiles SubHRMS and ScaleUP only). Its conventions are this spec plus `backend/AGENTS.md` and `mobapp/AGENTS.md`.
 > **System Awareness:**
 > - Models reused: Room, RoomMember, Song, KaraokeQueue, PlaybackSession, ActivityLog.
 > - Tables reused; one column and one index added to `karaoke_queue`.

@@ -9,7 +9,7 @@ Sizes are measured from git (`origin/main` before, this branch after), line endi
 | Area | Before | After |
 | :--- | :--- | :--- |
 | **Always-on rules** (Claude Code, every turn) | `claude-adapter/rules/` held a second, full copy of the rule library (22 files). A fresh install loaded all of it on every turn. | Six files, **symlinked** from their single canonical copy: [rules/core/](../rules/core/) (project gate, authority boundary, git workflow, security baseline), [context-budget.md](../rules/context-budget.md), [rule-router.md](../rules/rule-router.md). The adapter holds no rules. Each holds only its rules; the procedures they used to carry (the branch gate, the ownership table, the Graphify commands) are conditional files that skills open. |
-| **Rule layout** | 22 flat files, each in a six-heading template (Purpose / Scope / Responsibilities / Rules / Best Practices / AI Behavior) that restated itself; "search before create" in four files; one 27 KB profile covering every project. | [core/](../rules/core/) (always on) and [conditional/](../rules/conditional/) (loaded by the router): overlapping rules merged, the profile split by topic, boilerplate dropped. Old paths are one-line redirects. |
+| **Rule layout** | 22 flat files, each in a six-heading template (Purpose / Scope / Responsibilities / Rules / Best Practices / AI Behavior) that restated itself; "search before create" in four files; one 27 KB profile covering every project. | [core/](../rules/core/) (always on) and [conditional/](../rules/conditional/) (loaded by the router): overlapping rules merged, the profile split by topic, boilerplate dropped. The old flat files are gone; links to them were rewritten. |
 | **Rule routing** | Each skill carried its own "load these rules" table. | One [rule router](../rules/rule-router.md): by task, and by the paths in a diff. |
 | **Shared skill steps** | Every skill restated the authority boundary, a workflow diagram, the project gate, the branch gate, ticket resolution (one copied the allocation script verbatim), template fill rules, report persistence with run history, `task.md` upkeep, and versioning. | Written once in [skill-protocol.md](../rules/conditional/skill-protocol.md); each skill keeps only what is specific to its stage. |
 | **Context priority** | Implicit; skills read the spec, plan, and reports in full. | Every `SKILL.md` has a **Context Loading Priority** section: `task.md` (and `summary.md` first) → `context.md` → only the spec / plan sections the step needs → only the source files named. |
@@ -22,7 +22,7 @@ Sizes are measured from git (`origin/main` before, this branch after), line endi
 
 ### Where each old rule went
 
-| Old file (now a redirect) | Canonical home |
+| Old file (removed) | Canonical home |
 | :--- | :--- |
 | `authority-boundary.md`, `git-workflow.md` | `core/` (same names). The branch gate moved to `conditional/branch-gate.md`, the ownership table to `conditional/skill-protocol.md` §9 |
 | `security.md` | `core/security-baseline.md` |
@@ -36,7 +36,7 @@ Sizes are measured from git (`origin/main` before, this branch after), line endi
 | `ui-design.md`, `testing.md`, `performance.md`, `ticket-numbering.md`, `versioning.md` | `conditional/` (same names; testing and ticket-numbering anchors unchanged) |
 | (new) | `conditional/mobile.md`, `conditional/realtime.md`, `conditional/frontend.md`, `conditional/skill-protocol.md`, `conditional/branch-gate.md`, `conditional/code-search.md`, `rule-router.md` |
 
-The redirects exist because hundreds of historical specs and reports, and older installs, link to the old paths. Nothing loads them automatically; delete them once every installed copy is refreshed and no document you still use links to them.
+The old flat files were first kept as one-line redirects, then removed: the links in the 89 historical specs, reports, and config files that named them were rewritten to the homes above. Links to `project-profile.md` point to `core/project-gate.md`, whose rows name the topic files. Links that went through `.claude/rules/` (the old installed copies) now go to `.agents/rules/`.
 
 ### Merged with `main`
 
@@ -113,7 +113,7 @@ flowchart LR
 
 The saving comes mostly from what a run no longer has to open: the 27 KB two-project profile is now five topic files the router picks from, and the shared steps a run needs from the 30 KB ticket rule are in the 9.5 KB protocol, with the rest read by section.
 
-**Duplication removed.** The rule text in the kit went from 273,930 B (the library plus its adapter copy) to 130,650 B of canonical rules plus 8,372 B of redirects. The 13 existing templates went from 87,870 B to 81,904 B.
+**Duplication removed.** The rule text in the kit went from 273,930 B (the library plus its adapter copy) to 130,650 B of canonical rules (the 8,372 B of temporary redirects since removed). The 13 existing templates went from 87,870 B to 81,904 B.
 
 **Skill audit.** Each `SKILL.md` was checked for boilerplate that belongs in a shared file, prose that is really a checklist, and what it loads:
 
@@ -169,7 +169,7 @@ Graphify bounds a search by `--budget`. For the hrms notification feature, `grap
 
 ## 5. Rolling it out, and what is still open
 
-- **Existing installs must re-run `bash .agents/setup.sh`** after each kit update; Windows installs hold copies, not symlinks. In hrms, `.claude/rules/` still holds the older pointer stubs (they now resolve through the redirects), and `.claude/skills/` is a real directory with an older skill set (`webkit.spec`, `webkit.frontend-implement`, `webkit.backend-implement`) that `setup.sh` will not replace while those folders exist only there. Decide whether to keep or remove them before re-running it.
+- **Existing installs must re-run `bash .agents/setup.sh`** after each kit update; Windows installs hold copies, not symlinks. In hrms, `.claude/skills/` was a real directory with an older skill set (`webkit.spec`, `webkit.frontend-implement`, `webkit.backend-implement`) that `setup.sh` will not replace while those folders exist only there. Decide whether to keep or remove them before re-running it.
 - **The always-on set is as small as the older pointer-stub install** (≈ 2,700 tokens/turn) while the git workflow, authority boundary, and security baseline stay global: each core file holds only its rules, and the procedures they carried live in `conditional/branch-gate.md`, `skill-protocol.md` §9, and `conditional/code-search.md`, read only by the runs that need them. It is ≈ 92% smaller than a fresh install of the original kit.
 - **`ticket-numbering.md` is still the largest rule** (≈ 31 KB). Its §8 branch-resolution procedure is most of it; skills now read sections, not the file, but splitting §8 out would make that structural.
 - **The largest skills** (`document` ≈ 30 KB, `migrate` ≈ 32 KB, `specify` ≈ 25 KB) are mostly skill-specific reference: mermaid worked examples, translation maps, "must hold" tables. Moving each phase's reference block into its own file, opened only when that phase runs, is the next structural saving.

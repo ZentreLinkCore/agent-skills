@@ -53,5 +53,5 @@ Rebuild per the canonical layout ([chart_of_account.md](./chart_of_account.md) �
 2. **Gate columns are read-only here** — never write `tk_/pay_process_status` from this page.
 3. **Deleting a referenced period** — block/warn if the period has timesheet/payroll data or is closed.
 4. **`uuid`** — auto-set server-side; no client handling.
-5. Server-side pagination; delete confirmation; payroll-portal only ([hrms-rules](../../rules/hrms-rules.md) §4).
+5. Server-side pagination; delete confirmation; payroll-portal only ([hrms-rules](../../../rules/conditional/payroll.md) §4).
 6. **Build order (design-first):** Gate 1 hard-coded design (types/api/composable/page/modals) for review → Gate 2 wire the existing `payPeriod` apiResource (no migration/model work). Vitest for the composable (year filter refetch, unique-date error surface, pagination).

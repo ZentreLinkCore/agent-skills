@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — New accounting integration module for payroll financial posting.
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `reports/pages/journal_voucher` frontend module).
 > **Route:** `/payroll/journal-voucher` (`payroll_journal_voucher`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models reused: `PayrollRun`, `PayrollRunDetail`, `PayPeriod`, `ChartofAccount`, `SAPCodes`, `TransactionTypes`. Models created: `JournalVoucherHeader`, `JournalVoucherDetail`. Tables created: `journal_voucher_header`, `journal_voucher_detail`. New migration: `yes`.
 
 ---

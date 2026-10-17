@@ -37,7 +37,7 @@ Together, F2 and F3 mean search will go dead mid-party with no trace of why.
 - **Problem:** All three log `$e->getMessage()`. On a timeout or DNS failure, Laravel's `ConnectionException` message is Guzzle's, which ends with `for <full request URL>`. That URL carries `key=<YOUTUBE_API_KEY>` as a query parameter.
 - **Failure scenario:** Venue Wi-Fi drops for 8 s during a search, so `searchViaApiKey` times out. `storage/logs/laravel.log` gets `YouTube Data API search failed: cURL error 28: … for https://www.googleapis.com/youtube/v3/search?…&key=AIza…`. Anyone with log access — or any log shipper or error tracker added later — now holds the key and can drain its quota.
 - **Proof:** A request to a non-routable host with a fake key produced `Illuminate\Http\Client\ConnectionException: cURL error 28: Connection timed out after 1001 milliseconds … for http://10.255.255.1/youtube/v3/search?part=snippet&q=x&key=FAKE-KEY-123`, which contains the key. A count of the current `laravel.log`: **0** lines with a Google-style `key=`, so it has not leaked yet and no rotation is needed today.
-- **Rule:** [security.md](../../../rules/security.md) §1 — "Do not save sensitive credentials, tokens … in clear text"; skill §2 — "Secrets, tokens, or PII in logs". Escalated from MEDIUM because the leak is silent.
+- **Rule:** [security-baseline.md](../../../rules/core/security-baseline.md) §1 — "Do not save sensitive credentials, tokens … in clear text"; skill §2 — "Secrets, tokens, or PII in logs". Escalated from MEDIUM because the leak is silent.
 - **Suggested fix:**
   1. Add one private helper to `YouTubeKaraokeProvider`, e.g. `protected function logFailure(string $what, \Throwable $e): void`, that logs `preg_replace('/([?&]key=)[^&\s]+/', '$1***', $e->getMessage())`.
   2. Call it from all three `catch` blocks.
@@ -69,7 +69,7 @@ Together, F2 and F3 mean search will go dead mid-party with no trace of why.
   - `:91`: `videos.list` costs 1 unit.
 - **Problem:** With the scraper gone, every uncached search costs about 101 units. The default quota is 10,000 units/day, so about 99 searches. Typing a title with natural pauses fires 2–4 requests ("boh" → "bohemian" → "bohemian rhap" …), so the real budget is about **25–50 titles per day**, shared by the whole room. The server's 30-minute cache only helps with identical queries (chips, popular repeats).
 - **Failure scenario:** 15 guests each look up a few songs in the first hour. Quota is exhausted and search returns empty for everyone until midnight Pacific time. Through F2 this happens silently.
-- **Rule:** [performance.md](../../../rules/performance.md) §1 — debounce "to minimize redundant … queries". The debounce exists, but against a metered API 300 ms is too aggressive.
+- **Rule:** [performance.md](../../../rules/conditional/performance.md) §1 — debounce "to minimize redundant … queries". The debounce exists, but against a metered API 300 ms is too aggressive.
 - **Suggested fix** — two parts, the first needs a decision:
   - **(a) Ops, no code:** request a YouTube Data API quota increase in Google Cloud Console before a real party.
   - **(b) Code + spec §5.3:** raise the debounce to ~800 ms and the minimum query length to 3 (`SongSearchModal.tsx:70, :134`, `SearchSongsRequest` `min:3`), or search on submit (keyboard "Search" key) instead of while typing.
@@ -106,7 +106,7 @@ Together, F2 and F3 mean search will go dead mid-party with no trace of why.
 - **Location:** [`backend/tests/`](../../../../backend/tests/) contains only `Feature/ExampleTest.php` and `Unit/ExampleTest.php`.
 - **Problem:** The diff adds authorization rules (owner-or-host removal, guest opt-ins, closed-room channel refusal), idempotent writes with a race path, a per-guest limit, host-presence expiry, validation boundaries and an error envelope. None of it is under test. The verification harnesses used during `/webkit.fix` ran from a session scratchpad and are not in the repo.
 - **Failure scenario:** A later change reorders `AddSongToQueueAction` (e.g. the limit check before the replay check). A legitimate retry of an accepted add then starts returning `422 QUEUE_LIMIT_REACHED`, and nothing fails in CI.
-- **Rule:** [testing.md](../../../rules/testing.md) — "When updating calculation engines or logic layers, the agent must check for and update the associated test files"; §2 Feature tests for "validation layers, database transactions, route endpoints, and authentication guards".
+- **Rule:** [testing.md](../../../rules/conditional/testing.md) — "When updating calculation engines or logic layers, the agent must check for and update the associated test files"; §2 Feature tests for "validation layers, database transactions, route endpoints, and authentication guards".
 - **Suggested fix:** Add `tests/Feature/` tests with `RefreshDatabase`. `phpunit.xml` already uses SQLite `:memory:`; use `Http::fake()` for YouTube. Minimum set:
   - `QueueIdempotencyTest`: replay, mismatch 409, malformed key 422, duplicate-index rejection.
   - `QueueLimitTest`: guest blocked, host exempt, null clears.
@@ -145,7 +145,7 @@ Together, F2 and F3 mean search will go dead mid-party with no trace of why.
   - [`HostVideoPlayer.tsx:531-538`](../../../../mobapp/src/components/player/HostVideoPlayer.tsx#L531-L538) (new)
   - Same shape already in `NeonButton.tsx:40`. `QueueItemCard.tsx:32-35` has the correct version.
 - **Problem:** Four inline copies of "haptic if not web". The two new ones call `Haptics.impactAsync(...)` inside `try {}`, which cannot catch a rejected promise, so a device without haptics support raises an unhandled-rejection warning. `QueueItemCard`'s `triggerHaptic` already does it right with `.catch(() => {})`.
-- **Rule:** [coding-standards.md](../../../rules/coding-standards.md) — "DRY: Never duplicate helper functions or logic. Prioritize refactoring reusable logic to shared folders."
+- **Rule:** [code-quality.md](../../../rules/conditional/code-quality.md) — "DRY: Never duplicate helper functions or logic. Prioritize refactoring reusable logic to shared folders."
 - **Suggested fix:** Move `QueueItemCard`'s `triggerHaptic` into `src/utils/haptics.ts` (`export const triggerHaptic = (style = Haptics.ImpactFeedbackStyle.Light) => { if (Platform.OS !== 'web') Haptics.impactAsync(style).catch(() => {}); }`) and use it in all four places.
 - **Effort:** `small`
 - **Regression risk:** none.

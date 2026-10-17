@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (New statutory compliance consolidation report & government electronic file export module).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines` frontend module).  
 > **Route:** `/payroll/government-routines/monthly-contribution` (`payroll_government_routines_monthly_contribution`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models reused (`PayrollRun`, `PayrollRunDetail`, `PayPeriod`, `Account`, `AccountDetailVW`, `Company`); Tables reused (`payroll_run`, `payroll_run_detail`, `pay_period`, `vw_accounts_details`, `company`); Routes created (`/payroll-reports/monthly-contribution`, `/payroll-reports/monthly-contribution/export`); New migration: no (uses existing persisted `payroll_run_detail` and `breakdown_json` statutory shares with safe fallback).
 
 ---
@@ -170,7 +170,7 @@ No new database tables or column migrations are required. The module reads from 
 
 ## 4. Backend Implementation Plan
 
-Following the **thin-controller + Query/Handler/Action pattern** ([project-profile.md](../../rules/project-profile.md)):
+Following the **thin-controller + Query/Handler/Action pattern** ([project-gate.md](../../../rules/core/project-gate.md)):
 
 ### 4.1 Query Class: `GetMonthlyContributionReportQuery`
 

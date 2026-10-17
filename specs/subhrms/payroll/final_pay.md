@@ -4,7 +4,7 @@
 > **Portal:** Payroll. **Route:** `payroll/final-pay` (`payroll_final_pay`) — already registered → [final_pay/FinalPay.vue](../../../resources/views/web/src/module/payroll/payroll_processing/pages/final_pay/FinalPay.vue).
 > **`payroll_run.cycle = 'final'`.**
 > **Upstream:** the timekeeping **Final Pay Processing** module ([finalpay_processing/FinalPayProcessing.vue](../../../resources/views/web/src/module/timekeeping/finalpay_processing/pages/FinalPayProcessing.vue)) handles attendance/clearance validation for separating employees.
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 
@@ -58,7 +58,7 @@ Mirror the Regular Cycle processing page ([timesheet_summary.md](./timesheet_sum
 
 - **Clearance gate:** only process employees whose timekeeping final-pay validation/clearance is complete; block or warn otherwise.
 - **Loan payoff:** deduct full outstanding `payroll_loan.balance`; mark loans closed on final pay.
-- **Leave conversion:** convert only convertible/unused credits per policy ([hrms-rules](../../rules/hrms-rules.md)).
+- **Leave conversion:** convert only convertible/unused credits per policy ([hrms-rules](../../../rules/conditional/payroll.md)).
 - **Negative net:** if liabilities exceed pay, surface a flagged negative result for HR review (do not silently zero).
 - **13th pro-rate:** same basic source as [13th_month_pay.md](./13th_month_pay.md) — no double count if already disbursed.
 - **Closed period:** block processing.

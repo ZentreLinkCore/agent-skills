@@ -9,7 +9,7 @@
 | Project | SubHRMS — resolved via `vue` + `pinia` in `package.json` (web client). The mobile client is the nested React Native repo `resources/views/mobapp` (Expo / `react-native`), which `project-profile.md` does not cover; it is reviewed against the same `ui-design.md` rules and its own `src/theme/index.ts` tokens. |
 | Portal | Employee — resolved from the file path `module/employee/notifications/`; the notification center is cross-portal (see INFO "Specification clarification required") |
 | Scope | Ticket T00002 visual layer — 7 files: web `NotificationsPage.vue`, `NotificationSettingsPage.vue`, `HeaderBarComponets.vue` (notification hunks); mobile `NotificationItem.tsx`, `NotificationsScreen.tsx`, `NotificationSettingsScreen.tsx`, `AppTopHeader.tsx` (bell block) |
-| Design Sources Read | `.agents/rules/ui-design.md`; `resources/css/theme.css:14-52,153-175,452-464,534-540`; `resources/views/web/main.ts:32-39`; `resources/views/mobapp/src/theme/index.ts` (light + dark); `.agents/specs/subhrms/T00002/specs.md:385-422` (shared visual concept) |
+| Design Sources Read | `.agents/rules/conditional/ui-design.md`; `resources/css/theme.css:14-52,153-175,452-464,534-540`; `resources/views/web/main.ts:32-39`; `resources/views/mobapp/src/theme/index.ts` (light + dark); `.agents/specs/subhrms/T00002/specs.md:385-422` (shared visual concept) |
 | Reviewer Role | Senior Designer Review |
 | Review Date | 2026-10-15 |
 | Review Run | v1.2 — fix pass 2026-10-15 by /webkit-fix: Findings #1–#16 fixed; not re-reviewed |

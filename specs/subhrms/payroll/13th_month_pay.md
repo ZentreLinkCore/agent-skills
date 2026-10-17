@@ -4,7 +4,7 @@
 > **Portal:** Payroll. **Routes:** `payroll/13th-month-pay` (`payroll_13th_month_pay`, summary roster + processing actions) and `payroll/13th-month-details` (`payroll_13th_month_details`, full per-employee breakdown) — see §4.
 > **`payroll_run.cycle = '13th'`.**
 > **Computation source:** [13th_month_pro_rate.md](./13th_month_pro_rate.md) (the review report).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

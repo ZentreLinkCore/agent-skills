@@ -3,7 +3,7 @@
 > **Kind:** Extension & Redesign — Simplify the Leave Conversion module under Timekeeping (`/timekeeping/leave-conversion`) into a single, focused **Leave Conversion Settings** policy configuration view.  
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `leave_conversion` frontend module under `resources/views/web/src/module/timekeeping/leave_conversion/`).  
 > **Route:** `/timekeeping/leave-conversion` (`leave_conversion`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [ui-design.md](../../rules/ui-design.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md).  
 > **System Awareness:** Models Reused (`Leave`, `LeaveTypeConfigLog`); Tables Reused (`leaves`, `leave_type_config_logs`); Routes Reused (`routes/api/timekeeping.php`); New migration: No.
 
 ---

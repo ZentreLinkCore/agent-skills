@@ -4,7 +4,7 @@
 > **Portal:** **Employee / Mobapp** (`/api/employee/dashboard`, `/api/account`, `/api/biometric/*`, `/api/attendance/*`, `/api/ai/*` backend routes; `resources/views/mobapp` mobile client).
 > **Version:** v2.1 — 2026-09-02 — updated to reflect Employee Module Golden Chestnut palette, AI Copilot modal, KPI metric row & payslip snapshot integration, tactile haptic feedback, Web-identical Axios setup (`app/axios`), modular domain folder structure (`module/auth`, `module/employee/*`), and strictly module-only types.
 > **Route:** `(app)/index` (Bottom tab root: Dashboard, Timekeeping, Requests, Profile/Security).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:**
 > - Models Reused: `App\Models\Account`, `App\Models\AccountDetailVW`, `App\Models\AccountJob`, `App\Models\AppLeave`, `App\Models\AppOvertime`, `App\Models\AppChangeShift`, `App\Models\AppAdjustment`, `App\Models\AppOfficialBusinessTrip`, `App\Models\UserBiometricDevice`, `App\Models\PayrollRunDetail`, `App\Models\Announcement`, `App\Models\Holiday`.
 > - Tables Reused: `tbl_account`, `accountjob`, `app_leave`, `app_overtime`, `app_shift`, `app_adjustment`, `app_obt`, `user_biometric_devices`, `payroll_run_detail`, `announcements`, `holidays`.

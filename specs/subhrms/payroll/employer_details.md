@@ -3,7 +3,7 @@
 > **Kind:** Greenfield / Extension (Centralized Employer Registration Master & Statutory Metadata Management).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines` module) & **HR** (`/api/hr/companyProfile` routes, `company_profile` module).  
 > **Route:** `/payroll/government-routines/employer-details` (`payroll_government_routines_employer_details`) & `/hr/company-profile` (`hr_company_profile`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models reused (`Company`, `CompanyAttachment`, `TransLog`); Tables reused (`company`, `employee_handbook`, `translog`); Routes reused (`/api/hr/companyProfile`, `/api/hr/updateCompanyProfile`, `/api/hr/uploadProfileImage`); Routes created (`/api/payroll/employer-details`); New migration: no (extends existing `company` table fields).
 
 ---
@@ -162,7 +162,7 @@ CREATE TABLE `company` (
 
 ## 4. Backend Implementation Plan
 
-Following the **thin-controller + Query/Handler/Action pattern** ([project-profile.md](../../rules/project-profile.md)):
+Following the **thin-controller + Query/Handler/Action pattern** ([project-gate.md](../../../rules/core/project-gate.md)):
 
 ### 4.1 Query Class: `GetEmployerDetailsQuery`
 

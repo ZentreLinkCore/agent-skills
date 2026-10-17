@@ -3,7 +3,7 @@
 > **Kind:** Extension (Refactoring & UI/UX Enhancement of existing `timesheet_details` module)
 > **Portal:** **Employee / Timekeeping** (`/api/timekeeping/timesheet_details`, `resources/views/web/src/module/employee/timesheet_details`).
 > **Route:** `employee/timesheet-details` (`employee_timesheet_details`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md), [ui-design](../../rules/ui-design.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md).
 > **System Awareness:** Models reused (`AccountDetailVW`, `PayPeriod`, `Timesheet`); Tables reused (`vw_accounts_details`, `pay_period`, `timesheets`, `timelogs`); Routes reused (`GET /api/timekeeping/timesheet_details`); New migration: `no`.
 
 ---

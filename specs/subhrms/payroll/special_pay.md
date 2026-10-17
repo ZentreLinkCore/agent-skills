@@ -4,7 +4,7 @@
 > **⚠️ Hard dependency — cannot start yet:** the earnings source (`payroll_entry` table) does **not exist** in the system (only a `// → payroll_entry.id (future)` reference in the loan-schedule migration). This spec is **blocked** until the `payroll_entry` table is built ([batch_entries.md](./batch_entries.md)) and the special-earnings producer is in place ([bonus_special.md](./bonus_special.md)). Build those first.
 > **Portal:** Payroll. **Route:** `payroll/special-pay` (`payroll_special_pay`) — already registered → [special_pay/SpecialPay.vue](../../../resources/views/web/src/module/payroll/payroll_processing/pages/special_pay/SpecialPay.vue).
 > **`payroll_run.cycle = 'special'`** (the `payroll_run` table already carries a `cycle` column, unique per `(idpayperiod, cycle)`).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

@@ -4,7 +4,7 @@
 > **Portal:** **HR** (`/api/hr/...` routes, `hr/dashboard` frontend module).
 > **Version:** v1 — 2026-08-21 — initial
 > **Route:** `hr/dashboard` (`hr_dashboard`) — reused, unchanged.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:**
 > - **Models Reused:** `Unit`, `EmployeeMasterlist` (`vw_accounts_details`), `Account`, `AppLeave`, `Leave`, `ActivityorEvents`, `TransLog`, `Position`. **Models Created:** none.
 > - **Tables Reused:** `units`, `vw_accounts_details`, `accounts`, `app_leave`, `leaves`, `activity_event`, `translog`, `positions`. **Tables Created:** none.
@@ -33,7 +33,7 @@ This spec defines the **redesign + live rebuild**: adopt the same layout languag
 |---|---|
 | Single HTTP round-trip; matches the shipped `GetPayrollDashboardQuery` / `GetTimekeepingDashboardQuery` precedent. | Inherits the cost of the composed queries (acceptable — both are already tuned for their own dashboards). |
 | Attendance number can never drift from what Timekeeping's Daily Monitoring shows — same query, same result. | — |
-| Zero duplicated SQL for attendance-rate or event-listing logic (the reuse rule in [duplicate-prevention.md](../../rules/duplicate-prevention.md)). | — |
+| Zero duplicated SQL for attendance-rate or event-listing logic (the reuse rule in [system-awareness.md](../../../rules/conditional/system-awareness.md)). | — |
 
 **Option B — Multi-endpoint per-widget fetching**
 - Frontend calls `/hr/dashboard/headcount`, `/hr/dashboard/leaves`, the existing `/timekeeping/daily-monitoring/dashboard`, and `activity_event`'s own endpoint directly.
@@ -135,7 +135,7 @@ HR's real destinations from this dashboard are few (~5–6): Employees, Recruitm
 **Option B — Keep `pages/` flat structure, per-widget skeletons, and write a new HR-specific approve/decline controller**
 | Pros | Cons |
 |---|---|
-| No cross-portal API dependency. | Duplicates the exact status-flip logic already in `ApprovalRequestController::store`; violates [duplicate-prevention.md](../../rules/duplicate-prevention.md); leaves the "not modern" gap the user asked to close. |
+| No cross-portal API dependency. | Duplicates the exact status-flip logic already in `ApprovalRequestController::store`; violates [system-awareness.md](../../../rules/conditional/system-awareness.md); leaves the "not modern" gap the user asked to close. |
 
 **Recommendation:** Option A.
 

@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — the previous landing-page implementation (frontend module, shared UI kit, `Inquiry` model/migration, `LandingController`, related routes) and the two previous specs were deleted as part of a full reset. This spec re-derives everything from the current, empty repo state and the branding doc — nothing is being extended.
 > **Portal:** **Public / Landing** (no `/api/<prefix>` group — public marketing site; `landing` frontend module).
 > **Route:** `GET /` (`landing`), `GET /app` (`app_entry`).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md), [system-awareness.md](../../../rules/system-awareness.md), [duplicate-prevention.md](../../../rules/duplicate-prevention.md), [incremental-generation.md](../../../rules/incremental-generation.md), [security.md](../../../rules/security.md), [naming-convention.md](../../../rules/naming-convention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [system-awareness.md](../../../rules/conditional/system-awareness.md), [system-awareness.md](../../../rules/conditional/system-awareness.md), [code-quality.md](../../../rules/conditional/code-quality.md), [security-baseline.md](../../../rules/core/security-baseline.md), [code-quality.md](../../../rules/conditional/code-quality.md).
 > **System Awareness:** Models — none reused, none created by default (optional `Inquiry` model only if Decision 2 / Option B is chosen). Tables — none reused, none created by default (optional `inquiries` table only if Decision 2 / Option B is chosen). Routes — `GET /` and `GET /app` **reused** (already registered in `routes/web.php`, both render `view('app')`); `POST /api/inquiries` would be **created** only if Decision 2 / Option B is chosen. New migration — **No** by default (Yes, `create_inquiries_table`, only if Decision 2 / Option B is chosen).
 
 ---
@@ -67,7 +67,7 @@ This is therefore a clean **Greenfield** build: a new `landing` frontend module,
 |---|---|
 | Matches the branding doc literally — it specifies exactly two buttons ("Get Started" / "Learn More"), no "Request a Demo" or "Contact Sales" form anywhere in the Landing Page section | No way to capture a pre-signup lead (e.g. an enterprise inquiry) if marketing later wants one |
 | Zero backend, zero PII to validate/secure/store | — |
-| No spam/rate-limiting surface to defend ([security.md](../../../rules/security.md)) | — |
+| No spam/rate-limiting surface to defend ([security-baseline.md](../../../rules/core/security-baseline.md)) | — |
 
 **Option B — Add an `inquiries`-style lead-capture table**
 - A `POST /api/inquiries` endpoint (public, no `auth:sanctum`) backed by a new `Inquiry` model/migration, wired to a "Contact Sales" or "Request a Demo" form embedded in the CTA or Footer.
@@ -75,7 +75,7 @@ This is therefore a clean **Greenfield** build: a new `landing` frontend module,
 | Pros | Cons |
 |---|---|
 | Future-proofs for enterprise/demo-request lead capture | Nothing in the branding doc's Landing Page section calls for a contact/demo form — this is speculative scope creep |
-| Gives marketing a persisted list of interested leads | Adds validation, spam/rate-limiting, and PII-handling concerns ([security.md](../../../rules/security.md)) for a feature that wasn't requested |
+| Gives marketing a persisted list of interested leads | Adds validation, spam/rate-limiting, and PII-handling concerns ([security-baseline.md](../../../rules/core/security-baseline.md)) for a feature that wasn't requested |
 | — | A form with no visible field spec (name/email/message?) would have to be invented, not derived from the source doc |
 
 **Recommendation:** Option A. The branding doc's Landing Page section only specifies **Get Started** and **Learn More** as navigational buttons — neither implies a form submission. Section 3 (Database) below still documents the Option B schema for completeness, clearly marked as *not part of this build* unless explicitly chosen. If a "Contact Sales" flow is wanted later, it should get its own follow-up spec once the actual form fields and destination are defined.
@@ -162,7 +162,7 @@ This is therefore a clean **Greenfield** build: a new `landing` frontend module,
 
 **Under the recommended decisions (1A + 2A): no new table or migration.** The Landing Page ships as pure static frontend content, and `GET /` / `GET /app` are already registered in `routes/web.php`.
 
-**Only if Decision 2 / Option B is later chosen**, the following table would be added (shown here for completeness, per [project-profile.md](../../../rules/project-profile.md) conventions — no DB-level foreign keys, `id`-prefixed + indexed relationship columns if any, a `status` column instead of `SoftDeletes`, always `timestamps()`):
+**Only if Decision 2 / Option B is later chosen**, the following table would be added (shown here for completeness, per [project-gate.md](../../../rules/core/project-gate.md) conventions — no DB-level foreign keys, `id`-prefixed + indexed relationship columns if any, a `status` column instead of `SoftDeletes`, always `timestamps()`):
 
 ```php
 Schema::create('inquiries', function (Blueprint $table) {
@@ -197,7 +197,7 @@ Route::get('/app', function () {
 
 Nothing else needs to change here — this spec reuses these routes as-is; do not add a `LandingController` or any `routes/api.php` entries under Decision 1A/2A.
 
-**Only if Decision 2 / Option B is later chosen**, add (following the thin-controller + Handler pattern, no API Resources, per [project-profile.md](../../../rules/project-profile.md)):
+**Only if Decision 2 / Option B is later chosen**, add (following the thin-controller + Handler pattern, no API Resources, per [project-gate.md](../../../rules/core/project-gate.md)):
 
 - `App\Handlers\Landing\StoreInquiryHandler` (`app/Handlers/Landing/StoreInquiryHandler.php`) — static `execute($params = [])`, wraps the `Inquiry::create(...)` in `DB::transaction(...)`.
 - `App\Http\Controllers\LandingController` (`app/Http/Controllers/LandingController.php`, top-level — this is a public/global endpoint, not portal-scoped) with a thin `storeInquiry(Request $request)` method:
@@ -218,7 +218,7 @@ Nothing else needs to change here — this spec reuses these routes as-is; do no
       }
   }
   ```
-- Registered directly in `routes/api.php` as a **public** route (no `auth:sanctum` — this is the "Global" portal row, no prefix, per [project-profile.md](../../../rules/project-profile.md)'s portal table):
+- Registered directly in `routes/api.php` as a **public** route (no `auth:sanctum` — this is the "Global" portal row, no prefix, per [project-gate.md](../../../rules/core/project-gate.md)'s portal table):
   ```php
   Route::post('/inquiries', [LandingController::class, 'storeInquiry']);
   ```
@@ -323,7 +323,7 @@ export function useLandingApi() {
 - **SEO/meta tags**: `App.jsx` currently ships no `<title>`/meta description — the Blade shell (`resources/views/app.blade.php` or equivalent) should carry a static `<title>ScaleUP — The Business Operating System for Growing Companies</title>` and meta description; this is a one-line addition alongside the Build Order below, not a dynamic per-route SEO system.
 - **`app.css` dark leftovers**: `color-scheme: dark` and the dark scrollbar colors currently in `resources/css/app.css` are remnants of the deleted prior implementation and visually fight the light palette this spec assumes. This spec does not modify that file (no code changes here) — flag it for whichever implementation task (ideally the Design System spec/build) touches global CSS tokens first.
 - **No analytics/tracking wired**: click tracking on **Get Started**/**Learn More** (e.g. for conversion funnels) is not part of this spec — see Out of Scope.
-- **No lead-capture validation surface** under the recommended Decision 2A — since there is no form, there's nothing to rate-limit or sanitize; if Decision 2B is chosen later, standard input validation + rate limiting on `POST /api/inquiries` per [security.md](../../../rules/security.md) applies.
+- **No lead-capture validation surface** under the recommended Decision 2A — since there is no form, there's nothing to rate-limit or sanitize; if Decision 2B is chosen later, standard input validation + rate limiting on `POST /api/inquiries` per [security-baseline.md](../../../rules/core/security-baseline.md) applies.
 
 | Edge case | Handling |
 |---|---|

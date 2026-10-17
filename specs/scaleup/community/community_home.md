@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — no community page, component, route, model, or table exists today.
 > **Portal:** **Community** (`community` frontend module). Gate 1 is **design-only with hard-coded fixtures** — no API, no tables. See §2 Decision 4.
 > **Route:** `/feed`, rendered inside the Community context of the shell defined by [`community_shell.md`](./community_shell.md).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (ScaleUP Profile — React 19, `.jsx`/`.tsx`, `@/src/components/ui`), [ui-design.md](../../../rules/ui-design.md), [design_system.md](../design/design_system.md), [COMMUNITY_FEED.md](../../../blueprint/scaleup/docs/specifications/community/COMMUNITY_FEED.md), [POSTS.md](../../../blueprint/scaleup/docs/specifications/community/POSTS.md), [DESIGN_PRINCIPLES.md](../../../blueprint/scaleup/docs/DESIGN_PRINCIPLES.md) §5.
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (ScaleUP Profile — React 19, `.jsx`/`.tsx`, `@/src/components/ui`), [ui-design.md](../../../rules/conditional/ui-design.md), [design_system.md](../design/design_system.md), [COMMUNITY_FEED.md](../../../blueprint/scaleup/docs/specifications/community/COMMUNITY_FEED.md), [POSTS.md](../../../blueprint/scaleup/docs/specifications/community/POSTS.md), [DESIGN_PRINCIPLES.md](../../../blueprint/scaleup/docs/DESIGN_PRINCIPLES.md) §5.
 > **System Awareness:** Models — none reused, none created. Tables — none; the seven community table groups (`posts`, `comments`, `reactions`, `connections`, `follows`, `conversations`, `notifications`) do **not** exist. Routes — none; `/api/community/...` does not exist. Reused frontend — [`components/ui/`](../../../../resources/views/web/src/components/ui/) (17 primitives) and the tokens in [`resources/css/app.css`](../../../../resources/css/app.css). New migration: **no**.
 
 ---
@@ -223,7 +223,7 @@ src/module/community/home/
 
 `Card`, `Button`, `IconButton`, `Badge`, `Tabs`, `Modal`, `Textarea`, `Dropdown`, `Select`.
 
-**Missing and required:** `Avatar` (used in every post, the composer, the rail — the single most-repeated element on the page) and `EmptyState`. Both belong to [`design_system.md`](../design/design_system.md), not here. Building them ad-hoc in this module is the duplication [duplicate-prevention.md](../../../rules/duplicate-prevention.md) exists to stop — **add them to the Design System first.**
+**Missing and required:** `Avatar` (used in every post, the composer, the rail — the single most-repeated element on the page) and `EmptyState`. Both belong to [`design_system.md`](../design/design_system.md), not here. Building them ad-hoc in this module is the duplication [system-awareness.md](../../../rules/conditional/system-awareness.md) exists to stop — **add them to the Design System first.**
 
 ---
 

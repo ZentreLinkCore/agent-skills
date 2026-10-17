@@ -3,7 +3,7 @@
 > **Kind:** Extension — redesign of an existing, currently frontend-only (hard-coded/mock) module; no prior spec exists for it.
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `timekeeping/daily_monitoring` frontend module).
 > **Route:** `timekeeping/daily-monitoring` (`timekeeping_daily_monitoring`) — unchanged.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models reused (Timesheet — the real, currently-populated source; Timelog exists but is unpopulated/future; AttendanceException, AttendanceDispute, AppAdjustment, AccountDetailVW); Tables reused only; Routes reused (`/timekeeping/resolution-center` linked to, not duplicated); New migration: **no**.
 
 ---
@@ -12,7 +12,7 @@
 
 `daily_monitoring` is the Timekeeper/HR "control room" view for **today**: live headcount/checked-in health, a real-time roster (Attendance Board), and a per-employee Daily Time Record explorer (DTR Explorer). It is being redesigned because:
 
-1. **Misplaced/incomplete standards** — the page hand-rolls native `<select>` dropdowns, has no pagination on the Attendance Board roster, and its wide tables don't support the mandatory drag-to-scroll behavior ([ui-design.md](../../rules/ui-design.md) Best Practices) that every sibling report/roster table in this portal already has.
+1. **Misplaced/incomplete standards** — the page hand-rolls native `<select>` dropdowns, has no pagination on the Attendance Board roster, and its wide tables don't support the mandatory drag-to-scroll behavior ([ui-design.md](../../../rules/conditional/ui-design.md) Best Practices) that every sibling report/roster table in this portal already has.
 2. **A duplicate, non-integrated "Adjust Log" action** — every tab currently opens `DtrAdjustmentModal.vue`, which calls a **mock** `submitAdjustment()` that always fakes success and writes nothing real. This duplicates a feature that **already exists and is fully wired, end to end, with real data flowing through it today**:
    - Employees file real attendance corrections themselves via the employee portal's existing **Attendance Adjustment** tab (`employee/timekeeping_applications/.../AttendanceAdjustment.vue` → `TKApplicationController` → `AppAdjustment` model, **182 real rows in the DB**). Once approved (via the Manager portal's Approval Requests, per the org's configured Approver Matrix), `HandleTimesheet` **auto-merges** the correction into the day's computed totals via the `adj_aa_*` breakdown fields — this is the "auto detect" the requester is referring to.
    - Timekeepers have a dedicated **Resolution Center** (`timekeeping/resolution-center`, reachable from the sidebar, backed by `AttendanceException`/`AttendanceDispute` + `ResolutionCenterController`) for attendance anomalies. Its CRUD plumbing is real and live — the frontend hits real endpoints, not mocks, and the tables hold real rows (5 exceptions, 4 disputes). **Caveat, verified in code:** the "Run Auto-Audit Scan" action that's supposed to *detect* new exceptions (`RunAutoAuditScanHandler`) is currently a **random simulator** — it picks a random active employee and a random issue type roughly 40% of the time, with zero analysis of real attendance data. There is no real detection engine yet (e.g. one that scans `timesheet` for missing punches or schedule deviations). Daily Monitoring's "Exceptions Alert Feed" + "Resolve Log" button was a parallel, disconnected re-implementation of that same (currently half-built) job — the fix here is still to link out to Resolution Center rather than duplicate it, but building the *real* detection engine is separate, future work, not something to fake a second time in Daily Monitoring either.
@@ -28,7 +28,7 @@ The redesign's job is to strip out the duplicate action, adopt the project's rea
 The module is currently **100% mock data** (`daily_monitoring.api.ts` generates everything client-side) — it has never gone through Gate 2 (`webkit.backend-implement`).
 
 **Option A — Redesign only, keep the API layer mocked (Recommended)**
-- Fix layout/components/adjust-action removal now. Reshape the mock response field names to mirror the real backend fields they'll eventually come from (`empid`, `issue_type`, `severity`, `status` from `AttendanceException`; `timein`/`timeout`/`late`/`ut`/`reghrs`/`acthrs` from `Timesheet` — **not** `Timelog`, see Section 3) so the future Gate 2 pass is a pure api-file swap, per [vue-standards.md](../../rules/vue-standards.md) "Mirror Backend Fields".
+- Fix layout/components/adjust-action removal now. Reshape the mock response field names to mirror the real backend fields they'll eventually come from (`empid`, `issue_type`, `severity`, `status` from `AttendanceException`; `timein`/`timeout`/`late`/`ut`/`reghrs`/`acthrs` from `Timesheet` — **not** `Timelog`, see Section 3) so the future Gate 2 pass is a pure api-file swap, per [frontend-vue.md](../../../rules/conditional/frontend-vue.md) "Mirror Backend Fields".
 
 | Pros | Cons |
 |---|---|
@@ -56,7 +56,7 @@ The module is currently **100% mock data** (`daily_monitoring.api.ts` generates 
 | Pros | Cons |
 |---|---|
 | Removes a fake, unintegrated write path; single source of truth stays the employee-filed `AppAdjustment` flow | Timekeepers lose a (fake) one-click "fix it here" shortcut — but it never actually worked |
-| Zero duplicate logic vs. [duplicate-prevention.md](../../rules/duplicate-prevention.md) | — |
+| Zero duplicate logic vs. [system-awareness.md](../../../rules/conditional/system-awareness.md) | — |
 
 **Option B — Keep a modal, but wire it to create a real `AppAdjustment` record**
 - Same UI, but `submitAdjustment` actually calls the same creation path `TKApplicationController` uses, gated by an HR/Timekeeper permission.
@@ -115,7 +115,7 @@ No new tables/columns. Existing tables this feature will eventually read from (G
 - Exceptions feed rows: `id` (`EXC-{id}` format, matching `GetExceptionsQuery`), `empid`, `fullname`, `unit`, `issue_type`, `date`, `description`, `severity`, `status`.
 - DTR day rows: add a `has_adjustment: boolean` mock field (stubbed `false`/`true` per row) so the frontend indicator has something to bind to now, and a one-line wiring note for Gate 2: populate it from `HandleAttendanceAdjustmentQuery::checkApproved($date, $idacct)` — do not write a new detection method.
 
-When a follow-up backend spec is written, it should reuse `HandleTimesheetQuery`/`Timesheet` for attendance data and `GetExceptionsQuery` (or a thin sibling in the same `App\Queries\Timesheet` namespace) for exceptions — rather than introducing parallel queries or pointing at the still-empty `timelogs` table — per [duplicate-prevention.md](../../rules/duplicate-prevention.md). Building a *real* auto-audit detection engine (scanning `timesheet` for missing punches/schedule deviations to replace `RunAutoAuditScanHandler`'s random simulator) is a separate, standalone piece of work — it belongs to Resolution Center's own backlog, not this module's spec.
+When a follow-up backend spec is written, it should reuse `HandleTimesheetQuery`/`Timesheet` for attendance data and `GetExceptionsQuery` (or a thin sibling in the same `App\Queries\Timesheet` namespace) for exceptions — rather than introducing parallel queries or pointing at the still-empty `timelogs` table — per [system-awareness.md](../../../rules/conditional/system-awareness.md). Building a *real* auto-audit detection engine (scanning `timesheet` for missing punches/schedule deviations to replace `RunAutoAuditScanHandler`'s random simulator) is a separate, standalone piece of work — it belongs to Resolution Center's own backlog, not this module's spec.
 
 ---
 

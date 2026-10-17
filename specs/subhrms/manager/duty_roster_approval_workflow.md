@@ -1,10 +1,10 @@
 # Spec — Duty Roster Approval Workflow
 
 > **Kind:** Extension — Duty Roster (`app/Http/Controllers/tk/DutyRosterController.php`, `manager/staff_scheduler` frontend module) already exists and already writes into `app_shift`. Nothing here creates a parallel roster table or a second approval engine. It also **fixes a latent defect in the existing shared approval engine** that this workflow is the first consumer to actually require working (see Decision 1).
-> **Portal:** **Manager** (filing + the Department Head's existing approver inbox), touching **HR** (one small routing addition so HR's existing approver inbox becomes reachable) and the shared `tk` duty-roster backend. Accent: **teal** (already used throughout `manager/staff_scheduler` — `bg-teal-600`, `text-teal-600` etc. in the existing `DutyRoster.vue`/`DutyRosterSchedule.vue`); the HR-facing sidebar addition uses **emerald** per [ui-design](../../../rules/ui-design.md) and the precedent in `hr/incident_report.md`.
+> **Portal:** **Manager** (filing + the Department Head's existing approver inbox), touching **HR** (one small routing addition so HR's existing approver inbox becomes reachable) and the shared `tk` duty-roster backend. Accent: **teal** (already used throughout `manager/staff_scheduler` — `bg-teal-600`, `text-teal-600` etc. in the existing `DutyRoster.vue`/`DutyRosterSchedule.vue`); the HR-facing sidebar addition uses **emerald** per [ui-design](../../../rules/conditional/ui-design.md) and the precedent in `hr/incident_report.md`.
 > **Version:** v1 — 2026-08-24 — initial.
 > **Route:** Reuses `/manager/staff-scheduler/duty-roster` and `/manager/staff-scheduler/assign` (unchanged); reuses `/manager/approvers-menu/applications-request` (unchanged, already exists); **adds** `/hr/approvers-menu/applications-request` (`hr_approvers_menu_applications_request`) — the same existing page, mounted under one more portal prefix, mirroring how `/employee/approvers-menu/*` and `/manager/approvers-menu/*` already both exist for the same module.
-> **Conventions:** [project-profile](../../../rules/project-profile.md), [hrms-rules](../../../rules/hrms-rules.md), [ui-design](../../../rules/ui-design.md), [vue-standards](../../../rules/vue-standards.md), [duplicate-prevention](../../../rules/duplicate-prevention.md), [laravel-standards](../../../rules/laravel-standards.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md), [duplicate-prevention](../../../rules/conditional/system-awareness.md), [laravel-standards](../../../rules/conditional/backend.md).
 > **System Awareness:** Models **reused** `AppChangeShift`, `ApproverMatrix`, `ApproverList`, `ApproverSub`, `AccountDetailVW`, `Unit`. Models **created**: none. Tables **reused** `app_shift`, `approver_matrix`, `approver_list`, `approver_sub` — all already exist, already populated by HR's existing [Approver Matrix screen](../../../../resources/views/web/src/module/hr/business_units/pages/approver_matrix/ApproverMatrix.vue). Tables **created**: none. **1 additive column**: `app_shift.filed_by` (nullable). Routes **reused** `GET/POST /api/manager/getApprovalRequest`, `/api/manager/approveRequest` (fixed, not replaced — see Decision 1); `GET api/timekeeping/duty-roster*` (extended). Routes **created**: none at the API layer — only a **frontend route + sidebar entry** duplicating the existing `approvers_menu` module under `/hr/*`. Actions **reused** `App\Actions\Approver\ResolveApproverListAction` (unchanged). New migration: **yes** — 1, additive, nullable column, zero backfill.
 
 ---
@@ -51,7 +51,7 @@ Both are pre-existing gaps in code shared by Leave/OT/OBT/Attendance-Adjustment/
 
 | Pros | Cons |
 |---|---|
-| Zero regression risk to Leave/OT/OBT/Attendance-Adjustment/existing Change-Shift behavior, whatever it is today | Two different completion engines reading/writing the identical `approvers` JSON shape on the identical table — a direct [duplicate-prevention](../../../rules/duplicate-prevention.md) violation |
+| Zero regression risk to Leave/OT/OBT/Attendance-Adjustment/existing Change-Shift behavior, whatever it is today | Two different completion engines reading/writing the identical `approvers` JSON shape on the identical table — a direct [duplicate-prevention](../../../rules/conditional/system-awareness.md) violation |
 | Smaller, isolated diff | The authorization gap (Problem 2) stays open for every other application type — leaving a known, real hole in place because fixing it wasn't "this ticket" |
 | | A record's approval semantics now differ depending on *which* endpoint touched it — fragile and confusing for whoever debugs it next |
 
@@ -141,7 +141,7 @@ Every existing consumer of `app_shift` (Change Shift application) is **self-file
 **Option B — Build a dedicated "Roster Approvals" page per tier**
 | Pros | Cons |
 |---|---|
-| Purpose-built UI, could show roster-specific context (employee grid, date range) inline | New pages, new components, new composables, for a job the existing generic inbox already does — the [duplicate-prevention](../../../rules/duplicate-prevention.md) rule argues against this by name |
+| Purpose-built UI, could show roster-specific context (employee grid, date range) inline | New pages, new components, new composables, for a job the existing generic inbox already does — the [duplicate-prevention](../../../rules/conditional/system-awareness.md) rule argues against this by name |
 
 **Recommendation: Option A**, with the optional `source=roster` filter/badge from Option A's description.
 
@@ -232,7 +232,7 @@ No schema change. HR configures these exactly as they do today for every other a
 ### 4b. Actions
 
 - **`App\Actions\Approver\ResolveApproverListAction`** — *reused unmodified*. Called as `ResolveApproverListAction::execute($filedBy)` (the Supervisor's own id), not the scheduled employee's id.
-- **`App\Actions\Shift\SyncTimesheetShiftAction`** — *new*, extracted from the Timesheet-upsert block currently inline in [`SaveShiftAssignmentHandler.php:63-70`](../../../../app/Handlers/Shift/SaveShiftAssignmentHandler.php#L63): `execute($idacct, $date, $shiftId)` → `Timesheet::updateOrCreate(...)`. Called from `ApprovalRequestController::store()` only when a `cs`-alias, non-null-`filed_by` record reaches final `status = 1` (AC-9). `SwapShiftHandler`'s and any other non-Duty-Roster caller of `SaveShiftAssignmentHandler` that still needs an instant Timesheet write (none remain after this spec — swap now goes through Draft too) would call it directly; extracting it is what lets both call sites share the logic instead of duplicating the upsert, per [duplicate-prevention](../../../rules/duplicate-prevention.md).
+- **`App\Actions\Shift\SyncTimesheetShiftAction`** — *new*, extracted from the Timesheet-upsert block currently inline in [`SaveShiftAssignmentHandler.php:63-70`](../../../../app/Handlers/Shift/SaveShiftAssignmentHandler.php#L63): `execute($idacct, $date, $shiftId)` → `Timesheet::updateOrCreate(...)`. Called from `ApprovalRequestController::store()` only when a `cs`-alias, non-null-`filed_by` record reaches final `status = 1` (AC-9). `SwapShiftHandler`'s and any other non-Duty-Roster caller of `SaveShiftAssignmentHandler` that still needs an instant Timesheet write (none remain after this spec — swap now goes through Draft too) would call it directly; extracting it is what lets both call sites share the logic instead of duplicating the upsert, per [duplicate-prevention](../../../rules/conditional/system-awareness.md).
 
 ### 4c. Handlers
 

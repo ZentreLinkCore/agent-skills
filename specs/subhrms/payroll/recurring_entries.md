@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (page is a 4-line placeholder; no backend yet).
 > **Portal:** Payroll. **Route:** `payroll/recurring-entries` (`payroll_recurring_entries`) — already registered → [recurring_entries/RecurringEntries.vue](../../../resources/views/web/src/module/payroll/payroll_entries/pages/recurring_entries/RecurringEntries.vue).
 > **Builds on the shared `payroll_entry` table** defined in [batch_entries.md](./batch_entries.md) §3a.
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md).
 
 ---
 

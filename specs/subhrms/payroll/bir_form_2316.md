@@ -2,7 +2,7 @@
 
 > **Kind:** Greenfield (page is a 1-line placeholder). Reads the annualization record produced by [year_end.md](./year_end.md); reuses the roster+detail split from [payslip.md](./payslip.md).
 > **Portal:** Payroll. **Route:** `payroll/bir/bir-form-2316` (`payroll_bir_bir_form_2316`) — already registered → [bir_form_2316/BIRForm2316.vue](../../../resources/views/web/src/module/payroll/government_routines/pages/bir/bir_form_2316/BIRForm2316.vue).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md) (Domain Query/Handler, no API Resources), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md) (Domain Query/Handler, no API Resources), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 
@@ -45,7 +45,7 @@ BIR FORM 2316  ──►  per-employee roster (processed year-end employees) ─
 
 ## 3. Target Files
 
-Frontend (fill the already-registered stub folder; TS structure per [Project Profile](../../rules/project-profile.md) since nothing else in `government_routines` establishes a competing convention yet):
+Frontend (fill the already-registered stub folder; TS structure per [Project Profile](../../../rules/core/project-gate.md) since nothing else in `government_routines` establishes a competing convention yet):
 ```
 resources/views/web/src/module/payroll/government_routines/pages/bir/bir_form_2316/
 ├── BIRForm2316.vue                    # replaces the 1-line stub
@@ -96,7 +96,7 @@ routes/api/payroll.php → add under the existing "payroll reports" section:
 - **Roster page** (`BIRForm2316.vue`) — header (breadcrumb `Payroll / Government Routines / BIR / Form 2316`, Slate/Payroll accent per portal), **year** select (from `years`), stat cards (Headcount Certified / Total Refunds / Total Collectibles — mirror [year_end.md](./year_end.md) §4's stat pattern), roster table (`BirForm2316RosterTable.vue`: Employee, TIN, Taxable Income, Tax Due, Refund/Payable, Status), row action → **View Certificate** (opens `BirForm2316Certificate.vue` — a routed detail view or in-page panel, follow whichever pattern is cheaper given no dedicated Reports sibling exists yet for this feature, unlike 13th Month's Prooflist precedent).
 - **Certificate view** (`BirForm2316Certificate.vue`) — laid out to mirror the actual BIR 2316 form sections: Part I (Employee Information: TIN, name, address, birth date, civil status, dependents), Part II (Employer Information: TIN, RDO, registered name, address), Part IV-A (Summary: gross compensation, non-taxable/exempt, taxable compensation, tax due, tax withheld, refund/payable — pulling `gross_amount`, `gov_contri`, `taxbasicsalary`, `tax_due`, `wtax`, `tax_refund`/`tax_payable`), and a 13th-month/other-benefits line item. Cyan accent (Payroll portal, matching [year_end.md](./year_end.md)/[13th_month_pay.md](./13th_month_pay.md)), dark mode, printable layout (`@media print` friendly — hide chrome/nav, keep the form body).
 - **Export/Print:** no PDF library exists yet in this project (`composer.json` has neither `barryvdh/laravel-dompdf` nor `mpdf`/`tcpdf`) — flag this as a **new backend dependency** to add at Gate 2 if a pixel-accurate downloadable PDF is required; the browser's native print (`window.print()` over the `@media print`-styled certificate) is a zero-dependency fallback for Gate 1/early Gate 2 and may be sufficient if the user doesn't need an official downloadable PDF immediately.
-- **Design-First (Gate 1):** hard-code `api/bir_form_2316.api.ts`'s `getRoster`/`getCertificate` with realistic values shaped after the fields above (seed a mix of refund/collectible/zero-adjustment rows, at least one row with a populated `prev_*` block to exercise the substituted-filing section) — no live calls, per [Project Profile](../../rules/project-profile.md)'s design-first flow.
+- **Design-First (Gate 1):** hard-code `api/bir_form_2316.api.ts`'s `getRoster`/`getCertificate` with realistic values shaped after the fields above (seed a mix of refund/collectible/zero-adjustment rows, at least one row with a populated `prev_*` block to exercise the substituted-filing section) — no live calls, per [Project Profile](../../../rules/core/project-gate.md)'s design-first flow.
 
 ---
 

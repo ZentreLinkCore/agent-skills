@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — Master reference table & annual income tax calculation engine for year-end tax annualization and BIR 2316 / Alphalist compliance.  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `bir/annual_tax_table` frontend module).  
 > **Route:** `/payroll/government-routines/bir/annual-tax-table` (`payroll_bir_annual_tax_table`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models created (`BirAnnualTaxTable`); Tables created (`bir_annual_tax_table`); Routes created (`/api/payroll/bir-annual-tax-table`, `/api/payroll/bir-annual-tax-table/lookup`); New migration: `yes` (`2026_07_30_000006_create_bir_annual_tax_table.php`).
 
 ---
@@ -385,7 +385,7 @@ export interface AnnualTaxLookupResult {
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Tax Annualization Formula:**
    $$\text{Tax Adjustment} = \text{Annual Tax Due} - \text{Total YTD Tax Withheld}$$
