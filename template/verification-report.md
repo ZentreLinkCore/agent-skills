@@ -12,6 +12,8 @@ Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-sp
    when it handles the finding (✅ FIXED / ✅ FIXED (traced) / ✅ ALREADY RESOLVED / ❌ NOT FIXED, with evidence)
    and recomputes §1, §2, §4, §5, §8 and the Verification Run row as a fix pass (vN.k). See
    .agents/rules/conditional/ticket-numbering.md §5 "Fix pass".
+5. A scoped run (/webkit-verify T##### <ids>) updates this file in place: §1, §8, the scoped rows of §2, §4, §5, §6,
+   and the scoped findings. Everything else stays as the previous run left it. See /webkit-verify "Scoped Run".
 -->
 
 ## Metadata
@@ -26,7 +28,7 @@ Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-sp
 | Branch | {{branch}} (base `{{base}}`, {{n}} commits, {{m}} files changed) |
 | Specification File | [spec.md](./spec.md) — version {{x.y}}, status {{SPEC_STATUS}} |
 | Verification Date | {{YYYY-MM-DD}} |
-| Verification Run | v{{N}} — {{what changed since the previous run, or "initial"}} |
+| Verification Run | v{{N}} — {{what changed since the previous run, or "initial"; a scoped run: "scoped: <ids>; rest as graded in v<M>"}} |
 
 **Implementation Scope**
 
@@ -45,7 +47,8 @@ Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-sp
 
 <!-- Choose one, from §3 (full rule: /webkit-verify Phase 5): any BLOCKER → ❌ FAILED · else any REQUIRED FIX
      → ⚠ PASS WITH FIXES · else, every AC MET or UNVERIFIED with its §6 check → ✅ PASS, written
-     "✅ PASS (n AC pending manual check)" while any is UNVERIFIED. A /webkit-fix pass appends "(after fix pass vN.k)". -->
+     "✅ PASS (n AC pending manual check)" while any is UNVERIFIED. A scoped run appends "(scoped: <ids>)", a /webkit-fix
+     pass "(after fix pass vN.k)". -->
 
 {{✅ PASS | ⚠ PASS WITH FIXES | ❌ FAILED}}
 
@@ -211,7 +214,8 @@ Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-sp
 
 ## 8. Final Recommendation
 
-<!-- Keep exactly one option. READY FOR MERGE only when there is no BLOCKER and no REQUIRED FIX. -->
+<!-- Keep exactly one option. READY FOR MERGE only when there is no BLOCKER and no REQUIRED FIX, and never from a
+     scoped run: FULL VERIFY BEFORE MERGE instead. -->
 
 ### READY FOR MERGE
 
@@ -226,5 +230,9 @@ Generic fill rules: .agents/rules/conditional/skill-protocol.md §3. Template-sp
 
 1. {{Finding #n — one-line action}}
 2. {{Finding #n — one-line action}}
+
+### FULL VERIFY BEFORE MERGE
+
+**Reason:** Scoped run v{{N}} covered {{ids}} and nothing required is open; the rest of the spec was last graded in v{{M}}. Run `/webkit-verify {{T#####}}` before merge.
 
 <!-- Run history -->
