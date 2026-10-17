@@ -34,5 +34,14 @@ versioning:
           Raise APP_MIN_SUPPORTED_VERSION only for a MAJOR (breaking) release: clients below it get HTTP 426 and
           cannot use the app until they update.
 
+    - name: webapp
+      repo: webapp
+      paths: [webapp/]
+      ignore_paths:
+        - webapp/dist/
+        - webapp/node_modules/
+      version:
+        - { file: webapp/package.json, key: version }
+
     # backend/ (Laravel API) carries no app version: composer.json has no "version" key, so a backend-only
     # ticket bumps nothing. Add a target here if the API starts versioning its releases.
