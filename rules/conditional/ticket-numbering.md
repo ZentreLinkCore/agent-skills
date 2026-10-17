@@ -125,7 +125,7 @@ grep -ril '<feature name or route>' ".agents/specs/$project" --include='*.md' 2>
 | `summary.md` | `/webkit-summarize` | Overwrite with the latest run, filled from [the ticket-summary template](../../template/ticket-summary.md); bump the Metadata **Summary Run** row and append the superseded run to the run history. It is a compression: the sources stay, and where they disagree the source wins. |
 | `investigation.md` | `/webkit-investigate` | Update in place, filled from [the investigation-report template](../../template/investigation-report.md); bump the Metadata **Investigation Run** row and append the superseded run to the run history. Its Fix Plan checkboxes and §9 Resolution are filled by the skill that applies the fix. |
 | `refactor.md` | `/webkit-refactor` | Update in place, filled from [the refactor-report template](../../template/refactor-report.md); bump the Metadata **Refactor Run** row so successive cleanups on one ticket each leave a line, and append the superseded run to the run history. |
-| `verify.md` | `/webkit-verify` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the verification-report template](../../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
+| `verify.md` | `/webkit-verify` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the verification-report template](../../template/verification-report.md); bump the Metadata **Verification Run** row and append the superseded run to the run history. A scoped run (`/webkit-verify T##### <ids>`) updates it in place instead: the run history and Verification Run row as above, then only §1, §8, and its scoped rows and findings. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
 | `code-review.md` | `/webkit-code-review` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the code-review-report template](../../template/code-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
 | `design-review.md` | `/webkit-design-review` (findings closed by `/webkit-fix`) | Overwrite with the latest run, filled from [the design-review-report template](../../template/design-review-report.md); bump the Metadata **Review Run** row and append the superseded run to the run history. `/webkit-fix` edits it in place as a [fix pass](#fix-pass). |
 
@@ -178,7 +178,7 @@ Every update also refreshes **Done**, **Next step**, and **Last Updated**, and a
 
 Whichever of `/webkit-verify` or `/webkit-fix` leaves the ticket in this state sets the spec's **Status** to `Done` and the plan's **Plan Status** to `Done`, and records it in `task.md`:
 
-- `verify.md` exists and its status is ✅ PASS (any form, including `(n AC pending manual check)` and `(after fix pass …)`),
+- `verify.md` exists and its status is ✅ PASS (any form, including `(n AC pending manual check)` and `(after fix pass …)`, but not `(scoped: …)`),
 - no CRITICAL or HIGH finding is open in `code-review.md` or `design-review.md`, where they exist,
 - every plan task is ticked or retired, and
 - the spec's §15 Open Questions is empty and its Status is `Approved` or `In Progress`.

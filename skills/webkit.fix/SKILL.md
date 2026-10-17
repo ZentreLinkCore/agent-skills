@@ -183,7 +183,7 @@ Apply the report's own status rule to the findings still **open**, as if the clo
 
 | Report | Recompute | Also update |
 | --- | --- | --- |
-| `verify.md` | §1 Overall Status: open BLOCKER → ❌ FAILED; open REQUIRED FIX → ⚠ PASS WITH FIXES; neither → ✅ PASS (keep any `(n AC pending manual check)`) | §2, §4, §5 rows whose every FAIL reason is now closed → PASS `(fixed: Finding #n)`; the §2 AC count; §8 → READY FOR MERGE when nothing required is open, else the open findings only |
+| `verify.md` | §1 Overall Status: open BLOCKER → ❌ FAILED; open REQUIRED FIX → ⚠ PASS WITH FIXES; neither → ✅ PASS (keep any `(n AC pending manual check)` or `(scoped: …)`) | §2, §4, §5 rows whose every FAIL reason is now closed → PASS `(fixed: Finding #n)`; the §2 AC count; §8 → READY FOR MERGE when nothing required is open (FULL VERIFY BEFORE MERGE when the status is `(scoped: …)`), else the open findings only |
 | `code-review.md` | Overall Code Quality from the open findings | Final Recommendation |
 | `design-review.md` | Overall Design Fit from the open findings | Final Recommendation |
 | `refactor.md` | ✅ BEHAVIOR PRESERVED once every check that failed in §5 passes again | §5 Regression Evidence, with the after-fix result |
@@ -213,7 +213,7 @@ An older header-format `specs.md` with no §14: append a `<!-- Changelog -->` li
 
 ### Step 5 — Close the ticket when it is finished
 
-If the ticket now meets every condition of [Closing a ticket](../../rules/conditional/ticket-numbering.md#closing-a-ticket) (verify ✅ PASS, no CRITICAL / HIGH open in the other reports, every task ticked, no Open Questions, spec `Approved` or `In Progress`), set the spec's **Status** and the plan's **Plan Status** to `Done`. Otherwise leave both; `task.md` §4 says what is missing.
+If the ticket now meets every condition of [Closing a ticket](../../rules/conditional/ticket-numbering.md#closing-a-ticket) (verify ✅ PASS and not `(scoped: …)`, no CRITICAL / HIGH open in the other reports, every task ticked, no Open Questions, spec `Approved` or `In Progress`), set the spec's **Status** and the plan's **Plan Status** to `Done`. Otherwise leave both; `task.md` §4 says what is missing.
 
 ### Step 6 — Update task.md
 
@@ -227,8 +227,9 @@ Recommend re-running the source skill, in the Fix Summary and as `task.md`'s Nex
 
 - the Completion Status is PARTIALLY COMPLETED,
 - a fix was applied as an equivalent change rather than as written (Phase 4),
-- a BLOCKER or CRITICAL finding could only be closed as `✅ FIXED (traced)`, or
-- a fix changed authorization, a schema, or a public API contract beyond the construct the finding cited.
+- a BLOCKER or CRITICAL finding could only be closed as `✅ FIXED (traced)`,
+- a fix changed authorization, a schema, or a public API contract beyond the construct the finding cited, or
+- the source was a scoped verify run and nothing required is left open: the full `/webkit-verify <ticket>` is the check before merge.
 
 Otherwise the next step is the next stage of the work (commit, the other review, merge), not a re-run.
 

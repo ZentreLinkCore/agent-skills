@@ -22,12 +22,13 @@ Shared steps (gates, ticket resolution, templates, report persistence, `task.md`
 | `/webkit-verify T#####` | Verify that ticket's spec against that ticket's branch. |
 | `/webkit-verify <branch-name>` | Verify that branch; the branch names the ticket (`T00004`, `T00004-<slug>`, `F0135`). |
 | `/webkit-verify` | Verify the current branch (or the uncommitted workspace) against its ticket's spec. |
+| `/webkit-verify T##### <ids>` | A **scoped run**: grade only those spec IDs (`AC-17..AC-20`, `AC-03,AC-07`, `FR-08`, `EC-07`) and carry everything else from the previous run. See [Scoped Run](#scoped-run). |
 
 ## Context Loading Priority
 
 1. **`task.md`**: the Verify row, the open findings, the previous runs. Read `summary.md` first if it exists.
 2. **`context.md`** (if it exists), plus `touched-files.md` / `dependency-map.md`: where each rule's code is expected to live, a starting point for the absence sweep. A map, not evidence.
-3. **The whole `spec.md`, before any code** (Phase 1). This skill is the exception to "only the sections the step needs": the spec is the yardstick, and every section is graded. `plan.md` only in Phase 7: the unticked tasks with their **Done when**, and the tasks a Case 1 correction touches. The previous `verify.md` only on a re-run: its Metadata, status, and findings, to append the run history and re-check every `✅ FIXED` line.
+3. **The whole `spec.md`, before any code** (Phase 1). This skill is the exception to "only the sections the step needs": the spec is the yardstick, and every section is graded. A [scoped run](#scoped-run) reads only its scope's sections. `plan.md` only in Phase 7: the unticked tasks with their **Done when**, and the tasks a Case 1 correction touches. The previous `verify.md` only on a re-run: its Metadata, status, and findings, to append the run history and re-check every `✅ FIXED` line.
 4. **The implementation**: the branch diff, then each changed file at the changed hunks; for the absence sweep, the place each rule's code would live. Graphify first ([code-search.md](../../rules/conditional/code-search.md)), then targeted `rg`; `graphify path` to follow a route to the guard or handler that should enforce a rule. The source `file:line` is the evidence, never the graph.
 
 Rules: the router's [By files in a diff](../../rules/rule-router.md#by-files-in-a-diff-reviews-fixes) table, for this diff's paths only. Open [verification-report.md](../../template/verification-report.md) at Phase 6. **Avoid:** whole-repo reads; `code-review.md` / `design-review.md` beyond their status and open CRITICAL / HIGH (Phase 7 Step 3); unrelated tickets' reports; the whole blueprint.
@@ -146,8 +147,9 @@ IMPROVEMENT and OUT OF SCOPE findings never change the status. An `UNVERIFIED` A
 
 ### Final recommendation
 
-- **READY FOR MERGE**: status is ✅ PASS.
+- **READY FOR MERGE**: status is ✅ PASS, from a full run (or its fix pass).
 - **FIX REQUIRED BEFORE MERGE**: status is ⚠ PASS WITH FIXES or ❌ FAILED. List every BLOCKER and REQUIRED FIX by finding number.
+- **FULL VERIFY BEFORE MERGE**: a [scoped run](#scoped-run) with no BLOCKER and no REQUIRED FIX open. The scoped IDs pass; the rest of the spec was last graded against older code.
 
 ### Spec Update Rules
 
@@ -200,14 +202,38 @@ Case 2 is never applied: write `Applied: No — …` and leave the spec alone.
 
 **Step 2 — Tick what this run proved.** In `plan.md`, tick each unticked task whose **Done when** this run confirmed with `file:line` or command evidence (a previous session may have built it without ticking). Set **Plan Status** to `In Progress`, or `Done` when every task is ticked or retired. Never untick: a ticked task whose Done When fails is a finding.
 
-**Step 3 — Close the ticket when it is finished**, per [Closing a ticket](../../rules/conditional/ticket-numbering.md#closing-a-ticket): spec **Status** and **Plan Status** → `Done` only when every condition holds.
+**Step 3 — Close the ticket when it is finished**, per [Closing a ticket](../../rules/conditional/ticket-numbering.md#closing-a-ticket): spec **Status** and **Plan Status** → `Done` only when every condition holds. Never after a scoped run.
 
 **Step 4 — Update task.md** per protocol §5. This skill's rows: the §1 Verify row (`vN — <status>`); replace this report's unticked §3 items with this run's BLOCKER / REQUIRED FIX findings (ticked items stay as history); §2 ticks from Step 2; §4 pending manual checks; Metadata after Steps 1 and 3; **Next step** `/webkit-fix <ticket> --verify` when anything required is open.
+
+## Scoped Run
+
+`/webkit-verify T##### <ids>` checks part of the spec (typically the ACs a spec amendment added, or the ones a change touched) without re-grading what an earlier run already graded. It is a cheap check while building, never the check before merge: only a full run returns READY FOR MERGE or closes the ticket.
+
+**Needs an earlier run.** No `verify.md`, or a legacy portal spec → run full and say why in one line. An ID the spec does not have → stop and list it.
+
+**Expand the scope one hop**, from the spec itself, and print the final list before reading any code:
+
+- each AC → the FR / EC IDs in its row; each FR → the Flow steps, §8 rows, §13 rows and §15 decisions that name it;
+- each FR / EC given directly → the ACs that verify it;
+- every finding in `verify.md` whose Specification Reference names a scoped ID.
+
+| Phase | In a scoped run |
+| --- | --- |
+| Context | `task.md` (and `summary.md`) as usual. From `spec.md`: Metadata, the §16 Change Log rows newer than the spec version the previous run graded, and the sections the scope names, not the whole spec. From the previous `verify.md`: Metadata, §1, §2, §8, and the scoped findings. From `plan.md` (Phase 7): the tasks whose **Covers** names a scoped ID. |
+| 1. Load | The code: the files those plan tasks, §8 rows and `touched-files.md` rows name, at the branch diff's hunks. |
+| 2. Comparison | Every scoped AC gets a result. The absence sweep and the reverse direction cover the scoped FR / EC / rules only. A §16 row since the previous run that changed a section outside the scope → note it in §2 as `Not re-graded (changed in spec vX.Y)`. |
+| 3. Adversarial | Scoped code only. Run the project's **whole** test command, not only the scoped test files: it is the only check the rest of the spec gets in this run, and a failing out-of-scope test is a finding. |
+| 4. Classify | Re-test the scoped findings' `✅ FIXED` lines. New findings continue the existing numbering. Findings outside the scope are carried as written, not re-tested. |
+| 5. Status | The usual rule over **every** open finding (carried and new), suffixed `(scoped: <ids>)`, e.g. `✅ PASS (scoped: AC-17–AC-20)`. Recommendation: FIX REQUIRED BEFORE MERGE while anything required is open, otherwise FULL VERIFY BEFORE MERGE, never READY FOR MERGE. |
+| 6. Report | Update `verify.md` **in place**, not overwritten: append the previous run's line to the run history, set Verification Run to `vN — scoped: <expanded ids>; rest as graded in vM` (M = the last full run), and rewrite only §1, §8, the scoped rows of §2, §4, §5, §6, and the scoped findings. Everything else stays as the previous run left it. |
+| 7. Ticket | Step 1 only for a Case 1 error inside the scope; Step 2 ticks scoped tasks only; Step 3 never runs; Step 4 as usual, with **Next step** `/webkit-fix <ticket> --verify` while anything required is open, else the full `/webkit-verify <ticket>`. |
 
 ## Anti-Patterns
 
 | Anti-pattern | Why it fails |
 | --- | --- |
+| READY FOR MERGE from a scoped run | Everything outside the scope was graded against older code. |
 | Reading the code before the spec | You read the spec as a description of what you already saw. |
 | "Looks correct" as evidence | Not falsifiable; a missing implementation also looks correct. |
 | Checking only the happy path | Edge cases are where specs are violated. |
@@ -227,3 +253,4 @@ Always include the saved report path and the updated `task.md` path, and say wha
 - Code quality beyond the spec: `/webkit-code-review <ticket>`
 - When Phase 7 Step 3 closed the ticket (`Done`): `/webkit-summarize <ticket>`, to compress the ticket's history into `summary.md` for later sessions.
 - After fixes: **no re-run needed.** `/webkit-fix` closes the findings here as a fix pass. Re-run only when its Fix Summary says a re-run is needed, or when a fresh adversarial pass is wanted before merge.
+- After a scoped run with nothing required open: the full `/webkit-verify <ticket>` before merge.
