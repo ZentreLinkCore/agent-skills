@@ -35,7 +35,7 @@ bash .agents/setup.sh --global    # optional: /webkit-* commands in every projec
 `setup.sh` does three things, and never deletes a file that exists only outside `.agents/`:
 
 1. Links `.claude/skills` to `.agents/skills`, so Claude Code finds the `/webkit-*` commands.
-2. Links the always-on rules into `.claude/rules/` (`rules/core/*.md`, `rule-router.md`, `context-budget.md`). Claude Code loads these on every turn. It also retires files older versions put there (moving real files to `.claude-rules-backup/`).
+2. Links the always-on rules into `.claude/rules/` (`rules/core/*.md`, `rule-router.md`, `context-budget.md`). Claude Code loads these on every turn. It also retires files older versions put there (moving real files to `.claude-rules-backup/`, which it hides from `git status` through `.git/info/exclude`).
 3. Copies `claude-adapter/AGENTS.md` to the project root as the entry point for other agents, when there is none. An existing root `AGENTS.md` is never overwritten (it may hold project-specific sections, such as the dev login the browser checks use); `setup.sh` says what to point it at.
 
 Get updates with `git -C .agents pull`. The links mean a changed file applies at once. Where symlinks are unavailable (Git Bash on Windows), `setup.sh` copies instead and says so: re-run it after each pull.
