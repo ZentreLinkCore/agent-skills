@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (New master reference parameter table & integration into Payroll Processing & Government Routines Pag-IBIG).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines` frontend module under `payroll`).  
 > **Route:** `/payroll/pag-ibig/table` (`payroll_government_routines_pagibig_table`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models created (`PagibigContributionTable`); Tables created (`pagibig_contribution_table`), extended (`payroll_run_detail`); Routes created (`/payroll/pagibig-contribution-table`); New migration: yes.
 
 ---
@@ -464,7 +464,7 @@ export const pagibigContributionTableApi = {
 
 ### D. UI Component Layout & Aesthetics
 
-Per [ui-design.md](../../rules/ui-design.md):
+Per [ui-design.md](../../../rules/conditional/ui-design.md):
 - **Summary Header Cards**: Display Active Schedule Year, Statutory Compensation Cap (₱10,000.00), Standard EE Cap (₱200.00), Standard ER Cap (₱200.00), and Effective Date.
 - **Rules Table Grid**: Styled table with compensation brackets, EE %, ER %, Cap Limit, Status pill (`Active`/`Inactive`), and Action dropdown (Edit/Delete).
 - **Interactive Calculator Widget**: Live input for monthly basic salary to simulate and verify EE and ER shares instantly against configured rules.

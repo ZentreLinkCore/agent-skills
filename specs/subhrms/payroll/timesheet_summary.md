@@ -3,7 +3,7 @@
 > **Status:** Design (page does not yet exist — current `RegularCycle.vue` is a placeholder `<h1>`).
 > **Portal:** Payroll (`payroll` controller namespace, `payroll` URL prefix, `payroll` frontend module folder).
 > **Upstream:** Timekeeping → Timesheet Processing → **Timesheet Closing (lock)** → Payroll Processing (this spec).
-> **Authoritative conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md). Follow it; do not re-derive the architecture.
+> **Authoritative conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md). Follow it; do not re-derive the architecture.
 
 ---
 
@@ -96,7 +96,7 @@ Read-only source. Model [app/Models/AccountJob.php](../../../app/Models/AccountJ
 | Column | Type | Use in payroll |
 |---|---|---|
 | `salary` | decimal(15,5) | Monthly basic salary. |
-| **`daysmonth`** | string, default `'26.0833'` | **Working days per month — the divisor for the daily rate.** `daily_rate = salary ÷ daysmonth`. (`26.0833 ≈ 313 ÷ 12`, consistent with the 313-day factor in [HRMS Domain Rules §3](../../rules/hrms-rules.md).) Cast to float via the model's `CastNumericStrings` trait. |
+| **`daysmonth`** | string, default `'26.0833'` | **Working days per month — the divisor for the daily rate.** `daily_rate = salary ÷ daysmonth`. (`26.0833 ≈ 313 ÷ 12`, consistent with the 313-day factor in [HRMS Domain Rules §3](../../../rules/conditional/payroll.md).) Cast to float via the model's `CastNumericStrings` trait. |
 
 > **REQUIRED:** the daily-rate divisor MUST be read from `accountjob.daysmonth` for the employee — never a hardcoded constant. Fall back to the column default `26.0833` only when the row's value is null/empty. Hourly rate = `daily_rate ÷ 8`.
 
@@ -348,7 +348,7 @@ daily_rate  = salary / days_month
 hourly_rate = daily_rate / 8
 ```
 
-**Step 1 — earnings → GROSS:** each category = `Σ(hours_column × day_type_factor × hourly_rate)`, day-type factors from the OT/holiday/night-diff config already maintained in the Payroll portal (`OvertimeRateController`) and the rates in [HRMS Domain Rules §1](../../rules/hrms-rules.md) (OT 125%, RD/special 130%, regular holiday 200%, night diff 110%).
+**Step 1 — earnings → GROSS:** each category = `Σ(hours_column × day_type_factor × hourly_rate)`, day-type factors from the OT/holiday/night-diff config already maintained in the Payroll portal (`OvertimeRateController`) and the rates in [HRMS Domain Rules §1](../../../rules/conditional/payroll.md) (OT 125%, RD/special 130%, regular holiday 200%, night diff 110%).
 
 ```text
 gross_pay = basic_pay + ot_pay + night_diff_pay + holiday_pay + leave_pay + adjustments
@@ -362,7 +362,7 @@ undertime_deduction  = accountjob.undertime  ? ut_hrs   × hourly_rate : 0
 absent_deduction     = accountjob.absences   ? absents  × daily_rate  : 0
 ```
 
-**Step 3 — statutory deductions (period-gated):** apply a contribution only when its `*_period_type` JSON includes the current cutoff-half (derive the half from `payroll_period.period_type` / the cutoff dates). Amounts come from `accountjob.sss_amount` / `philhealth_amount` / `ibig_amount`. Withholding tax uses the BIR table on **taxable income = `gross_pay − sss − philhealth − pagibig`** (per [HRMS Domain Rules §3](../../rules/hrms-rules.md)); `internal_revenue = 'Table-Based'` selects the table path.
+**Step 3 — statutory deductions (period-gated):** apply a contribution only when its `*_period_type` JSON includes the current cutoff-half (derive the half from `payroll_period.period_type` / the cutoff dates). Amounts come from `accountjob.sss_amount` / `philhealth_amount` / `ibig_amount`. Withholding tax uses the BIR table on **taxable income = `gross_pay − sss − philhealth − pagibig`** (per [HRMS Domain Rules §3](../../../rules/conditional/payroll.md)); `internal_revenue = 'Table-Based'` selects the table path.
 
 **Step 4 — other deductions:** due loan amortizations + recurring entries from the **Payroll Entries** module (loans / recurring_entries) for this period.
 
@@ -520,7 +520,7 @@ export { default as payrollProcessingRoutes } from './route/payroll_processing.r
 
 ---
 
-## 11. Testing (per [.agents/rules/testing.md](../../rules/testing.md))
+## 11. Testing (per [.agents/rules/conditional/testing.md](../../../rules/conditional/testing.md))
 
 - **PHPUnit** — the money math is critical calculation coverage:
   - `GetPayrollProcessingRosterQuery`: gate flags, `payroll_status` derivation (incl. `No Timesheet` / `No Rate`), hours copied correctly, `daily_rate` preview, employees with/without summaries and with/without `accountjob`.

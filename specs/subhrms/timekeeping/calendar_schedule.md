@@ -3,14 +3,14 @@
 > **Kind:** Remediation of an existing standalone module — `module/timekeeping/calendar_schedule/` stays a separate module from `timekeeping/applications/pages/duty_roster/`, but is rebuilt to stop duplicating Duty Roster's logic and to follow this codebase's established conventions.
 > **Portal:** **Timekeeping** (`/api/timekeeping/calendar-schedule` backend routes, `timekeeping/calendar_schedule` frontend module).
 > **Route:** `/timekeeping/calendar-schedule` (`calendar_schedule`) — already linked from the Timekeeping Sidebar under *Timekeeping Setup > Calendar Schedule* (`useSidebarLinks.ts:277`). No route change.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md), [naming-convention.md](../../rules/naming-convention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md), [code-quality.md](../../../rules/conditional/code-quality.md).
 > **System Awareness:** Models reused (`AccountDetailVW`, `Shift`, `AccountJob`, `AppChangeShift`, `Timesheet`, `AppLeave`); Tables reused only (`vw_accounts_details`, `shift`, `accountjob`, `app_shift`, `timesheet`, `app_leave`); Routes: existing `GET /api/timekeeping/calendar-schedule` (+ `/stats`) reused/fixed, existing `POST /api/timekeeping/duty-roster/publish` reused (no new publish route — see Decision 1); New migration: **no**.
 
 ---
 
 ## 1. Purpose
 
-An audit of `module/timekeeping/calendar_schedule/` found that it calls real endpoints (it is not mock data) but is a materially weaker, incompletely-wired duplicate of `timekeeping/applications/pages/duty_roster/`, and violates several established conventions from [duplicate-prevention.md](../../rules/duplicate-prevention.md) and sibling modules like `timesheet_adjustment`.
+An audit of `module/timekeeping/calendar_schedule/` found that it calls real endpoints (it is not mock data) but is a materially weaker, incompletely-wired duplicate of `timekeeping/applications/pages/duty_roster/`, and violates several established conventions from [system-awareness.md](../../../rules/conditional/system-awareness.md) and sibling modules like `timesheet_adjustment`.
 
 Concrete findings (file:line references verified against current code):
 
@@ -29,7 +29,7 @@ Concrete findings (file:line references verified against current code):
 ## 2. Design Decisions
 
 ### Decision 1: Delegate writes to Duty Roster instead of building parallel write endpoints
-- **"Publish Week" calls the existing `POST /api/timekeeping/duty-roster/publish`** (`DutyRosterController::publish`, already implements "flip draft `AppChangeShift` rows to Approved for a date range"). No new publish controller/route is created — per [duplicate-prevention.md](../../rules/duplicate-prevention.md) §5, a parallel publish endpoint for the same table/status transition is a hard violation.
+- **"Publish Week" calls the existing `POST /api/timekeeping/duty-roster/publish`** (`DutyRosterController::publish`, already implements "flip draft `AppChangeShift` rows to Approved for a date range"). No new publish controller/route is created — per [system-awareness.md](../../../rules/conditional/system-awareness.md) §5, a parallel publish endpoint for the same table/status transition is a hard violation.
 - Calendar Schedule remains **read-mostly**: it triggers the existing write action but does not gain its own drag/drop/swap/delete UI — that stays exclusive to Duty Roster.
 
 ### Decision 2: Extract the shared shift-resolution algorithm

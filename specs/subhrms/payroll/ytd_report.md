@@ -2,7 +2,7 @@
 
 > **Kind:** Greenfield read-only report page. Reads persisted payroll history; incorporates detailed BIR tax calculations.
 > **Portal:** Payroll. **Route:** `payroll/payroll-reports/ytd-report` (`payroll_payroll_reports_ytd_report`) → [ytd_report/YTDReport.vue](../../../resources/views/web/src/module/payroll/reports/pages/payroll_reports/ytd_report/YTDReport.vue).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md) (Domain Query/Handler pattern, no API Resources).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md) (Domain Query/Handler pattern, no API Resources).
 
 ---
 

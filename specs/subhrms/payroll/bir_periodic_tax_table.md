@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — Master withholding tax reference table & calculation engine for payroll processing.  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `bir/periodic_tax_table` frontend module).  
 > **Route:** `/payroll/government-routines/bir/periodic-tax-table` (`payroll_bir_periodic_tax_table`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models created (`BirPeriodicTaxTable`); Tables created (`bir_periodic_tax_table`); Routes created (`/api/payroll/bir-periodic-tax-table`, `/api/payroll/bir-periodic-tax-table/lookup`); New migration: `yes` (`2026_07_30_000005_create_bir_periodic_tax_table.php`).
 
 ---
@@ -392,7 +392,7 @@ export interface TaxLookupResult {
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Taxable Compensation Basis:**
    $$\text{Taxable Compensation} = \text{Gross Taxable Income} - (\text{SSS EE} + \text{PhilHealth EE} + \text{Pag-IBIG EE} + \text{Exempt Allowances})$$

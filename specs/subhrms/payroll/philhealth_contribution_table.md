@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (New master reference parameter table & integration into Payroll Calculation & Government Routines PhilHealth).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines/pages/philhealth` frontend module).  
 > **Route:** `/payroll/phil-health/table` (`payroll_government_routines_philhealth_table`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models created (`PhilhealthContributionTable`); Tables created (`philhealth_contribution_table`), extended (`payroll_run_detail`); Routes created (`/payroll/philhealth-contribution-table`); New migration: yes.
 
 ---
@@ -265,7 +265,7 @@ resources/views/web/src/module/payroll/government_routines/pages/philhealth/tabl
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Salary Basis Evaluation Algorithm:**
    - Given an employee's Monthly Basic Salary $S$:

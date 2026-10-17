@@ -4,7 +4,7 @@
 > **Portal:** **Employee / Mobapp** (`/api/timekeeping/timesheet_details` backend route; `resources/views/mobapp/src/module/employee/timekeeping` mobile module).
 > **Version:** v1 — 2026-09-02 — initial specification for modern non-table mobile timesheet details with parity to web timesheet calculations, cutoff period navigation, segmented metrics, daily card timeline, and daily detail inspection modal.
 > **Route:** `(app)/timekeeping` (Bottom tab: Timekeeping & Timesheet).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md), [ui-design](../../rules/ui-design.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md).
 > **System Awareness:**
 > - Models Reused: `App\Models\AccountDetailVW`, `App\Models\PayPeriod`, `App\Models\Timesheet`, `App\Models\Timelog`, `App\Models\Leave`, `App\Models\ChangeShift`, `App\Models\AttendanceAdjustment`, `App\Models\Overtime`, `App\Models\OfficialBusinessTrip`.
 > - Tables Reused: `vw_accounts_details`, `pay_period`, `timesheets`, `timelogs`, `leaves`, `change_shifts`, `attendance_adjustments`, `overtimes`, `official_business_trips`.

@@ -4,7 +4,7 @@
 > **Portal:** **Global** — `/api/ai/*` (top-level, inside `auth:sanctum`), global Vue component `components/Chatbot/` mounted in `DashboardLayout.vue` for every portal.
 > **Version:** v3 — 2026-08-25 — added Decision 12 (the chatbot should not mount on all 206 routes; portal-level `meta.chatbot` defaults + per-route override) plus AC-39…AC-45, and rewired §5.5's `showChatbot` from a path check to route meta.
 > **Route:** `POST /api/ai/chat` · `POST /api/ai/agent-chat` · `GET|DELETE /api/ai/history/{session_id}` (all reused) · `POST /api/mcp/execute` (**to be removed** — Decision 5) · `POST /mcp/hrms` (reused, unchanged).
-> **Conventions:** [project-profile.md](../../../../.claude/rules/project-profile.md), [hrms-rules.md](../../../../.claude/rules/hrms-rules.md), [duplicate-prevention.md](../../../../.claude/rules/duplicate-prevention.md), [security.md](../../../../.claude/rules/security.md), [vue-standards.md](../../../../.claude/rules/vue-standards.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [system-awareness.md](../../../rules/conditional/system-awareness.md), [security-baseline.md](../../../rules/core/security-baseline.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md).
 > **System Awareness:** Models **none created** — reuses [`Account`](../../../../app/Models/Account.php), [`AccountDetailVW`](../../../../app/Models/AccountDetailVW.php), [`AccountLeave`](../../../../app/Models/AccountLeave.php), [`AppLeave`](../../../../app/Models/AppLeave.php). Tables **`ai_chat_sessions`, `ai_chat_messages`, `ai_audit_logs` (all reused)**. Routes **all reused; one deleted (`/api/mcp/execute`)**. **New migration: YES — two `alters/` migrations only** (`alters/ai_chat_messages/`, `alters/ai_audit_logs/`); no new table, no new model.
 
 ---
@@ -183,7 +183,7 @@ Surfacing an error to the one user who hit it is necessary but not sufficient �
 [`validateOwnershipAndScope()`](../../../../app/Policies/McpToolPolicy.php) admits in a comment that a production system should verify the target `empid` reports to this manager, then returns `true` unconditionally for role 2.
 
 **Option A — Reuse the `units.idhead` pattern via a new shared helper (Recommended)**
-- The managed-units query is copy-pasted in **four** places ([`MyTeamController:44`](../../../../app/Http/Controllers/manager/MyTeamController.php#L44), [`GetDutyRosterQuery:32`](../../../../app/Queries/Shift/GetDutyRosterQuery.php#L32), [`GetManagementReportsQuery:17`](../../../../app/Queries/ManagementReports/GetManagementReportsQuery.php#L17), [`tk/DutyRosterController:51`](../../../../app/Http/Controllers/tk/DutyRosterController.php#L51)). Per [duplicate-prevention.md](../../../../.claude/rules/duplicate-prevention.md), extract `App\Queries\Team\GetManagedEmployeesQuery::managedUnitIds(int $userId): array` (+ `managesEmpid(int $userId, string $empid): bool`), point the policy at it, and refactor the four existing call sites to use it.
+- The managed-units query is copy-pasted in **four** places ([`MyTeamController:44`](../../../../app/Http/Controllers/manager/MyTeamController.php#L44), [`GetDutyRosterQuery:32`](../../../../app/Queries/Shift/GetDutyRosterQuery.php#L32), [`GetManagementReportsQuery:17`](../../../../app/Queries/ManagementReports/GetManagementReportsQuery.php#L17), [`tk/DutyRosterController:51`](../../../../app/Http/Controllers/tk/DutyRosterController.php#L51)). Per [system-awareness.md](../../../rules/conditional/system-awareness.md), extract `App\Queries\Team\GetManagedEmployeesQuery::managedUnitIds(int $userId): array` (+ `managesEmpid(int $userId, string $empid): bool`), point the policy at it, and refactor the four existing call sites to use it.
 
 | Pros | Cons |
 |---|---|
@@ -454,7 +454,7 @@ No new tables and no new models. Three tables reused as-is from [`2026_06_25_102
 **`ai_chat_sessions`** — unchanged. `user_id` already exists; this spec only starts *reading* it (Decision 4).
 
 > [!NOTE]
-> These three tables carry real FK constraints (`constrained('accounts')`), against the SubHRMS zero-DB-FK convention. They already shipped that way; **the alters must not add more FKs** — index only, per [project-profile.md](../../../../.claude/rules/project-profile.md).
+> These three tables carry real FK constraints (`constrained('accounts')`), against the SubHRMS zero-DB-FK convention. They already shipped that way; **the alters must not add more FKs** — index only, per [project-gate.md](../../../rules/core/project-gate.md).
 
 **Seed rows:** none.
 
@@ -557,7 +557,7 @@ resources/views/web/src/module/<portal>/*/route/*.routes.ts
 ```
 
 > [!NOTE]
-> `useHRMSChatbot.js` is JavaScript in a TS codebase, and `HRMSChatbot.vue` is ~1,640 lines. Converting to `.ts` and splitting the card templates into child components is **out of scope** here (§8) — this pass keeps the diff reviewable. Per [vue-standards.md](../../../../.claude/rules/vue-standards.md), any *new* file must be `.ts`.
+> `useHRMSChatbot.js` is JavaScript in a TS codebase, and `HRMSChatbot.vue` is ~1,640 lines. Converting to `.ts` and splitting the card templates into child components is **out of scope** here (§8) — this pass keeps the diff reviewable. Per [frontend-vue.md](../../../rules/conditional/frontend-vue.md), any *new* file must be `.ts`.
 
 ### 5.1 Composable changes
 
@@ -570,7 +570,7 @@ resources/views/web/src/module/<portal>/*/route/*.routes.ts
 
 ### 5.2 Component changes
 
-- **Error bubble:** rose/red-tinted variant of the AI bubble — warning icon, the message, a small `error_code` chip, and a **Retry** button. Follows the existing dark-mode token pattern in the file ([ui-design.md](../../../../.claude/rules/ui-design.md)).
+- **Error bubble:** rose/red-tinted variant of the AI bubble — warning icon, the message, a small `error_code` chip, and a **Retry** button. Follows the existing dark-mode token pattern in the file ([ui-design.md](../../../rules/conditional/ui-design.md)).
 - **Delete** these `v-if="msg.type === …"` blocks and their `mock*` sources: `approval-list`, `team-attendance`, `employee-lookup`, `incident-management`, `logs-adjustment`, `roster-validation`, `payroll-run`, `contributions-review`, `admin-permissions`, `audit-logs` (Decision 8).
 - **Wire** `leave-balance` to `msg.data` from the `leave.balance` tool result; delete `mockLeaveBalances`, `mockPolicies`, `mockRoster` (AC-23).
 - **Keep** `roster`, `payslip`, `attendance-summary` (already live from `/api/employee/shift_schedule` + `/api/employee/dashboard`), and all four `*-form` cards (already post to `/api/employee/submit_application`).
@@ -674,7 +674,7 @@ Both chatbot values are arbitrary Tailwind escapes far outside this scale, which
 | **Personal scope.** An employee sees only their own leave, attendance, schedule, and payslip | [`McpToolPolicy`](../../../../app/Policies/McpToolPolicy.php) role-3 ownership branch; AC-14 |
 | **Portal separation.** Manager/HR/TK/Payroll scopes never widen an employee's access; the frontend's URL-derived role is cosmetic — authorization is always off `Account.role` | `McpToolPolicy`; AC-15…AC-17 |
 | **Team scope = units headed by the manager** (`units.idhead`, `status = 1`) — the app's existing definition, now shared | `GetManagedEmployeesQuery`; AC-15, AC-16 |
-| **Audit trail.** Every tool attempt, allowed or denied, is recorded — satisfies the [hrms-rules.md](../../../../.claude/rules/hrms-rules.md) audit requirement for payroll/attendance access | `HrmsTool::handle()`; AC-18 |
+| **Audit trail.** Every tool attempt, allowed or denied, is recorded — satisfies the [payroll.md](../../../rules/conditional/payroll.md) audit requirement for payroll/attendance access | `HrmsTool::handle()`; AC-18 |
 | **No fabricated HR data.** Any figure shown to a user must trace to a tool result | Decisions 1 & 8; AC-6, AC-23 |
 
 ### 6.2 Edge cases

@@ -3,7 +3,7 @@
 > **Kind:** Extension — corrective refactor of the existing organization data layer. No new product capability.
 > **Portal:** **Organization** (`/api/organizations/...` routes, `organization` frontend module). Touches Auth, Onboarding, and Dashboard domains as collateral.
 > **Route:** No new routes. Existing endpoints keep their URLs and response shapes.
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (ScaleUP Profile), [naming-convention.md](../../../rules/naming-convention.md), [DATABASE_SCHEMA.md](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [PERMISSION_MATRIX.md](../../../blueprint/scaleup/docs/PERMISSION_MATRIX.md), [ORGANIZATION_ROLES.md](../../../blueprint/scaleup/docs/specifications/organization/ORGANIZATION_ROLES.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (ScaleUP Profile), [code-quality.md](../../../rules/conditional/code-quality.md), [DATABASE_SCHEMA.md](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [PERMISSION_MATRIX.md](../../../blueprint/scaleup/docs/PERMISSION_MATRIX.md), [ORGANIZATION_ROLES.md](../../../blueprint/scaleup/docs/specifications/organization/ORGANIZATION_ROLES.md).
 > **System Awareness:** Models reused/renamed — `Organization`, `OrganizationUser` → `OrganizationMember`, `OrganizationInvitation`, `User`, `BusinessGoal`. Models created — `OrganizationRole`, `Permission`, `RolePermission`. Tables renamed — `organization_users` → `organization_members`. Tables created — `organization_roles`, `permissions`, `role_permissions`. Routes reused: all four `routes/api/*.php` files unchanged. New migration: **yes** — see §2 Decision 1 for whether they replace or supplement the originals. **69 references across 21 app files + 5 migrations.**
 
 ---
@@ -14,7 +14,7 @@ The organization data layer was built before the blueprint was being followed. I
 
 | Divergence | Current | Required by |
 | :--- | :--- | :--- |
-| FK column naming | `id_organization`, `id_user`, `id_created_by`, `id_invited_by`, `id_current_organization` | [naming-convention.md](../../../rules/naming-convention.md) L24 *and* [DATABASE_SCHEMA.md](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md) |
+| FK column naming | `id_organization`, `id_user`, `id_created_by`, `id_invited_by`, `id_current_organization` | [code-quality.md](../../../rules/conditional/code-quality.md) L24 *and* [DATABASE_SCHEMA.md](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md) |
 | Membership table name | `organization_users` | `organization_members` |
 | Roles | plain `role` string column | `organization_roles` + `permissions` + `role_permissions` |
 | Foreign keys | none declared | "Foreign keys should be used where appropriate" |
@@ -104,7 +104,7 @@ This spec corrects all four. It is a **blocker for every subsequent ScaleUP spec
 
 | Pros | Cons |
 | :--- | :--- |
-| Membership reads need no join | Two sources of truth that can disagree — the exact class of defect [duplicate-prevention.md](../../../rules/duplicate-prevention.md) exists to prevent |
+| Membership reads need no join | Two sources of truth that can disagree — the exact class of defect [system-awareness.md](../../../rules/conditional/system-awareness.md) exists to prevent |
 | Smallest diff to the existing queries | Every role change must write both columns, forever |
 
 **Recommendation: Option A.** The join is trivially cheap (five rows, permanently cacheable) and Option B's drift risk is real and permanent. Preserve the wire format by shaping `role->name` back into the `role` key — see §4.
@@ -194,7 +194,7 @@ The doc specifies `type`, `country`, `description`, `timezone`, `currency`, none
 | `users` | `id_current_organization` | `current_organization_id` |
 | `business_goals` | `id_organization` | `organization_id` |
 
-> **DECIDED — `invited_by`,** matching the blueprint rather than [naming-convention.md](../../../rules/naming-convention.md) L24's `<parent>_id` rule. This is a deliberate, documented exception; the migration notes it and passes the parent table explicitly (`constrained('users')`), since Laravel would otherwise infer a table named `invited_bies`.
+> **DECIDED — `invited_by`,** matching the blueprint rather than [code-quality.md](../../../rules/conditional/code-quality.md) L24's `<parent>_id` rule. This is a deliberate, documented exception; the migration notes it and passes the parent table explicitly (`constrained('users')`), since Laravel would otherwise infer a table named `invited_bies`.
 
 ### `organizations` — corrected
 

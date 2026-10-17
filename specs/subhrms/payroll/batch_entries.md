@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (page is a 4-line placeholder; **no payroll-entries backend exists yet**).
 > **Portal:** Payroll. **Route:** `payroll/batch-entries` (`payroll_batch_entries`) — already registered → [batch_entries/BatchEntries.vue](../../../resources/views/web/src/module/payroll/payroll_entries/pages/batch_entries/BatchEntries.vue).
 > **Defines the shared `payroll_entry` table** used by all Payroll Entries features ([recurring_entries.md](./recurring_entries.md), [service_charge.md](./service_charge.md), [loans.md](./loans.md), [bonus_special.md](./bonus_special.md)).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

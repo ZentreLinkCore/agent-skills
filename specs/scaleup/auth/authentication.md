@@ -3,7 +3,7 @@
 > **Kind:** Greenfield
 > **Portal:** Auth
 > **Route:** /login (auth_login), /register (auth_register), /forgot-password (auth_forgot_password), /reset-password/{token} (auth_reset_password), /verify-email (auth_verify_email)
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [security.md](../../rules/security.md), [naming-convention.md](../../rules/naming-convention.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [security-baseline.md](../../../rules/core/security-baseline.md), [code-quality.md](../../../rules/conditional/code-quality.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models: `User` (reused, extended). Tables: `users` (reused, extended via new migration), `password_reset_tokens` (reused as-is), `sessions` (reused as-is). Routes: none exist yet for auth — all new (`routes/web.php` + new `routes/api/auth.php`). New migration: **yes** — one alter-table migration adding `status`, `last_login_at`, `onboarding_completed_at` to `users`. `laravel/sanctum` is **not yet in `composer.json`** — installing it is a Build Order prerequisite.
 
 ---
@@ -27,7 +27,7 @@ Business problem solved: without this, there is no way to create a ScaleUP accou
 
 | Pros | Cons |
 |---|---|
-| No access/refresh token ever touches JS-readable storage — directly satisfies [security.md](../../rules/security.md)'s "no PII/tokens in `localStorage`" rule, since the auth cookie is httpOnly | Requires the `EnsureFrontendRequestsAreStateful` middleware on the `api` group and correct `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN` env config |
+| No access/refresh token ever touches JS-readable storage — directly satisfies [security-baseline.md](../../../rules/core/security-baseline.md)'s "no PII/tokens in `localStorage`" rule, since the auth cookie is httpOnly | Requires the `EnsureFrontendRequestsAreStateful` middleware on the `api` group and correct `SANCTUM_STATEFUL_DOMAINS`/`SESSION_DOMAIN` env config |
 | Reuses the `sessions` table that already exists in the base migration — zero new schema | `fetch`/axios calls must send `credentials: 'include'` and the CSRF header — the current `axiosInstance.js` stub does neither yet (see §7 build order) |
 | Logout is a true server-side session kill (`session()->invalidate()`), not just "forget a token" | Doesn't by itself support a future native mobile app or third-party API consumer (those need Sanctum's token-ability mode) |
 | Matches Laravel's own idiomatic SPA pattern (same one Breeze/Jetstream ship) — least custom code | |
@@ -37,7 +37,7 @@ Business problem solved: without this, there is no way to create a ScaleUP accou
 
 | Pros | Cons |
 |---|---|
-| Trivially portable to a future native/mobile client or third-party API integration | Storing the token anywhere JS can read it (`localStorage`) is exactly what [security.md](../../rules/security.md) forbids for tokens/PII — an XSS bug becomes full account takeover |
+| Trivially portable to a future native/mobile client or third-party API integration | Storing the token anywhere JS can read it (`localStorage`) is exactly what [security-baseline.md](../../../rules/core/security-baseline.md) forbids for tokens/PII — an XSS bug becomes full account takeover |
 | No CSRF header/cookie plumbing needed | Requires a `personal_access_tokens` migration + manual expiry/rotation logic that Sanctum's stateful mode gives for free |
 | | Logout ("forget the token") can't force-invalidate a token already exfiltrated, unlike killing a server session |
 
@@ -54,7 +54,7 @@ Business problem solved: without this, there is no way to create a ScaleUP accou
 |---|---|
 | `uncompromised()` checks the password against the "Have I Been Pwned" breach corpus via the k-anonymity API — real-world credential-stuffing defense for free | One extra outbound HTTP call per registration/reset (Laravel caches/handles this gracefully, but note it as a dependency on an external service being reachable) |
 | Zero new dependency — ships in Laravel core | |
-| Centralized in one rule object reused across Register + Reset (single source of truth per [duplicate-prevention.md](../../rules/duplicate-prevention.md)) | |
+| Centralized in one rule object reused across Register + Reset (single source of truth per [system-awareness.md](../../../rules/conditional/system-awareness.md)) | |
 
 **Option B — Custom regex/length validation**
 - Hand-rolled `regex:` rules (e.g. requiring a symbol) in the FormRequest.
@@ -159,7 +159,7 @@ Business problem solved: without this, there is no way to create a ScaleUP accou
 | Pros | Cons |
 |---|---|
 | Permanent, queryable audit trail (useful for an admin "security" view later) | New columns + a write on every failed login (including malicious brute-force traffic) — more DB load exactly when you don't want it |
-| Survives a cache flush | Duplicates what `RateLimiter` already does correctly; violates [duplicate-prevention.md](../../rules/duplicate-prevention.md)'s "no duplicate logic" for something the framework ships |
+| Survives a cache flush | Duplicates what `RateLimiter` already does correctly; violates [system-awareness.md](../../../rules/conditional/system-awareness.md)'s "no duplicate logic" for something the framework ships |
 
 **Recommendation:** **Option A** for this spec's scope. It's the lower-risk, zero-migration option and the framework-idiomatic one. If a future Admin/Security spec wants a persistent lockout audit trail, that's an additive change to `users` at that time — not something to pre-build here.
 
@@ -183,11 +183,11 @@ All changes are to the **existing** `users` table — reused and extended, no ne
 ### `users` — new columns (new migration, alter table)
 | Column | Type | Nullable/Default | Notes |
 |---|---|---|---|
-| `status` | string (`active`, `disabled`) | default `'active'`, indexed | Per [project-profile.md](../../rules/project-profile.md) convention: this project uses a `status` column instead of `SoftDeletes`/hard delete for account-level enable/disable. Set only by handlers, **never** mass-assignable from a register/update request payload (security: prevents a client from POSTing `status` in a signup body). |
+| `status` | string (`active`, `disabled`) | default `'active'`, indexed | Per [project-gate.md](../../../rules/core/project-gate.md) convention: this project uses a `status` column instead of `SoftDeletes`/hard delete for account-level enable/disable. Set only by handlers, **never** mass-assignable from a register/update request payload (security: prevents a client from POSTing `status` in a signup body). |
 | `last_login_at` | timestamp, nullable | null by default | Set by `LoginHandler` on every successful login. |
 | `onboarding_completed_at` | timestamp, nullable | null by default | Set by the Onboarding flow (owned by the sibling spec, §8) once the wizard finishes. This spec only **reads** it, to decide whether a just-authenticated user is routed to `/onboarding` or the app shell — it does not define the wizard's own progress schema. |
 
-No column is added to `$fillable` purely for convenience — `status`, `last_login_at`, and `onboarding_completed_at` are written explicitly by Handler code (`$user->update([...])` with an explicit, hard-coded key set), not by passing raw request input through mass assignment, per [security.md](../../rules/security.md)'s validation rule.
+No column is added to `$fillable` purely for convenience — `status`, `last_login_at`, and `onboarding_completed_at` are written explicitly by Handler code (`$user->update([...])` with an explicit, hard-coded key set), not by passing raw request input through mass assignment, per [security-baseline.md](../../../rules/core/security-baseline.md)'s validation rule.
 
 ### Sanctum-related schema note
 Sanctum's stateful SPA cookie mode (the recommended Decision A above) needs **no new migration** — it rides on the `sessions` table that already exists. Do **not** publish/run Sanctum's `personal_access_tokens` migration as part of this spec; that table is for bearer-token API consumers (mobile apps, third-party integrations), which is explicitly out of scope (§8).
@@ -216,7 +216,7 @@ Sanctum's stateful SPA cookie mode (the recommended Decision A above) needs **no
 - `ResendVerificationEmailHandler::execute($user)` — guards against an already-verified user, calls `$user->sendEmailVerificationNotification()`.
 - `VerifyEmailHandler::execute($data)` — validates the signed payload (`id`, `hash`, `expires`, `signature`) against a temporary signed-route check performed server-side, marks `email_verified_at`, fires `Verified` event. Idempotent: verifying an already-verified email returns success rather than an error (defends against email-scanner pre-fetch, see Decision above).
 
-No Action classes are needed yet — none of these Handlers' logic is large enough or reused by another Handler to warrant splitting out (per [project-profile.md](../../rules/project-profile.md), Actions are optional and only added when a Handler grows past a cohesive ~40-line block).
+No Action classes are needed yet — none of these Handlers' logic is large enough or reused by another Handler to warrant splitting out (per [project-gate.md](../../../rules/core/project-gate.md), Actions are optional and only added when a Handler grows past a cohesive ~40-line block).
 
 ### Controller
 `app/Http/Controllers/Auth/AuthController.php` (new, namespace `App\Http\Controllers\Auth`), thin dispatcher, one method per endpoint below, each `try/catch` → `response()->json([...], $code)` per the project's no-API-Resources convention:
@@ -302,7 +302,7 @@ module/auth/
 ```
 The stub folders already on disk (`types/`, `composables/`) are leftover from a Vue-oriented scaffold and are **not** part of the React convention this spec follows — this spec uses `hooks/` (React idiom) instead of `composables/`, and skips `types/` (plain `.jsx`, not TypeScript), matching the task's explicit React module convention (`index.jsx`, `api/<feature>.api.js`, `pages/`, `components/`).
 
-**Design System reuse:** `AuthCard`, form `Input`/`Button`/`Checkbox`, and `PasswordStrengthMeter`'s visual chrome should come from the Design System spec's shared components (`.agents/specs/scaleup/design/design_system.md`, §8) once that spec exists and is implemented — it doesn't exist yet (empty stub folder confirmed during the scan). Until then, build minimal local `Input`/`Button` primitives inside `module/auth/components/` scoped to this module, and note them explicitly as **temporary** so whoever implements the Design System spec swaps these call sites over to the canonical components rather than leaving two parallel Button implementations (per [duplicate-prevention.md](../../rules/duplicate-prevention.md)).
+**Design System reuse:** `AuthCard`, form `Input`/`Button`/`Checkbox`, and `PasswordStrengthMeter`'s visual chrome should come from the Design System spec's shared components (`.agents/specs/scaleup/design/design_system.md`, §8) once that spec exists and is implemented — it doesn't exist yet (empty stub folder confirmed during the scan). Until then, build minimal local `Input`/`Button` primitives inside `module/auth/components/` scoped to this module, and note them explicitly as **temporary** so whoever implements the Design System spec swaps these call sites over to the canonical components rather than leaving two parallel Button implementations (per [system-awareness.md](../../../rules/conditional/system-awareness.md)).
 
 **Pages (each composed as `<AuthLayout><AuthCard>...form...</AuthCard></AuthLayout>`):**
 - `LoginPage` — email, password, "Remember me" checkbox, "Forgot password?" link, submit → `useAuth().login()`. On success: redirect to `/onboarding` if `onboarding_completed_at` is null, else to the app shell root (Global Layout spec, §8).

@@ -1,11 +1,11 @@
 # Spec — Final Pay Processing (timekeeping) — restructure & redesign to the new layout
 
 > **Kind:** Restructure + redesign of an **existing, working** feature to the current layout/design system. **Behavior-preserving** — keep the workflow, change the structure and look.
-> **Portal:** Timekeeping (`tk` namespace / `timekeeping` URL prefix + module folder). **Accent: blue** (per [project-profile](../../rules/project-profile.md) portal colors — the current page wrongly uses teal).
+> **Portal:** Timekeeping (`tk` namespace / `timekeeping` URL prefix + module folder). **Accent: blue** (per [project-profile](../../../rules/core/project-gate.md) portal colors — the current page wrongly uses teal).
 > **Route:** `timekeeping/final-pay-processing` (`finalpay_processing`) — already registered.
 > **Current state:** fully-built module at [finalpay_processing/](../../../resources/views/web/src/module/timekeeping/finalpay_processing/) — 412-line monolith page, 230-line composable, 5 components, **fully-mocked** api.
 > **Downstream:** the payroll [Final Pay](../payroll/final_pay.md) cycle (this page endorses separated employees to payroll).
-> **Conventions:** [project-profile](../../rules/project-profile.md), [ui-design](../../rules/ui-design.md), [vue-standards](../../rules/vue-standards.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md).
 
 ---
 
@@ -86,7 +86,7 @@ Register under the `timekeeping` URL prefix (`api/timekeeping/final-pay/...`, **
 3. **Accent consistency:** blue only; no teal/purple except where a status semantically needs a distinct color (use valid tokens).
 4. **Checklist gate:** Validate disabled until all items checked (unchanged).
 5. **Empty/loading:** use `EmptyState` / `Loading` (no bare `Spinner`).
-6. **Authorization:** timekeeper role; separated-employee data is sensitive ([hrms-rules](../../rules/hrms-rules.md) §4).
+6. **Authorization:** timekeeper role; separated-employee data is sensitive ([hrms-rules](../../../rules/conditional/payroll.md) §4).
 
 ---
 

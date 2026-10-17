@@ -5,7 +5,7 @@
 > **Version:** v2 — 2026-08-31 — Mobile-only scope.
 > **Route:**
 > - Mobile (Expo Router): `/(auth)/biometric-setup` (Setup Wizard), `/(auth)/login` (HUD Biometric Auth), `/(app)/time-in-out` (Biometric Punch Clock), `/(app)/profile` (Device Security Manager).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [laravel-standards.md](../../rules/laravel-standards.md), [hrms-rules.md](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [backend.md](../../../rules/conditional/backend.md), [payroll.md](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models reused (`Account`, `UserBiometricDevice`, `BiometricAuthLog`, `EmployeeSchedule`, `DtrPeriod`); Tables reused (`accounts`, `user_biometric_devices`, `biometric_auth_logs`); Routes reused/extended (`api/biometric/*`); New migration: **No** (schema already possesses full `user_biometric_devices` and `biometric_auth_logs`).
 
 ---

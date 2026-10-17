@@ -3,7 +3,7 @@
 > **Kind:** Extension & Greenfield — Complete UI and backend endpoint wiring for the Timekeeping Change Shift Applications module.
 > **Portal:** **Timekeeping** (`/api/timekeeping/...` routes, `timekeeping/applications/change-shift` frontend module).
 > **Route:** `/timekeeping/applications/change-shift` (`tk_applications_change_shift`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [ui-design.md](../../rules/ui-design.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md).
 > **System Awareness:** Models Reused (`AppChangeShift`, `Timesheet`, `Shift`, `PayPeriod`); Tables Reused (`app_shift`, `timesheets`, `shifts`, `payperiods`, `accounts`); Routes Created (`routes/api/timekeeping.php`); New migration: No (table `app_shift` already exists).
 
 ---

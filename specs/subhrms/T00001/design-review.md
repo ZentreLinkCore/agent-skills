@@ -4,7 +4,7 @@
 > **Project:** **`mobapp` — React Native / Expo.** *Not* SubHRMS-Vue and *not* ScaleUP-React. See §0.
 > **Portal:** employee (Golden Chestnut accent)
 > **Scope:** `resources/views/mobapp/src/module/employee/messages` — 58 files / 27,959 lines. **13 reviewed in depth** (see §7).
-> **Design sources read:** `mobapp/src/theme/index.ts:1-250` (Restyle — authoritative), `mobapp/src/contexts/ThemeContext.tsx:16-148`, `mobapp/src/constants/theme.ts:1-24`, `mobapp/src/app/_layout.tsx:86,137`, `.agents/rules/ui-design.md` (inherited only — see §0)
+> **Design sources read:** `mobapp/src/theme/index.ts:1-250` (Restyle — authoritative), `mobapp/src/contexts/ThemeContext.tsx:16-148`, `mobapp/src/constants/theme.ts:1-24`, `mobapp/src/app/_layout.tsx:86,137`, `.agents/rules/conditional/ui-design.md` (inherited only — see §0)
 > **Run:** v4 — 2026-09-16 — the PARTIAL/DEFERRED items closed out (§10); **D9 was mis-framed and is corrected there.** v3 — 2026-09-16 — §6 Modern Enhancement Ideas E1-E5 applied; **E1's runtime claim was wrong and is corrected** (see §9). v2 — 2026-09-16 — Fix Plan steps 1-9 applied. v1 — 2026-09-15 — initial.
 > **Verdict:** v1 **REQUEST CHANGES** (4 HIGH) → **after fixes: all 4 HIGH + 3 MEDIUM + 1 LOW resolved and verified.** D8/D9 deferred (see §8).
 
@@ -12,7 +12,7 @@
 
 ## 0. Project resolution — the skill's two-project gate does not cover this scope
 
-The [`project-profile.md`](../../rules/project-profile.md) gate resolves the repo to **SubHRMS** (`vue`, `pinia`, `vue-router` in the root `package.json`). That is correct for the repo — **and wrong for this target path.**
+The [`project-gate.md`](../../../rules/core/project-gate.md) gate resolves the repo to **SubHRMS** (`vue`, `pinia`, `vue-router` in the root `package.json`). That is correct for the repo — **and wrong for this target path.**
 
 `resources/views/mobapp/` is a **third codebase**: a React Native / Expo app with its own `package.json` (`expo ~57.0.20`, `react-native 0.86.3`, `react 19.2.3`, `@shopify/restyle`, `lucide-react-native`), its own `.git`, its own `tsconfig.json` and its own `AGENTS.md`.
 
@@ -82,7 +82,7 @@ All contrast ratios below were **computed** from the literal token values (WCAG 
 - **Problem:** `primary` is `#CB793A` (`theme/index.ts:24`) — the Employee Golden Chestnut. It is a *fill and border* colour, not a text colour. This is the same documented failure `ui-design.md` records for the web theme, reproduced here.
 - **Measured:** `#CB793A` on `#FFFFFF` = **3.31:1** ✗ (fails AA for normal text; several sites are `fontSize={9}`–`{11}`, so the large-text 3:1 allowance does not apply).
 - **What the user sees:** Accent-coloured labels — "Forward", section headings, profile role lines — wash out against white cards in light mode.
-- **Authority:** WCAG 2.1 AA §1.4.3; [`ui-design.md`](../../rules/ui-design.md) Employee-accent contrast rule; `theme/index.ts:24-25`
+- **Authority:** WCAG 2.1 AA §1.4.3; [`ui-design.md`](../../../rules/conditional/ui-design.md) Employee-accent contrast rule; `theme/index.ts:24-25`
 - **Fix:** use the accessible sibling, which **auto-flips per mode** and needs no ternary:
   ```diff
   - <Text fontSize={13} fontWeight="600" color="primary">
@@ -182,7 +182,7 @@ All contrast ratios below were **computed** from the literal token values (WCAG 
 
   Eight files open with the same line: `const primaryAccent = isDark ? '#E2A35A' : '#CB793A';` — which is `theme.colors.primary`, already destructured in most of those files.
 - **What the user sees:** nothing today — the values are correct. This is a **drift bomb**: the first rebrand or accent tweak updates `theme/index.ts` and silently leaves 34 sites on the old palette, producing a half-restyled app. It also forces `useAppTheme()` to be imported purely to obtain `isDark`, coupling components to a second theme system they otherwise don't need (**DR1**).
-- **Authority:** [`duplicate-prevention.md`](../../rules/duplicate-prevention.md); `theme/index.ts:9,12,17,24,173,176,181,188`
+- **Authority:** [`system-awareness.md`](../../../rules/conditional/system-awareness.md); `theme/index.ts:9,12,17,24,173,176,181,188`
 - **Fix:**
   ```diff
   - const { isDark } = useAppTheme();
@@ -292,7 +292,7 @@ Same name, inverted meaning, in the same light mode. `ThemeContext` adds a third
 
 ### DR4 — Inherited web-theme drift (informational)
 
-`ThemeContext.tsx:41` declares the module accents come "from theme.css", and they do — including the drift [`ui-design.md`](../../rules/ui-design.md) already records: `moduleAdmin` is `#8B5CF6` violet (the rule mandates Enterprise Indigo and says *"Do NOT use violet or purple for Admin"*), and `moduleHr` is `#10B981` emerald-500 where the rule says emerald-600 `#059669`. **No action here** — the messages module is employee-portal and never uses these as portal accents (`#8B5CF6` appears only in decorative avatar palettes and a filter icon). Fixing belongs upstream in `theme.css`; noted so the next agent does not "fix" the mobile copy into disagreement with the web app.
+`ThemeContext.tsx:41` declares the module accents come "from theme.css", and they do — including the drift [`ui-design.md`](../../../rules/conditional/ui-design.md) already records: `moduleAdmin` is `#8B5CF6` violet (the rule mandates Enterprise Indigo and says *"Do NOT use violet or purple for Admin"*), and `moduleHr` is `#10B981` emerald-500 where the rule says emerald-600 `#059669`. **No action here** — the messages module is employee-portal and never uses these as portal accents (`#8B5CF6` appears only in decorative avatar palettes and a filter icon). Fixing belongs upstream in `theme.css`; noted so the next agent does not "fix" the mobile copy into disagreement with the web app.
 
 ---
 
@@ -411,7 +411,7 @@ Run `/webkit.fix resources/views/mobapp/src/module/employee/messages using .agen
 
 State plainly what this report does **not** cover.
 
-- **13 of 58 files reviewed in depth**, per the ~15-file cap in [`context-loading.md`](../../rules/context-loading.md): all 4 pages (`MessagesScreen`, `ConversationScreen`, `MessagesMoreScreen`, `MessageRequestsScreen`), plus `MessageBubbleGroup`, `ChatInputBar`, `ManageChannelModal`, `MoveChannelSectionModal`, `MessageContent`, `ConversationListItem`, `DirectMessageHoldModal`, `ChatToolsDrawer`, `UserAvatar` — selected by traffic (pages first) and by hardcoded-colour density.
+- **13 of 58 files reviewed in depth**, per the ~15-file cap in [`context-budget.md`](../../../rules/context-budget.md): all 4 pages (`MessagesScreen`, `ConversationScreen`, `MessagesMoreScreen`, `MessageRequestsScreen`), plus `MessageBubbleGroup`, `ChatInputBar`, `ManageChannelModal`, `MoveChannelSectionModal`, `MessageContent`, `ConversationListItem`, `DirectMessageHoldModal`, `ChatToolsDrawer`, `UserAvatar` — selected by traffic (pages first) and by hardcoded-colour density.
 - **45 files were machine-scanned, not read**: every file was swept for hex literals, `isDark` pairing, Restyle `color="token"` props, `accessibilityLabel`, `fontSize` and spacing values, so the **counts** in D1/D2/D6/D7/D8/D9 are module-complete. Files *not* read line-by-line may hold layout or state-handling defects this report would have caught on a full read — most plausibly `ArchivedChannelsModal`, `CreateChannelModal`, `GroupDetailsModal`, `ColleagueProfileModal`, `VideoPlayerModal`, `MessagesSearchModal`.
 - **No app was run and nothing was measured on a device.** All contrast figures are computed from literal token values under WCAG 2.1 relative luminance, compositing `rgba()` tints over their parent surface. Real rendering adds RN opacity props, `activeOpacity` (0.82 in places), gradients and platform colour management — a measured ratio may differ. `#F59E0B` under `activeOpacity` will be *worse* than the 1.89:1 in D5, not better.
 - **Runtime-only states not assessed:** loading, empty, error, offline, optimistic-send, upload progress, typing indicators, long-press menus, keyboard-avoidance, and every animated transition. These need a device or simulator.
@@ -460,7 +460,7 @@ All four states now pass (5.39:1 light, 8.18:1 dark). The `isDark` ternary is de
 
 - **D6 — 8 of 34 sites.** `ChatAudioBubble`, `DedicatedMessagesHeader`, `EmojiPickerPanel`, `GifPickerPanel` have no `useTheme()` call, so `theme` is not in scope. Adding a hook to four components is a structural change with **zero user-visible benefit** (the inline values are already correct) — it belongs in a refactor, not a contrast fix. The 26 sites where `theme` was already in scope were converted and typechecked.
 - **D7 — 6 of 173 controls.** Labelled only the genuinely *silent* composer controls (cancel reply / edit / linked-ticket, remove attachment, discard & send voice). `MessageActionModal`'s rows were left alone because they have **visible `<Text>` children that RN already announces**; the full-screen backdrop scrim at `MessageActionModal.tsx:200` was left unlabelled on purpose, since labelling a full-viewport scrim adds noise rather than access.
-- **D8 / D9 — not started.** Adding two unused text variants helps nobody on its own, and migrating 338 `fontSize` overrides plus ~57 spacing values is precisely the churn [`incremental-generation.md`](../../rules/incremental-generation.md) warns against. Both are genuinely opportunistic; leave them to the files they touch next.
+- **D8 / D9 — not started.** Adding two unused text variants helps nobody on its own, and migrating 338 `fontSize` overrides plus ~57 spacing values is precisely the churn [`code-quality.md`](../../../rules/conditional/code-quality.md) warns against. Both are genuinely opportunistic; leave them to the files they touch next.
 
 ### Not verified
 
@@ -487,7 +487,7 @@ Chroma is clamped per step to 92% of the sRGB gamut boundary by binary search, s
 
 ### E2 — five of the seven proposed keys were duplicates
 
-Checked each candidate against the existing theme before adding it. `onCard`, `onCardMuted`, `onSuccessBg`, `onDangerBg` and `onWarningBg` all already exist as `text`, `textMuted`, `successText`, `dangerText` and `warningText` — adding them would have been exactly the duplication [`duplicate-prevention.md`](../../rules/duplicate-prevention.md) forbids. **Only the two genuinely missing keys were added:** `accentFill` / `onAccentFill`.
+Checked each candidate against the existing theme before adding it. `onCard`, `onCardMuted`, `onSuccessBg`, `onDangerBg` and `onWarningBg` all already exist as `text`, `textMuted`, `successText`, `dangerText` and `warningText` — adding them would have been exactly the duplication [`system-awareness.md`](../../../rules/conditional/system-awareness.md) forbids. **Only the two genuinely missing keys were added:** `accentFill` / `onAccentFill`.
 
 That pair is the real payoff: it is precisely the hand-rolled ternary v2 introduced for D3, promoted to a token. Restyle swaps it per theme, so `MessagesScreen` no longer needs `isDark` for colour at all:
 

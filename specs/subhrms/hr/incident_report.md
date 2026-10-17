@@ -1,10 +1,10 @@
 # Spec — Incident Report (HR) — bringing the module onto system conventions
 
 > **Kind:** Extension / rework of an existing module — `incident_reports` table, `IncidentReportController`, `GetIncidentReportQuery` and the `hr/incident_report` frontend module all exist. Nothing here creates a parallel table, model or endpoint.
-> **Portal:** **HR** (`/api/hr/incident-reports...`, `resources/views/web/src/module/hr/incident_report/` frontend module). **Accent: emerald** per [ui-design](../../../rules/ui-design.md).
+> **Portal:** **HR** (`/api/hr/incident-reports...`, `resources/views/web/src/module/hr/incident_report/` frontend module). **Accent: emerald** per [ui-design](../../../rules/conditional/ui-design.md).
 > **Version:** v1 — 2026-08-20 — initial.
 > **Route:** `hr/incident-report` (`hr_incident_report`) — unchanged; already registered in [useSidebarLinks.ts:202](../../../../resources/views/web/src/composables/useSidebarLinks.ts#L202) under *Health & Safety*.
-> **Conventions:** [project-profile](../../../rules/project-profile.md), [hrms-rules](../../../rules/hrms-rules.md), [ui-design](../../../rules/ui-design.md), [vue-standards](../../../rules/vue-standards.md), [duplicate-prevention](../../../rules/duplicate-prevention.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md), [vue-standards](../../../rules/conditional/frontend-vue.md), [duplicate-prevention](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models **reused** `IncidentReport`, `AccountDetailVW`, `Account`, `Unit`, `TransLog`; Models **created** `IncidentReportParty`, `IncidentReportAction`. Tables **reused** `incident_reports`, `vw_accounts_details`, `units`, `translog`; Tables **created** `incident_report_parties`, `incident_report_actions`. Routes **reused** `GET /api/hr/incident-reports`; Routes **created** `show`/`update`/`assign`/`status`/`actions`; Route **removed** `POST /api/hr/incident-reports/save`. Queries **reused/extended** `App\Queries\Incident\GetIncidentReportQuery`. New migration: **yes** — 3 (one additive on `incident_reports`, two child tables) plus one data-backfill migration.
 
 ---
@@ -29,9 +29,9 @@ The module ships today and **looks** right (emerald HR accent, slate cards, dark
 | G10 | **Filter options are hard-coded in the frontend.** `categoryOptions`, `INCIDENT_STATUSES`, `INCIDENT_SEVERITIES` live in the composable/utils. | [useIncidentReport.ts](../../../../resources/views/web/src/module/hr/incident_report/composables/useIncidentReport.ts), [incident_report.utils.ts](../../../../resources/views/web/src/module/hr/incident_report/utils/incident_report.utils.ts) | `GetSeparationsQuery::filters()` serves types, statuses, departments (from `units`) and employees (`HandleGlobal::getFilterEmployees()`) to the page. |
 | G11 | **The page silently shows fabricated data.** `applyMockData()` runs on any API failure, and `submitReport()` fabricates a client-side row when the response is not `success` — a broken backend looks like a working page. `MOCK_INCIDENTS` is ~140 of the 180 lines of `utils`. | `useIncidentReport.ts`, `incident_report.utils.ts` | No other module ships mock fallbacks; `useSeparation` surfaces the failure. This is the single most misleading thing in the module. |
 | G12 | **Types are stubs.** `IncidentReportItem { [key: string]: any }`; the real `Incident` type is exported from `utils/`, not `types/`. | [types.incident_report.ts](../../../../resources/views/web/src/module/hr/incident_report/types/types.incident_report.ts), [index.ts](../../../../resources/views/web/src/module/hr/incident_report/index.ts) | `types.separation.ts` defines real unions, `Paginator<T>`, form and filter-option interfaces. |
-| G13 | **Stats are 5 unfiltered `COUNT(*)` queries per request.** | controller `index()` | [performance](../../../rules/performance.md) — one grouped aggregate does the same work in one round trip. |
+| G13 | **Stats are 5 unfiltered `COUNT(*)` queries per request.** | controller `index()` | [performance](../../../rules/conditional/performance.md) — one grouped aggregate does the same work in one round trip. |
 
-**What this spec does *not* change:** the visual design. The emerald accent, card treatment, dark-mode classes, drag-to-scroll container and skeleton loader already conform to [ui-design](../../../rules/ui-design.md) and stay as they are. The work is data model, filing flow, seeding, contract and types — plus the new UI surfaces the lifecycle needs.
+**What this spec does *not* change:** the visual design. The emerald accent, card treatment, dark-mode classes, drag-to-scroll container and skeleton loader already conform to [ui-design](../../../rules/conditional/ui-design.md) and stay as they are. The work is data model, filing flow, seeding, contract and types — plus the new UI surfaces the lifecycle needs.
 
 ---
 
@@ -59,7 +59,7 @@ The module ships today and **looks** right (emerald HR accent, slate cards, dark
 **Option C — New table `hr_incident_reports`, leave the old one**
 | Pros | Cons |
 |---|---|
-| Zero migration risk | Two tables for one entity — a direct [duplicate-prevention](../../../rules/duplicate-prevention.md) violation |
+| Zero migration risk | Two tables for one entity — a direct [duplicate-prevention](../../../rules/conditional/system-awareness.md) violation |
 
 **Recommendation: Option A.** It is the only option that is correct on both a fresh install and an environment where the table already exists.
 
@@ -327,7 +327,7 @@ Route::post('/incident-reports/{id}/actions', [IncidentReportController::class, 
 | AC-31 | The frontend, with the API returning `500` | The page loads | An error state with a retry control is rendered; **no** fabricated incident is displayed; `grep -r "MOCK_INCIDENTS" resources/views/web/src` returns nothing |
 | AC-32 | The frontend, with `POST` rejected `422` | The create modal is submitted | The modal stays open, shows the field errors, and **no** row is appended to the local list |
 | AC-33 | The frontend module | Type-checking / build | `types.incident_report.ts` declares `IncidentSeverity`, `IncidentStatus`, `IncidentParty`, `IncidentAction`, `IncidentReportItem`, `Paginator<T>`, `IncidentFilterOptions`, `IncidentForm` with no `[key: string]: any`; `index.ts` exports types only from `types/`, and `utils/` exports only style/icon maps |
-| AC-34 | The redesigned page | Visual check against [ui-design](../../../rules/ui-design.md) | Emerald HR accent, `bg-white dark:bg-slate-800 border-slate-200/60 dark:border-slate-700` cards, `dark:` variants on every colour class, and the table container keeps `cursor-grab active:cursor-grabbing select-none` drag-to-scroll |
+| AC-34 | The redesigned page | Visual check against [ui-design](../../../rules/conditional/ui-design.md) | Emerald HR accent, `bg-white dark:bg-slate-800 border-slate-200/60 dark:border-slate-700` cards, `dark:` variants on every colour class, and the table container keeps `cursor-grab active:cursor-grabbing select-none` drag-to-scroll |
 | AC-35 | `routes/api/hr.php` | Grepped after the change | `POST /incident-reports/save` is gone; `apiResource('incident-reports')->only(['index','show','store','update'])` plus `/{id}/assign`, `/{id}/status`, `/{id}/actions` are registered; no reference to `/save` remains in `resources/views/web/src` |
 
 ---
@@ -523,7 +523,7 @@ Following `types.separation.ts`: `IncidentSeverity = 'low' | 'medium' | 'high' |
 
 ### 5c. Composable (`composables/useIncidentReport.ts`)
 
-Deleted: the `MOCK_INCIDENTS` import, `applyMockData()`, and the fabricate-a-row branch in `submitReport()`. Added: `error = ref<string | null>(null)` set from the caught response; `filterOptions` populated from `filter`; `formErrors = ref<Record<string, string[]>>({})` fed from a `422`; `assignIncident`, `changeStatus`, `logAction`. Server-side pagination and the existing debounce-free `watch([...])` → `currentPage = 1` → refetch behaviour are kept (they already match the system). Per [vue-standards](../../../rules/vue-standards.md), all state stays in the composable; the page stays presentational.
+Deleted: the `MOCK_INCIDENTS` import, `applyMockData()`, and the fabricate-a-row branch in `submitReport()`. Added: `error = ref<string | null>(null)` set from the caught response; `filterOptions` populated from `filter`; `formErrors = ref<Record<string, string[]>>({})` fed from a `422`; `assignIncident`, `changeStatus`, `logAction`. Server-side pagination and the existing debounce-free `watch([...])` → `currentPage = 1` → refetch behaviour are kept (they already match the system). Per [vue-standards](../../../rules/conditional/frontend-vue.md), all state stays in the composable; the page stays presentational.
 
 ### 5d. Layout sketch (unchanged structure, new controls)
 
@@ -557,7 +557,7 @@ Detail panel (modal): subject + reporter + witnesses (parties) · description ·
 5. **Anonymous reporting is supported.** `idacct_reporter = NULL` with `reported_by = 'Anonymous (HR Hotline)'` is valid and must never be back-resolved to the filing user.
 6. **`occurred_at` ≤ now** and `occurred_at` ≤ `reported_at` — an incident cannot be reported before it happened.
 7. **The action trail is append-only.** No update or delete path; it is the investigation record.
-8. **Portal separation** ([hrms-rules](../../../rules/hrms-rules.md)): this module lives entirely in the HR portal. It does not surface in the employee or manager portals in this spec — employee self-reporting is §8.
+8. **Portal separation** ([hrms-rules](../../../rules/conditional/payroll.md)): this module lives entirely in the HR portal. It does not surface in the employee or manager portals in this spec — employee self-reporting is §8.
 9. **Every mutation writes `translog`** with `module = 'HR Access'`, via `TransLog::logAction`.
 10. **`stats` are whole-table, not filter-scoped** — the banner is a standing department-wide count, so filtering the list does not move it. Deliberate; documented so it is not "fixed" as a bug.
 
@@ -614,7 +614,7 @@ Dependency-first. Steps 1-5 are `/webkit.backend-implement`; step 6 is the Gate-
 - **Notifications** — email/broadcast to the assignee on assignment and on `critical` filings.
 - **Analytics** — incident-rate-by-department trending, severity heatmaps, an HR dashboard tile.
 - **Duplicate detection** — suggesting existing IRs at filing time from title/location/date proximity.
-- **Restyling the module** — explicitly excluded. The current visual layer already conforms to [ui-design](../../../rules/ui-design.md); only the new controls in §5 are added, in the existing idiom.
+- **Restyling the module** — explicitly excluded. The current visual layer already conforms to [ui-design](../../../rules/conditional/ui-design.md); only the new controls in §5 are added, in the existing idiom.
 
 ---
 

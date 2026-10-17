@@ -4,7 +4,7 @@
 > **Portal:** Payroll (`payroll` controller namespace, `payroll` URL prefix, `payroll` frontend module folder).
 > **Upstream:** Payroll Processing → (Payroll Closing) → **Payslip** (this spec, read/generate).
 > **Reuse from:** the Employee-portal payslip module ([resources/views/web/src/module/employee/payslip/](../../../resources/views/web/src/module/employee/payslip/)) — the official payslip document already exists there; this spec applies it to Payroll, feeds it **real** `payroll_run_detail` data, and improves the design.
-> **Authoritative conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md). Follow it; do not re-derive the architecture.
+> **Authoritative conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md). Follow it; do not re-derive the architecture.
 
 ---
 
@@ -81,7 +81,7 @@ resources/views/web/src/components/payslip/
 └── PayslipDocumentModal.vue   # NEW — thin Modal wrapper around PayslipDocument (Print/PDF toolbar)
 ```
 
-- `PayslipDocument.vue` takes a typed `period: PayslipPeriod` + `employee` + `company` props and an `accent` prop (`'emerald' | 'cyan'`) so it renders in the portal's color (Employee = emerald, Payroll = cyan — per [ui-design](../../rules/ui-design.md) / project-profile portal accents). All hardcoded strings ("ZentreLink Corp.", "JC", "EMP-00142", bank, signatories) become **props**.
+- `PayslipDocument.vue` takes a typed `period: PayslipPeriod` + `employee` + `company` props and an `accent` prop (`'emerald' | 'cyan'`) so it renders in the portal's color (Employee = emerald, Payroll = cyan — per [ui-design](../../../rules/conditional/ui-design.md) / project-profile portal accents). All hardcoded strings ("ZentreLink Corp.", "JC", "EMP-00142", bank, signatories) become **props**.
 - Keep the Print / PDF logic (`html2canvas` + `jspdf`) in the modal wrapper (already a dependency in the employee module).
 - **Refactor the employee module** to import the shared document instead of its local `PayslipModal.vue` (behavior-preserving; see [refactor skill](../../skills/webkit.refactor/SKILL.md)). This removes the duplicate and is part of "improved design."
 
@@ -146,7 +146,7 @@ Read-only. Input: period params + `empid` (or `idacct`). Steps:
 4. **Shape into the `PayslipPeriod` contract** the shared document expects — build `earnings[]` and `deduction_items[]` (label + optional `sub` + amount) from the detail columns (skip/annotate ₱0 lines), set `gross`, `deductions`, `net`, `coverage`, `date_issued`, `status`.
 5. Return `{ period: PayslipPeriod, employee: {...}, company: {...}, ytd?: {...} }`.
 
-> **Employee-portal reuse:** the same query, scoped to `$request->user()`'s `idacct` and returning **all** their periods (YTD list), replaces the employee module's mock. Expose an employee-portal route (`api/employee/payslips`) that calls this query with the authenticated employee id — so both portals share one source of truth. (Employee sees only their own; enforce via the auth user, per [security](../../rules/security.md) / [hrms-rules](../../rules/hrms-rules.md) §4.)
+> **Employee-portal reuse:** the same query, scoped to `$request->user()`'s `idacct` and returning **all** their periods (YTD list), replaces the employee module's mock. Expose an employee-portal route (`api/employee/payslips`) that calls this query with the authenticated employee id — so both portals share one source of truth. (Employee sees only their own; enforce via the auth user, per [security](../../../rules/core/security-baseline.md) / [hrms-rules](../../../rules/conditional/payroll.md) §4.)
 
 ### 5.5 `ReleasePayslipsHandler` (optional)
 
@@ -232,12 +232,12 @@ export { usePayslipApi } from './api/payslip.api';
 3. **Re-processing after view:** the payslip always reflects the latest persisted detail; no stale caching.
 4. **Zero-value lines:** dim ₱0 earnings/deductions (existing document behavior); never show negative net without a visible flag.
 5. **Company/signatory data:** must come from config, never hardcoded (the mock's "ZentreLink Corp." is placeholder only).
-6. **Authorization:** Payroll portal → any employee's payslip (officer role). Employee portal → **own** payslips only, enforced by the authenticated user id. Payslips expose compensation — strict portal separation ([hrms-rules](../../rules/hrms-rules.md) §4).
+6. **Authorization:** Payroll portal → any employee's payslip (officer role). Employee portal → **own** payslips only, enforced by the authenticated user id. Payslips expose compensation — strict portal separation ([hrms-rules](../../../rules/conditional/payroll.md) §4).
 7. **Print fidelity:** provide `@media print` styles so the browser Print output is a clean single-page payslip (improvement over screen-only styling).
 
 ---
 
-## 10. Testing (per [.agents/rules/testing.md](../../rules/testing.md))
+## 10. Testing (per [.agents/rules/conditional/testing.md](../../../rules/conditional/testing.md))
 
 - **PHPUnit:**
   - `GetEmployeePayslipQuery`: maps `payroll_run_detail` → `PayslipPeriod` correctly (earnings/deductions/gross/net), throws cleanly when absent, employee-scoped variant returns only the auth user's rows.

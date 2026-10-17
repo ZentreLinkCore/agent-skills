@@ -3,14 +3,14 @@
 > **Kind:** **Extension / Consolidation** — the `translog` audit trail already exists end-to-end, but in **two parallel backends and three parallel frontends** with divergent contracts, one broken writer, and dead statistics. This spec defines the single canonical implementation and the deltas required to reach it.
 > **Portal:** **Global** (`App\Http\Controllers\global`, top-level `/api/transLogs` — no portal prefix), consumed by the **HR**, **Timekeeping**, and **Payroll** frontend modules.
 > **Route:** `GET /api/transLogs` (global, existing) · pages `hr/transaction-logs` (`hr_transaction_logs`), `timekeeping/transaction-logs` (`transaction_logs`), plus a payroll page under `payroll/reports`.
-> **Conventions:** [project-profile.md](../../../../.claude/rules/project-profile.md), [hrms-rules.md](../../../../.claude/rules/hrms-rules.md), [duplicate-prevention.md](../../../../.claude/rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Model **[TransLog](../../../../app/Models/TransLog.php) (reused)**; Table **`translog` (reused — no new table)**; Routes **`GET /api/transLogs` (reused)**, `GET /api/timekeeping/transaction-logs` (existing — see Decision 1); **New migration: YES — one `alters/` migration only, to add missing indexes.** No new table, no new model.
 
 ---
 
 ## 1. Purpose
 
-`translog` is the system-wide **audit trail**: every create / update / delete performed through the HRMS writes a row recording *who* did *what*, in *which module*, *when*, from *which IP*, with the *before* and *after* values as JSON. It backs the "Transaction Logs" audit pages in HR, Timekeeping, and Payroll, and satisfies the audit-trail requirement in [hrms-rules.md](../../../../.claude/rules/hrms-rules.md) ("Log any edits to payroll records or attendance adjustments").
+`translog` is the system-wide **audit trail**: every create / update / delete performed through the HRMS writes a row recording *who* did *what*, in *which module*, *when*, from *which IP*, with the *before* and *after* values as JSON. It backs the "Transaction Logs" audit pages in HR, Timekeeping, and Payroll, and satisfies the audit-trail requirement in [payroll.md](../../../rules/conditional/payroll.md) ("Log any edits to payroll records or attendance adjustments").
 
 **The problem this spec solves:** the feature grew organically and has drifted into an inconsistent state. Verified by scan:
 
@@ -20,7 +20,7 @@
 | F2 | **`insertTransLog` is broken against the current schema.** It inserts `date` and `time` columns that **do not exist** in the `translog` migration, and **omits `action_type`**, which is `tinyInteger` NOT NULL with no default. All 36 payroll call sites fail on a freshly-migrated database. | [create_translog_table.php](../../../../database/migrations/table/translog/2024_10_31_120134_create_translog_table.php) has no `date`/`time`; `action_type` at L19 |
 | F3 | **Two read backends with different response shapes.** Global [TransactionLogsController](../../../../app/Http/Controllers/global/TransactionLogsController.php) puts the whole query inline in the controller (violating thin-controller) and returns `{translog, stats:{total_today,total_inserts,total_updates,total_deletes}, modules}`. The tk one delegates to [GetTransactionLogsQuery](../../../../app/Queries/TransactionLog/GetTransactionLogsQuery.php) and returns `{translog, stats:{totalAudits,timesheetClosing,adjustments,biometricSyncs}}`. | both files |
 | F4 | **Timekeeping stats are permanently zero.** `GetTransactionLogsQuery` counts modules `'Timesheet Closing'`, `'Timesheet Adjustment'`, `'Biometric Sync'` — **no code anywhere writes those module values.** The only values ever written are `'Payroll Access'` (36×), `'HR Access'` (11×), `'Employee Access'` (3×), `'Payroll Processing'` (1×). Timekeeping writes **no** logs at all. | [GetTransactionLogsQuery.php:84-86](../../../../app/Queries/TransactionLog/GetTransactionLogsQuery.php#L84-L86) vs. grep of all call sites |
-| F5 | **No portal separation.** `/api/transLogs` is inside the `auth:sanctum` group with **no portal scoping**. The HR page requests it with no `module` filter, so HR sees `Payroll Access` rows. The payroll module scopes itself by sending `module: 'Payroll Access'` **from the client** — trivially removable by the caller. Contradicts [hrms-rules.md](../../../../.claude/rules/hrms-rules.md) §4 Portal Separation. | [transaction_logs.api.ts](../../../../resources/views/web/src/module/payroll/reports/api/transaction_logs.api.ts), [useTransactionLogs.ts](../../../../resources/views/web/src/module/hr/transaction_logs/composables/useTransactionLogs.ts) |
+| F5 | **No portal separation.** `/api/transLogs` is inside the `auth:sanctum` group with **no portal scoping**. The HR page requests it with no `module` filter, so HR sees `Payroll Access` rows. The payroll module scopes itself by sending `module: 'Payroll Access'` **from the client** — trivially removable by the caller. Contradicts [payroll.md](../../../rules/conditional/payroll.md) §4 Portal Separation. | [transaction_logs.api.ts](../../../../resources/views/web/src/module/payroll/reports/api/transaction_logs.api.ts), [useTransactionLogs.ts](../../../../resources/views/web/src/module/hr/transaction_logs/composables/useTransactionLogs.ts) |
 | F6 | **Missing indexes.** Only `createdby` is indexed. Every read filters/sorts on `created_at`, `module`, and `action_type`, and every request runs `COUNT(*)` over the whole table 4× for stats. This is an append-only table that grows forever. | migration L21 is the only `index()` |
 | F7 | **Three duplicated frontend modules** with three different `useTransactionLogsApi()` hooks (`getTransactionLogs` / `getTransLogs` / `getLogs`) and three placeholder `types.transaction_logs.ts` files that are all `[key: string]: any` — i.e. no real typing anywhere. | `hr/transaction_logs/`, `timekeeping/transaction_logs/`, `payroll/reports/` |
 
@@ -35,7 +35,7 @@
 
 | Pros | Cons |
 |---|---|
-| Single source of truth for audit reads — [duplicate-prevention.md](../../../../.claude/rules/duplicate-prevention.md) §3 | Touching the tk endpoint is a breaking change for its frontend (1 file, 1 line) |
+| Single source of truth for audit reads — [system-awareness.md](../../../rules/conditional/system-awareness.md) §3 | Touching the tk endpoint is a breaking change for its frontend (1 file, 1 line) |
 | Fixes the thin-controller violation (F3) — the global controller becomes a 6-line dispatcher matching every sibling | Superset params mean slightly more branching in one query class |
 | One place to add portal scoping (Decision 4), indexes, and stat fixes | Retiring a route needs the frontend updated in the same pass |
 | `translog` is genuinely global data — a per-portal read endpoint has no domain justification | |
@@ -78,7 +78,7 @@
 
 | Pros | Cons |
 |---|---|
-| Matches the Action pattern in [project-profile.md](../../../../.claude/rules/project-profile.md) | Over-engineering for a single `create()` — the profile explicitly says *"Do NOT add Action classes for trivial work"* |
+| Matches the Action pattern in [project-gate.md](../../../rules/core/project-gate.md) | Over-engineering for a single `create()` — the profile explicitly says *"Do NOT add Action classes for trivial work"* |
 | Central place for future hooks (async queue, redaction) | Adds a third indirection while the goal is to remove indirection |
 
 **Recommendation: Option A.** F2 means payroll audit logging is *currently non-functional on a clean DB* — this is the highest-value fix in the spec, and Option B leaves the JSON diff broken for the 36 highest-volume call sites. If the 36-site diff is too wide for one pass, Option B is an acceptable **interim** step, but Option A should stay the target.
@@ -93,7 +93,7 @@
 | Pros | Cons |
 |---|---|
 | **Fixes F4** — impossible to filter on a label nothing writes; the mismatch becomes a compile-visible constant reference | Adding a module still needs a code change (correct for an audit taxonomy) |
-| No migration, no join, no new table — matches `UPPER_SNAKE_CASE` constants in [naming-convention.md](../../../../.claude/rules/naming-convention.md) | Legacy rows with off-taxonomy values still need the `DISTINCT` union |
+| No migration, no join, no new table — matches `UPPER_SNAKE_CASE` constants in [code-quality.md](../../../rules/conditional/code-quality.md) | Legacy rows with off-taxonomy values still need the `DISTINCT` union |
 | Dropdown stops depending on `SELECT DISTINCT module` over a growing table (a full scan today) | |
 
 **Option B — Keep free-text `module` strings**
@@ -124,7 +124,7 @@
 
 | Pros | Cons |
 |---|---|
-| **Fixes F5** — satisfies [hrms-rules.md](../../../../.claude/rules/hrms-rules.md) §4; payroll audit detail stops being reachable from the employee/HR portals | Needs an explicit portal→modules policy decision from you (below) |
+| **Fixes F5** — satisfies [payroll.md](../../../rules/conditional/payroll.md) §4; payroll audit detail stops being reachable from the employee/HR portals | Needs an explicit portal→modules policy decision from you (below) |
 | Client filter becomes a UX convenience, not a security boundary | An HR-wide auditor role may need an explicit "see all" bypass |
 | One enforcement point (Decision 1 gives us exactly one) | |
 
@@ -157,7 +157,7 @@ Confirm or amend this table before implementation — especially whether HR shou
 | Pros | Cons |
 |---|---|
 | Makes the page meaningful and the F4 stats real | Requires touching timekeeping handlers — a separate, larger workstream |
-| Timesheet adjustments are exactly what [hrms-rules.md](../../../../.claude/rules/hrms-rules.md) demands an audit trail for | Scope grows beyond the log feature itself |
+| Timesheet adjustments are exactly what [payroll.md](../../../rules/conditional/payroll.md) demands an audit trail for | Scope grows beyond the log feature itself |
 
 **Option B — Retire the timekeeping page; keep HR + Payroll only**
 - Delete `timekeeping/transaction_logs/` and its route + endpoint.
@@ -188,7 +188,7 @@ Confirm or amend this table before implementation — especially whether HR shou
 |---|---|
 | Fixes F7; one contract, one type file, one diff-viewer implementation | Needs a home for shared feature modules; nothing comparable exists yet under `src/module/` |
 | A UI improvement lands in all three portals at once | Portal-specific stat tiles must become props/config |
-| Real TS interfaces instead of `any` — [coding-standards.md](../../../../.claude/rules/coding-standards.md) §4 | Larger refactor than fixing three files |
+| Real TS interfaces instead of `any` — [code-quality.md](../../../rules/conditional/code-quality.md) §4 | Larger refactor than fixing three files |
 
 **Option B — Keep three modules, unify only the types + api hook**
 - Move `types.transaction_logs.ts` and `useTransactionLogsApi()` into a shared location; leave the three pages/components as they are.
@@ -214,7 +214,7 @@ Confirm or amend this table before implementation — especially whether HR shou
 | `action_type` | `tinyInteger` NOT NULL | `0=insert, 1=update, 2=delete` (comment in migration). **No default** — F2 |
 | `oldvalue` | `json` nullable | `$casts` → array |
 | `newvalue` | `json` nullable | `$casts` → array |
-| `createdby` | `integer` | → `accounts.id`. Indexed as `idx_translog_createdby`. No DB-level FK (per [project-profile.md](../../../../.claude/rules/project-profile.md)) — correct, keep it that way |
+| `createdby` | `integer` | → `accounts.id`. Indexed as `idx_translog_createdby`. No DB-level FK (per [project-gate.md](../../../rules/core/project-gate.md)) — correct, keep it that way |
 | `ip_address` | `string` | |
 | `mac_address` | `string` nullable | Always `null` at every call site today |
 | `created_at` / `updated_at` | timestamps | `created_at` is the audit timestamp; reads derive `date`/`time` via `DATE_FORMAT` |
@@ -223,7 +223,7 @@ Confirm or amend this table before implementation — especially whether HR shou
 
 ### New migration (the only one) — `database/migrations/alters/`
 
-Add the indexes the read path needs (F6). Plain `->index()`, **no `->foreign()`**, per [project-profile.md](../../../../.claude/rules/project-profile.md):
+Add the indexes the read path needs (F6). Plain `->index()`, **no `->foreign()`**, per [project-gate.md](../../../rules/core/project-gate.md):
 
 ```php
 Schema::table('translog', function (Blueprint $table) {
@@ -353,11 +353,11 @@ Drop the payroll hook's hard-coded `module: 'Payroll Access'` — that scoping m
 
 | Module | Keeps | Changes |
 |---|---|---|
-| [hr/transaction_logs/](../../../../resources/views/web/src/module/hr/transaction_logs/) — richest, the reference implementation | `TransactionLogHeader`, `TransactionLogToolbar`, `TransactionLogTableView`, `TransactionLogGridView`, `TransactionLogDetailPanel`, `utils/` badge+avatar helpers, localStorage view toggle, `highlightMatch`, xlsx export | import shared types/api; drop the local placeholder types; **add debounce to the search input** (currently every keystroke fires a request — [performance.md](../../../../.claude/rules/performance.md) requires ~300ms; the tk module already does this correctly via `@/src/utils/debounce`) |
+| [hr/transaction_logs/](../../../../resources/views/web/src/module/hr/transaction_logs/) — richest, the reference implementation | `TransactionLogHeader`, `TransactionLogToolbar`, `TransactionLogTableView`, `TransactionLogGridView`, `TransactionLogDetailPanel`, `utils/` badge+avatar helpers, localStorage view toggle, `highlightMatch`, xlsx export | import shared types/api; drop the local placeholder types; **add debounce to the search input** (currently every keystroke fires a request — [performance.md](../../../rules/conditional/performance.md) requires ~300ms; the tk module already does this correctly via `@/src/utils/debounce`) |
 | [timekeeping/transaction_logs/](../../../../resources/views/web/src/module/timekeeping/transaction_logs/) | `TransactionLogFilters` (date range), `TransactionLogStats`, `TransactionLogTable`, `TransactionLogGrid`, debounced search, `onUnmounted` debounce cleanup | **replace the three dead stat tiles** (`timesheetClosing`/`adjustments`/`biometricSyncs`) with `total_inserts`/`total_updates`/`total_deletes` (Decision 5C); import shared types/api; rename `filter.action` → `filter.search` |
 | [payroll/reports/pages/transaction_logs/](../../../../resources/views/web/src/module/payroll/reports/pages/transaction_logs/) | page + route under `payroll/reports` | import shared types/api; remove client-side `module` pinning |
 
-**Shared UI conventions** — reuse the globals (no import): `Pagination`, `Spinner`, `EmptyState`, `TableSkeleton`, `StatusBadge`, `VDatePicker`, `CSelect`; `Modal` is imported. Slate cards + dark-mode classes and the existing badge palettes in [transaction_logs.utils.ts](../../../../resources/views/web/src/module/hr/transaction_logs/utils/transaction_logs.utils.ts) per [ui-design.md](../../../../.claude/rules/ui-design.md).
+**Shared UI conventions** — reuse the globals (no import): `Pagination`, `Spinner`, `EmptyState`, `TableSkeleton`, `StatusBadge`, `VDatePicker`, `CSelect`; `Modal` is imported. Slate cards + dark-mode classes and the existing badge palettes in [transaction_logs.utils.ts](../../../../resources/views/web/src/module/hr/transaction_logs/utils/transaction_logs.utils.ts) per [ui-design.md](../../../rules/conditional/ui-design.md).
 
 **Layout sketch** (the HR reference, which the others converge toward):
 ```
@@ -382,10 +382,10 @@ Drop the payroll hook's hard-coded `module: 'Payroll Access'` — that scoping m
 
 **Rules**
 1. **Audit rows are immutable.** Insert-only — never update or delete a `translog` row from application code. No edit/delete UI, ever.
-2. **Every write path logs.** Create/update/delete on master data, payroll records, and attendance adjustments must call `TransLog::logAction()` with the correct `action_type` ([hrms-rules.md](../../../../.claude/rules/hrms-rules.md) audit-trail rule).
+2. **Every write path logs.** Create/update/delete on master data, payroll records, and attendance adjustments must call `TransLog::logAction()` with the correct `action_type` ([payroll.md](../../../rules/conditional/payroll.md) audit-trail rule).
 3. **Portal separation** (Decision 4) — enforced server-side; payroll audit detail must not be readable from the employee portal.
 4. **Logging must never break the business operation.** If a `logAction` call is inside the operation's `DB::transaction`, a logging failure rolls back a legitimate payroll write. Decide explicitly: log inside the transaction (atomic, but a log bug aborts the operation) or after commit (operation safe, log may be lost). **Recommended: inside the transaction** — a silently-unlogged payroll edit is worse than a failed one — but this must be a conscious choice.
-5. **No PII in log values.** `oldvalue`/`newvalue` capture whole model attribute sets at some call sites; salary and government-ID fields land in plaintext JSON. Per [security.md](../../../../.claude/rules/security.md), redact or whitelist which attributes are snapshotted for sensitive tables.
+5. **No PII in log values.** `oldvalue`/`newvalue` capture whole model attribute sets at some call sites; salary and government-ID fields land in plaintext JSON. Per [security-baseline.md](../../../rules/core/security-baseline.md), redact or whitelist which attributes are snapshotted for sensitive tables.
 
 **Edge cases**
 
@@ -395,7 +395,7 @@ Drop the payroll hook's hard-coded `module: 'Payroll Access'` — that scoping m
 | Log written by a job/command with no auth (e.g. `ProcessPayrollHandler` passes `$request = null`) | `Auth::id()` is `null` and `request()->ip()` may be a console IP. `createdby` is `integer` NOT NULL — **verify this doesn't fatal**; if it can, allow null or use a reserved system account id |
 | `oldvalue`/`newvalue` empty or not valid JSON (legacy rows written by the raw `insertTransLog` as flat strings) | Frontend must tolerate string-or-object; render a single "value" row rather than crashing the diff view |
 | Update where nothing actually changed | Detail panel already filters to changed keys only; an all-equal diff shows an explicit "No field changes" state, not an empty panel |
-| `search` containing regex/`%`/`_` metacharacters | Bound parameters everywhere (already the case); `highlightMatch` already escapes its regex — keep it, and keep the `<mark>` `v-html` sink limited to escaped output ([security.md](../../../../.claude/rules/security.md)) |
+| `search` containing regex/`%`/`_` metacharacters | Bound parameters everywhere (already the case); `highlightMatch` already escapes its regex — keep it, and keep the `<mark>` `v-html` sink limited to escaped output ([security-baseline.md](../../../rules/core/security-baseline.md)) |
 | Very large table | Server-side pagination only — never fetch all. Stats are 5 `COUNT(*)`s per request: with the Decision 3 indexes these are index-only; if the table reaches millions, cache the stat block briefly rather than dropping the indexes |
 | `datefrom` later than `dateto` | Return an empty page (no error). Optionally disable the invalid range in the date pickers |
 | `module` value requested outside the caller's permitted set | Intersect to empty → empty result. Do **not** 403 (leaks which modules exist) |

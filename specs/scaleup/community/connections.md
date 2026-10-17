@@ -4,7 +4,7 @@
 > **Portal:** **Community** (`/api/community/connections/...` routes, `community` frontend module).
 > **Version:** v1 — 2026-08-14 — initial.
 > **Route:** `/network` (already registered in [`community.routes.tsx`](../../../../resources/views/web/src/module/community/route/community.routes.tsx) — this spec replaces its placeholder element).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (ScaleUP Profile — React 19, real FKs, `<parent>_id`, `deleted_at`), [ui-design.md](../../../rules/ui-design.md), [design_system.md](../design/design_system.md), [CONNECTIONS.md](../../../blueprint/scaleup/docs/specifications/community/CONNECTIONS.md), [DATABASE_SCHEMA.md §5](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [community_shell.md](./community_shell.md), [community_home.md](./community_home.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (ScaleUP Profile — React 19, real FKs, `<parent>_id`, `deleted_at`), [ui-design.md](../../../rules/conditional/ui-design.md), [design_system.md](../design/design_system.md), [CONNECTIONS.md](../../../blueprint/scaleup/docs/specifications/community/CONNECTIONS.md), [DATABASE_SCHEMA.md §5](../../../blueprint/scaleup/docs/DATABASE_SCHEMA.md), [community_shell.md](./community_shell.md), [community_home.md](./community_home.md).
 > **System Awareness:** Models — **reused** `User`; **created** `Connection`, `UserBlock`. Tables — **created** `connections`, `user_blocks`; `users` unchanged. Routes — **extended** [`routes/api/community.php`](../../../../routes/api/community.php) (already mounted under `auth:sanctum` + `community` prefix in [`routes/api.php`](../../../../routes/api.php)); no existing endpoint covers connections. Controllers — **created** `Community/ConnectionController`; `CommunityController` untouched except via the discovery query below. New migration: **yes** — two.
 
 ---
@@ -83,7 +83,7 @@ The fix is to make the **unordered pair** unique, not the ordered one.
 | Pros | Cons |
 | :--- | :--- |
 | No generated-column dependency; portable to any driver | Correctness depends on every write path remembering to set them. One `Connection::create()` that forgets, and the unique index silently protects nothing |
-| Same unique index, so concurrent inserts still collide | Adds two columns the developer must keep in sync with two others — exactly the kind of duplication [coding-standards](../../../rules/coding-standards.md) warns against |
+| Same unique index, so concurrent inserts still collide | Adds two columns the developer must keep in sync with two others — exactly the kind of duplication [coding-standards](../../../rules/conditional/code-quality.md) warns against |
 
 **Option C — `unique(requester_id, recipient_id)` only, plus an application check inside a locked transaction**
 
@@ -262,7 +262,7 @@ Every method in [`CommunityController`](../../../../app/Http/Controllers/Communi
 | Pros | Cons |
 | :--- | :--- |
 | The client can branch on status instead of string-matching an error message — the only way the §2.5 criteria become mechanically checkable | Introduces a second error convention in the same module |
-| Lives in a **new** controller, so no existing file's style is rewritten — [incremental-generation](../../../rules/incremental-generation.md) is respected | Someone later must decide whether to back-port it to `CommunityController` |
+| Lives in a **new** controller, so no existing file's style is rewritten — [incremental-generation](../../../rules/conditional/code-quality.md) is respected | Someone later must decide whether to back-port it to `CommunityController` |
 | Correct codes matter here: `409` on a duplicate request is what tells the UI to show "Request already sent" rather than a generic failure | |
 
 **Option B — Follow the existing convention: `400` + message for everything**
@@ -319,7 +319,7 @@ Statuses and bodies below are the exact contract. `U1`, `U2`, `U3` are distinct 
 
 ## 3. Database
 
-Two new migrations. Both follow the ScaleUP conventions in [project-profile.md](../../../rules/project-profile.md): **real foreign keys** via `constrained()`, `<parent>_id` naming, and `deleted_at` reserved for erasure.
+Two new migrations. Both follow the ScaleUP conventions in [project-gate.md](../../../rules/core/project-gate.md): **real foreign keys** via `constrained()`, `<parent>_id` naming, and `deleted_at` reserved for erasure.
 
 ### 3.1 `connections` — new
 
@@ -459,7 +459,7 @@ Register `/connections/requests` and `/connections/status/{userId}` **before** a
 
 ### 4.8 Existing query to correct — `GetCommunityDiscoveryQuery`
 
-A minimal edit, not a rewrite ([incremental-generation](../../../rules/incremental-generation.md)):
+A minimal edit, not a rewrite ([incremental-generation](../../../rules/conditional/code-quality.md)):
 
 - `profile_summary.network_count` → real count of `accepted` connections involving the user (AC-31), replacing the literal `142`.
 - `suggested_people` → exclude users with any `pending` or `accepted` row against the current user (AC-32).
@@ -489,7 +489,7 @@ module/community/network/
 
 **Routing.** [`community.routes.tsx`](../../../../resources/views/web/src/module/community/route/community.routes.tsx) already has `/network` — swap `<PlaceholderCommunityPage type="network" />` for `<NetworkPage />`. No new route entry, no change to `useApiWebRoute.ts`.
 
-**Design system.** Reuse `@/src/components/ui` primitives and the tokens in [`resources/css/app.css`](../../../../resources/css/app.css). No new primitives, no new colors — [ui-design.md](../../../rules/ui-design.md) and [design_system.md](../design/design_system.md).
+**Design system.** Reuse `@/src/components/ui` primitives and the tokens in [`resources/css/app.css`](../../../../resources/css/app.css). No new primitives, no new colors — [ui-design.md](../../../rules/conditional/ui-design.md) and [design_system.md](../design/design_system.md).
 
 **Existing file touched:** [`SuggestedPeopleCard.jsx`](../../../../resources/views/web/src/module/community/home/components/rail/SuggestedPeopleCard.jsx) — its Connect button gets wired to `ConnectButton`. This is the only edit outside the new folder.
 
@@ -618,7 +618,7 @@ Dependency-first. Steps 1–4 are Gate 1 (design against fixtures); 5–10 are G
 - [ ] Every row in the **Acceptance Criteria** table passes (AC-1 … AC-32)
 - [ ] Every category in the **Non-Functional & Failure-Mode Checklist** is addressed — answered or explicitly `N/A because ...`
 - [ ] BR-6 verified by inspection: no file outside `app/{Models,Queries,Handlers,Actions,Http}/**/Community*` or `module/community/network/` reads the `connections` table, and no policy, middleware, or gate consults it
-- [ ] `npm run typecheck` passes (ScaleUP has no Vitest configured — see [project-profile.md](../../../rules/project-profile.md))
+- [ ] `npm run typecheck` passes (ScaleUP has no Vitest configured — see [project-gate.md](../../../rules/core/project-gate.md))
 - [ ] Both migrations run and roll back cleanly on MySQL **and** SQLite (generated columns — Decision 2 Option A)
 - [ ] No open findings from adversarial verification — see the latest `.agents/reports/community-connections-verify-<date>.md`
 

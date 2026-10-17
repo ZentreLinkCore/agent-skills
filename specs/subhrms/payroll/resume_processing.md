@@ -3,7 +3,7 @@
 > **Kind:** Extension — Interrupted batch task state persistence, progress checkpointing, and resume capabilities for long-running payroll & HRMS operations.
 > **Portal:** **Payroll / Global** (`/api/payroll/...` routes, `payroll_processing` frontend module).
 > **Route:** `payroll/payroll-processing` (`payroll_processing_regular_cycle`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models created: `ProcessingCheckpoint`; Tables created: `processing_checkpoints`; Routes created: `api/payroll/checkpoint/*`; New migration: yes.
 
 ---
@@ -147,7 +147,7 @@ Create migration `database/migrations/table/payroll/2026_08_02_000001_create_pro
 
 ## 4. Backend Architecture
 
-Follows the verified Query/Handler/Action pattern ([project-profile.md](../../rules/project-profile.md)):
+Follows the verified Query/Handler/Action pattern ([project-gate.md](../../../rules/core/project-gate.md)):
 
 ### 1. Model: `App\Models\ProcessingCheckpoint.php`
 - Location: `app/Models/ProcessingCheckpoint.php`
@@ -339,7 +339,7 @@ export function useCheckpointApi() {
 
 ## 7. Build Order
 
-Following the spec-driven flow ([project-profile.md](../../rules/project-profile.md)):
+Following the spec-driven flow ([project-gate.md](../../../rules/core/project-gate.md)):
 
 1. **Database Migration**: Create `2026_08_02_000001_create_processing_checkpoints_table.php`.
 2. **Model & Backend Core**:

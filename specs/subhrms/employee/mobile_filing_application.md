@@ -4,7 +4,7 @@
 > **Portal:** **Employee Mobile App** (`/api/employee/...` routes, `filing` mobile module).  
 > **Version:** v3 — 2026-09-07 — amended route to /(app)/apply query params, enforced single-day overtime, live expo-document-picker, and biometric vs filed application calendar separation per verify report.  
 > **Route:** `/(app)/apply` (`FilingApplicationScreen`), triggered via floating action button (FAB) in `/(app)/_layout.tsx` -> `NewApplicationModal.tsx` -> `FilingDatePickerModal.tsx` -> `/(app)/apply` -> `/(app)/requests`.  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [hrms-rules.md](../../rules/hrms-rules.md), [laravel-standards.md](../../rules/laravel-standards.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [payroll.md](../../../rules/conditional/payroll.md), [backend.md](../../../rules/conditional/backend.md).  
 > **System Awareness:**  
 > - **Models Reused:** `AppLeave`, `AppChangeShift`, `AppOvertime`, `AppAdjustment`, `AppOfficialBusinessTrip`, `PayPeriod`, `Timesheet`, `AccountDetailVW`, `ApproverMatrix`.  
 > - **Tables Reused:** `app_leaves`, `app_changeshift`, `app_overtime`, `app_adjustment`, `app_obtrip`, `payperiods`, `timesheets`, `tbl_account_details`.  

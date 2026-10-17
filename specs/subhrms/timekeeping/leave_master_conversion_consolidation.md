@@ -3,7 +3,7 @@
 > **Kind:** Extension — fixes a confirmed data-integrity bug and a structural duplication between two existing, live modules. No new module.
 > **Portal:** **Timekeeping** (`timekeeping/leave-master` and `timekeeping/leave-conversion` frontend modules, both under `/api/timekeeping/...`).
 > **Route:** `timekeeping/leave-master` (`tk_leave_master`) and `timekeeping/leave-conversion` — both unchanged.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models reused (`Leave` — table `leaves`, `LeaveTypeConfigLog`, `LeaveConversionPeriod`, `LeaveConversionRequest`); Tables reused only; New migration: **no** (the columns in question already exist — this is a code/ownership fix, not a schema addition).
 
 ---
@@ -118,7 +118,7 @@ No new tables/columns.
 
 - **`UpdateLeaveTypeConfigHandler`**: remove the `isPaid`/`isUnpaid` branches (dead, and the underlying columns hold bad data — Decision 1). Remove the `status` branch (Decision 2) so this handler can only ever touch `isconvertible`/`is_final_pay_convertible`/`deduct_balance` — fields Leave Master's handlers never touch.
 - **`SaveLeavePolicyHandler` / `ToggleLeavePolicyStatusHandler`**: no functional change required by this spec; optionally add a `TransLog`/audit write matching the pattern `LeaveTypeConfigLog` already established for the sibling page (1d) — flagged as a nice-to-have, not required to close the redundancy question.
-- **No new Query/Handler classes** — this is a subtraction/narrowing pass, not new feature surface, per [duplicate-prevention.md](../../rules/duplicate-prevention.md)'s instruction to extend/fix existing classes rather than add parallel ones.
+- **No new Query/Handler classes** — this is a subtraction/narrowing pass, not new feature surface, per [system-awareness.md](../../../rules/conditional/system-awareness.md)'s instruction to extend/fix existing classes rather than add parallel ones.
 
 ---
 

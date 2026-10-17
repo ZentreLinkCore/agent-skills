@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — no dashboard code, route, model, or table exists anywhere in the repo today.
 > **Portal:** **Dashboard / Global** (`dashboard` frontend module; no `/api/dashboard/...` routes exist yet — Gate 1 ships mock-data-only, see Decision 2).
 > **Route:** `/dashboard` (new Laravel + client-route entry — **recommended**, see Decision 1 for the `/app`-reuse alternative that was considered and rejected).
-> **Conventions:** [project-profile.md](../../../rules/project-profile.md) (thin-controller + Query/Handler/Action pattern, no API Resources, no DB foreign keys), [ui-design.md](../../../rules/ui-design.md) (responsive grid, dark mode, micro-transitions), [system-awareness.md](../../../rules/system-awareness.md), [ScaleUP Branding §6 "Dashboard Concept"](../../../blueprint/scaleup/design/scaleup-branding.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md) (thin-controller + Query/Handler/Action pattern, no API Resources, no DB foreign keys), [ui-design.md](../../../rules/conditional/ui-design.md) (responsive grid, dark mode, micro-transitions), [system-awareness.md](../../../rules/conditional/system-awareness.md), [ScaleUP Branding §6 "Dashboard Concept"](../../../blueprint/scaleup/design/scaleup-branding.md).
 > **System Awareness:** **Models** — none reused; `app/Models/` contains only `User.php` (no `Organization`, `Sales`, `Expense`, `Goal`, `Plan`, `Activity`, or `Opportunity` models exist). **Tables** — none reused; `database/migrations/` contains only the base Laravel tables (`users`, `cache`, `jobs`). **Routes** — none reused; `routes/web.php` only defines `/` (landing) and `/app` (SPA mount, currently `App.jsx` renders `null`); `routes/api.php` exists but is empty; no `/dashboard` route exists in either file. **Controllers** — none reused; `app/Http/Controllers/` contains only the base `Controller.php`. **New migration:** **No** for Gate 1 (mock-data-first — see Decision 2); the one documented exception (`business_goals`) is deliberately **not built** in this spec, for the reasons explained there.
 
 ---
@@ -77,7 +77,7 @@ The System Awareness Scan found **no** `Organization`, `Sales`, `Expense`, `Goal
 |---|---|
 | Goals become real/persisted a little sooner | Needs `idorganization` today, but `organizations` doesn't exist — either blocked until the Onboarding/Organization spec lands, or forced into a wrong-shaped `idusers`-only table that would need a breaking migration later |
 | Slightly less "throwaway" mock code for one widget | Breaks the "one cohesive Gate 1" story — one widget real, nine mocked, for no strong product reason yet |
-| | Contradicts the reuse-over-duplicate-structure rule in [system-awareness.md](../../../rules/system-awareness.md) — a table should be created when the scan finds nothing to extend, but here the *right* parent (`organizations`) simply isn't built yet, which is a reason to wait, not to work around |
+| | Contradicts the reuse-over-duplicate-structure rule in [system-awareness.md](../../../rules/conditional/system-awareness.md) — a table should be created when the scan finds nothing to extend, but here the *right* parent (`organizations`) simply isn't built yet, which is a reason to wait, not to work around |
 
 **Recommendation:** **Option A, fully mock, for the whole page.** Defer even `business_goals` to a dedicated future Goals spec that is written *after* an `Organization` model/table exists (from the Onboarding/Organization work). §3 documents the *proposed* `business_goals` shape as a head start for that future spec, clearly marked as not built here.
 
@@ -190,7 +190,7 @@ For the future Goals spec (**not built here**, and blocked on an `Organization` 
 
 Forward-looking sketch for **Gate 2** (this dashboard's live-wiring pass, once upstream domain specs — Finance/Sales, Goals, Opportunities — exist and have real tables):
 
-- **Controller**: thin `App\Http\Controllers\dashboard\DashboardController` — one method per widget (or one aggregate method), each calling a Query class and returning `response()->json([...])`, per [project-profile.md](../../../rules/project-profile.md) (no API Resources).
+- **Controller**: thin `App\Http\Controllers\dashboard\DashboardController` — one method per widget (or one aggregate method), each calling a Query class and returning `response()->json([...])`, per [project-gate.md](../../../rules/core/project-gate.md) (no API Resources).
 - **Query classes** (reads only, no writes on this page): `App\Queries\Dashboard\GetBusinessHealthScoreQuery`, `GetRevenueOverviewQuery`, `GetBusinessGoalsQuery`, `GetGrowthProgressQuery`, `GetUpcomingPlansQuery`, `GetRecentActivitiesQuery`, `GetBusinessInsightsQuery`, `GetAnalyticsSummaryQuery`, `GetOpportunitiesQuery` — each `extends Query`, static `execute($params = [])`, and each pulls from whichever domain table its future spec introduces (Sales/Expenses for Revenue, `business_goals` for Goals, an Activity log for Recent Activities, etc.). `QuickActionsBar` needs no query — its actions are static routes, not data.
 - **Routes**: register under a new `routes/api/dashboard.php`, loaded from the `auth:sanctum` group in `routes/api.php` the same way other portals will be, e.g. `Route::prefix('dashboard')->group(base_path('routes/api/dashboard.php'))`. Decide **aggregate vs. per-widget endpoints** at that time (a single `GET /api/dashboard/summary` reduces round-trips for a first paint; per-widget endpoints let slow widgets (e.g. Opportunities matching) load independently without blocking fast ones) — worth its own small decision in that future spec, not resolved here.
 - None of this is implemented now; it exists only to give the eventual backend spec a starting point consistent with this page's mock contract in §5.
@@ -250,7 +250,7 @@ resources/views/web/src/module/dashboard/home/
 
 - **Desktop (`lg:` and up)**: 12-column CSS grid exactly as sketched above.
 - **Tablet (`md:`)**: collapses to a 2-column grid; each widget takes 1 or 2 columns depending on its desktop weight (hero widgets stay wide, the three even cards stack 2-then-1).
-- **Mobile (base)**: single column, full-width stack in the same top-to-bottom order; `QuickActionsBar` switches from a wrapped row to a horizontally scrollable pill row (`overflow-x-auto`, drag-to-scroll per [ui-design.md](../../../rules/ui-design.md)) instead of wrapping to multiple lines.
+- **Mobile (base)**: single column, full-width stack in the same top-to-bottom order; `QuickActionsBar` switches from a wrapped row to a horizontally scrollable pill row (`overflow-x-auto`, drag-to-scroll per [ui-design.md](../../../rules/conditional/ui-design.md)) instead of wrapping to multiple lines.
 - **Glassmorphism**: cards use a translucent, blurred surface over the app's background gradient — e.g. `bg-white/70 backdrop-blur-xl border border-white/40 dark:bg-slate-900/50 dark:border-white/10` — layered on top of the Design System's base `Card` (an extra "glass" visual treatment, not a competing card component). Verify text contrast (see §6 edge cases).
 
 ### 5.3 API contract (target shape for Gate 2; mocked verbatim in Gate 1)

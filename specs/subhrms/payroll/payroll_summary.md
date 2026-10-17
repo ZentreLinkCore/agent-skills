@@ -4,7 +4,7 @@
 > **Portal:** Payroll (`payroll` controller namespace, `payroll` URL prefix, `payroll` frontend module folder).
 > **Upstream:** Payroll Processing → (Payroll Closing) → **Payroll Summary** (this spec, read-only).
 > **Models on:** the timekeeping **Timesheet Summary** report ([timesheet_reports/pages/timesheet_summary](../../../resources/views/web/src/module/timekeeping/timesheet_reports/pages/timesheet_summary/)) — same read-only report UX (period picker, stat cards, filter, pagination), payroll figures.
-> **Authoritative conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md). Follow it; do not re-derive the architecture.
+> **Authoritative conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md). Follow it; do not re-derive the architecture.
 
 ---
 
@@ -243,11 +243,11 @@ export { usePayrollSummaryApi } from './api/payroll_summary.api';
 4. **Filtered totals**: the totals footer reflects the **filtered** set (matches Timesheet Summary behavior), not the whole period — label it clearly when a filter is active.
 5. **Cycle**: defaults to `regular`; if special/13th/final runs exist for the period, accept a `cycle` param (future — the register is per run).
 6. **Read-only**: this page never writes; no lock/process actions here (those live in Payroll Processing / Payroll Closing).
-7. **Authorization**: payroll register exposes compensation — restrict to payroll-portal roles ([security](../../rules/security.md), [hrms-rules](../../rules/hrms-rules.md) §4 portal separation).
+7. **Authorization**: payroll register exposes compensation — restrict to payroll-portal roles ([security](../../../rules/core/security-baseline.md), [hrms-rules](../../../rules/conditional/payroll.md) §4 portal separation).
 
 ---
 
-## 9. Testing (per [.agents/rules/testing.md](../../rules/testing.md))
+## 9. Testing (per [.agents/rules/conditional/testing.md](../../../rules/conditional/testing.md))
 
 - **PHPUnit** — `GetPayrollSummaryQuery`: returns rows only when a `payroll_run` exists; correct join to employee fields; money fields rounded; `totals` sum correctly (gross/deductions/net + per-statutory); empty set for an unprocessed period; period resolution honors `from`/`to`/`idperiod`.
 - **Vitest** — `usePayrollSummary`: filter + pagination computeds; totals recompute over the filtered set; CSV export contains the filtered rows; URL-driven period navigation; Draft/Final badge from `pay_process_status`.

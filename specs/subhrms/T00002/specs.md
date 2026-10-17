@@ -87,7 +87,7 @@ Inspection of the SubHRMS codebase reveals the current baseline across frontend,
 
 ### Technical Reason for Architecture
 
-SubHRMS follows strict architectural rules ([project-profile.md](../../rules/project-profile.md)):
+SubHRMS follows strict architectural rules ([project-gate.md](../../../rules/core/project-gate.md)):
 - No foreign keys (`->foreign()`), relationship columns are `id`-prefixed (`idacct`), soft deletes use `status` columns (`1=active`, `0=deleted`).
 - Thin controllers delegate to `app/Queries/<Domain>/` for reads and `app/Handlers/<Domain>/` or `app/Actions/<Domain>/` for writes.
 - Returning raw JSON responses without API Resources.
@@ -346,7 +346,7 @@ The system enforces role and portal-scoped recipient routing so users receive on
 ### Architecture
 
 - **Where it fits:** SubHRMS Backend (`app/Actions/Notifications/`, `app/Handlers/Notifications/`, `app/Queries/Notifications/`, `app/Models/`, `app/Events/Notifications/`), Web Frontend (`resources/views/web/src/module/employee/notifications/`), and Mobile Frontend (`resources/views/mobapp/src/module/employee/notifications/`).
-- **Pattern followed:** SubHRMS Thin Controller + Query/Handler/Action pattern ([project-profile.md](../../rules/project-profile.md)).
+- **Pattern followed:** SubHRMS Thin Controller + Query/Handler/Action pattern ([project-gate.md](../../../rules/core/project-gate.md)).
 - **Reference implementation:** `app/Handlers/Payroll/ReleasePayslipsHandler.php` (for batch DB transactions), `app/Actions/Messages/ResolveMentionsAction.php` (for mention parsing and WebSocket broadcasts), `resources/views/web/src/components/custom/Navbar/HeaderBarComponets.vue` (for web navbar header integration).
 
 | Component | Status | Path |
@@ -593,7 +593,7 @@ All notification endpoints are strictly protected by the `auth:sanctum` middlewa
 
 ## 15. Implementation Notes
 
-- **Conventions to follow:** Follow SubHRMS conventions ([project-profile.md](../../rules/project-profile.md)): `idacct` column name, no `->foreign()` foreign keys (index only), `status` column soft deletes (`1=active`, `0=deleted`), Query/Handler/Action pattern with static `execute()`.
+- **Conventions to follow:** Follow SubHRMS conventions ([project-gate.md](../../../rules/core/project-gate.md)): `idacct` column name, no `->foreign()` foreign keys (index only), `status` column soft deletes (`1=active`, `0=deleted`), Query/Handler/Action pattern with static `execute()`.
 - **Do not change:** Do not modify `routes/channels.php` `user.{userId}` channel registration (already implemented in T00001). Do not modify existing payroll calculation logic in `ReleasePayslipsHandler.php`—only hook the notification dispatch action after the `PayrollRunDetail` update.
 - **Known pitfalls:**
   - Avoid calling `NotificationCreated::dispatch()` inside database transactions before `DB::commit()`. Always use `DB::afterCommit(...)` or dispatch after the transaction block completes to prevent race conditions where clients fetch notifications before MySQL commits.

@@ -54,7 +54,7 @@ With `--global`, each project still needs its own `.agents/` clone, because the 
 | When a skill writes a document | Its template, the project's config | [template/](./template/), [config/](./config/) |
 | Other agents | The portable entry point, then the always-on rules, then a skill's `SKILL.md` read directly | `AGENTS.md` at the project root |
 
-Every rule has exactly one copy, in [rules/](./rules/). The `rules/*.md` files at the top level are redirects kept so old links still resolve.
+Every rule has exactly one copy, in [rules/](./rules/).
 
 ### Which project am I in?
 
@@ -265,7 +265,7 @@ To remove it: `graphify hook uninstall`, `graphify uninstall --purge`, then dele
 | :--- | :--- |
 | [AGENTS.md](./AGENTS.md) | Index of every rule and skill |
 | [claude-adapter/](./claude-adapter/) | The portable `AGENTS.md` that `setup.sh` copies to the project root (no rules) |
-| [rules/](./rules/) | The rules: [core/](./rules/core/) (always on), [conditional/](./rules/conditional/) (routed), the [router](./rules/rule-router.md), the [context budget](./rules/context-budget.md); top-level redirects for old links |
+| [rules/](./rules/) | The rules: [core/](./rules/core/) (always on), [conditional/](./rules/conditional/) (routed), the [router](./rules/rule-router.md), the [context budget](./rules/context-budget.md) |
 | [skills/](./skills/) | The twelve `/webkit-*` commands |
 | [template/](./template/) | The format of every document the skills write |
 | [specs/](./specs/) | One ticket folder per piece of work, per project; older specs sit in portal folders beside them |

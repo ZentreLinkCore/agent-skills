@@ -3,7 +3,7 @@
 > **Kind:** Greenfield — new admin settings module for payroll behavior toggles.
 > **Portal:** **Admin** (`/api/admin/...` routes, `admin` frontend module).
 > **Route:** `admin/payroll-settings` (`admin_payroll_settings`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

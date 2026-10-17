@@ -65,7 +65,7 @@ The Duty Roster module (`manager/staff_scheduler`) was built as a **self-contain
 - **Affected UI Views**: Manager Portal → Staff Scheduler → Duty Roster, Assign Shifts, Roster Uploader. Indirectly related: Manager Dashboard's Approvals widget (the only place approvals currently work, but it doesn't cover manager-initiated roster edits at all — only employee-submitted requests).
 
 ## 5. Existing Solutions Found (Do Not Duplicate)
-Per `.agents/rules/duplicate-prevention.md`, the fix must **reuse**, not reinvent, what's already there:
+Per `.agents/rules/conditional/system-awareness.md`, the fix must **reuse**, not reinvent, what's already there:
 - The approve/decline **status semantics and side effects** (`status` 0/1/2, `approvers`, `date_approve`, `cancelby`/`cancel_reason`) are already fully defined and working in `ApprovalRequestController::store()` ([app/Http/Controllers/manager/ApprovalRequestController.php:68](app/Http/Controllers/manager/ApprovalRequestController.php#L68)) and `HandleChangeShiftQuery` ([app/Queries/ChangeShift/HandleChangeShiftQuery.php](app/Queries/ChangeShift/HandleChangeShiftQuery.php)). Any fix should call into or extract from this logic rather than adding a second, parallel status convention.
 - `GetDutyRosterQuery::mapShiftToRoster()` ([app/Queries/Shift/GetDutyRosterQuery.php:216](app/Queries/Shift/GetDutyRosterQuery.php#L216)) already computes the correct `Pending`/`Approved`/`Disapproved` label per cell — the frontend gap is that nothing acts on it, not that the data is missing.
 

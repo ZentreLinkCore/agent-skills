@@ -3,7 +3,7 @@
 > **Kind:** Extension — Redesigning the Payroll Dashboard UI and adding live backend query aggregation.
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `payroll/dashboard` frontend module).
 > **Route:** `payroll/dashboard` (`payroll_dashboard`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md).
 > **System Awareness:**
 > - **Models Reused:** `PayPeriod`, `PayrollRun`, `PayrollRunDetail`, `ProcessingCheckpoint`, `Account`, `PayrollEntryBatch`, `PayrollLoan`, `PayrollRecurringEntry`, `TransLog`.
 > - **Tables Reused:** `payroll_period`, `payroll_run`, `payroll_run_detail`, `processing_checkpoints`, `accounts`, `payroll_entry_batch`, `payroll_loan`, `payroll_recurring_entry`, `trans_log`.

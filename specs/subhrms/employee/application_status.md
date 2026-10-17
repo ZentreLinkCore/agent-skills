@@ -9,7 +9,7 @@
 > - `/employee/application-status/overtime` (`employee_application_status_overtime`) — Overtime Status
 > - `/employee/application-status/official-business-trip` (`employee_application_status_obtrip`) — OBT Status
 > - `/employee/application-status/leaves` (`employee_application_status_leaves`) — Leaves Status
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models Reused (`AppAdjustment`, `AppChangeShift`, `AppOvertime`, `AppOfficialBusinessTrip`, `AppLeave`); Tables Reused (`tbl_app_adjustment`, `tbl_app_changeshift`, `tbl_app_overtime`, `tbl_app_obtrip`, `tbl_app_leave`); Routes Reused (`/api/employee/application-status`, `/api/employee/logSheet`, `/api/employee/changeshift`, `/api/employee/overtime`, `/api/employee/obtrip`, `/api/employee/leaves`); New Migration: No.
 
 ---
@@ -46,7 +46,7 @@ This spec covers both the central portal landing hub ([ApplicationStatus.vue](fi
 |---|---|
 | Minimal template code. | Low visual impact, lacking search and filter capability. |
 
-**Recommendation:** Option A. Aligns with HRMS UI design standards ([ui-design.md](../../rules/ui-design.md)).
+**Recommendation:** Option A. Aligns with HRMS UI design standards ([ui-design.md](../../../rules/conditional/ui-design.md)).
 
 ---
 

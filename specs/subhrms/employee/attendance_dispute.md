@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (Employee Portal view) / Extension (reuses HR Resolution Center backend model)
 > **Portal:** **Employee** (`/api/employee/disputes`, `module/employee/disputes` frontend module).
 > **Route:** `employee/disputes` (`employee_disputes`).
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 > **System Awareness:** Models reused (`AttendanceDispute`); Tables reused (`attendance_disputes`); Routes created (`routes/api/employee.php`); New migration: `no`.
 
 ---

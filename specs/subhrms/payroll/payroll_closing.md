@@ -4,7 +4,7 @@
 > **Portal:** Payroll (`payroll` controller namespace, `payroll` URL prefix, `payroll` frontend module folder).
 > **Upstream:** Timesheet Closing → **Payroll Processing** ([timesheet_summary.md](./timesheet_summary.md)) → **Payroll Closing** (this spec).
 > **Models on:** the timekeeping **Timesheet Closing** feature — same UX (period status card, exceptions tracker, lock/unlock, history), applied to the payroll gate.
-> **Authoritative conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md). Follow it; do not re-derive the architecture.
+> **Authoritative conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md). Follow it; do not re-derive the architecture.
 
 ---
 
@@ -239,7 +239,7 @@ Copy `useTimesheetClosing` shape:
 
 ### 7.3 Page & components
 
-- **`PayrollClosing.vue`** — root layout copies the timekeeping closing page; payroll accent (cyan — see [ui-design](../../rules/ui-design.md) / project-profile portal colors). Sections: header, `PeriodStatusCard`, `ExceptionTracker`, `ClosingHistoryTable`, lock/unlock modals.
+- **`PayrollClosing.vue`** — root layout copies the timekeeping closing page; payroll accent (cyan — see [ui-design](../../../rules/conditional/ui-design.md) / project-profile portal colors). Sections: header, `PeriodStatusCard`, `ExceptionTracker`, `ClosingHistoryTable`, lock/unlock modals.
 - **`PayrollClosingHeader.vue`** — title, `VDatePicker` period range, prev/next, and the Lock / Unlock action buttons (state-aware, disabled per guards). Banner when `tk_status !== 'Closed'`.
 - **`PeriodStatusCard.vue`** — Open/Closed badge (`StatusBadge`), headcount, processed vs. pending, total gross / total net (peso via `formatCurrency`).
 - **`ExceptionTracker.vue`** — list of pre-close blockers grouped by `issue_type`, each with a "Resolve" link; empty (green "Ready to close") state when none.
@@ -265,11 +265,11 @@ Copy `useTimesheetClosing` shape:
 5. **Unlock → re-process**: unlocking sets `pay_process_status = 0` and `payroll_run.status = 0` so Payroll Processing can re-run and upsert details. Every lock/unlock is logged.
 6. **Comment required**: both lock and unlock require a non-empty comment (audit trail).
 7. **Concurrency**: wrap status/run writes + history in one `DB::transaction`.
-8. **Authorization**: privileged payroll-officer action — gate routes/UI per the project's existing authorization approach ([security](../../rules/security.md)).
+8. **Authorization**: privileged payroll-officer action — gate routes/UI per the project's existing authorization approach ([security](../../../rules/core/security-baseline.md)).
 
 ---
 
-## 10. Testing (per [.agents/rules/testing.md](../../rules/testing.md))
+## 10. Testing (per [.agents/rules/conditional/testing.md](../../../rules/conditional/testing.md))
 
 - **PHPUnit:**
   - `GetPayrollClosingStatusQuery`: status/gate derivation, processed vs. pending counts, totals.

@@ -1,5 +1,5 @@
 # Per-project settings for the /webkit-* skills — QueueMic.
-# Versioning procedure: .agents/rules/versioning.md
+# Versioning procedure: .agents/rules/conditional/versioning.md
 
 versioning:
   mode: auto                 # auto | recommend | off

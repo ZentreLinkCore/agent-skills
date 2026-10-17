@@ -3,7 +3,7 @@
 > **Kind:** Refactoring & Consolidation (Merging SSS, PhilHealth, Pag-IBIG, and BIR landing pages into a single unified Government Routines portal; centralizing Employer Details).  
 > **Portal:** **Payroll** (`/api/payroll/...` routes, `government_routines` frontend module).  
 > **Route:** `/payroll/government-routines` (`payroll_government_routines`).  
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [hrms-rules.md](../../rules/hrms-rules.md).  
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [payroll.md](../../../rules/conditional/payroll.md).  
 > **System Awareness:** Models reused (`Company`, `PayrollRun`, `PayrollRunDetail`, `PayPeriod`, `SssContributionTable`, `PhilhealthContributionTable`); Routes consolidated (`/payroll/government-routines`, `/payroll/employer-details`); Redundant routes removed (`/payroll/sss/employer-details`, `/payroll/phil-health/employer-details`, `/payroll/pag-ibig/employer-details`, `/payroll/bir/employer-details`); New migration: no.
 
 ---
@@ -179,7 +179,7 @@ The following duplicate sub-directories and landing page components will be safe
 
 ## 6. Business Rules & Edge Cases
 
-### 6.1 HRMS Domain Rules ([hrms-rules.md](../../rules/hrms-rules.md))
+### 6.1 HRMS Domain Rules ([payroll.md](../../../rules/conditional/payroll.md))
 
 1. **Single Source of Truth for Employer Statutory Registration:**
    - SSS Employer No, PhilHealth PEN, Pag-IBIG Employer No, BIR TIN, and Signatories are stored exclusively in the `company` database table.

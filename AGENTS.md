@@ -13,7 +13,7 @@ What lives where in `.agents/`, and when to load it. This file states no rules; 
 | **Resuming a ticket** | `specs/<project>/T#####/summary.md` (if any) → `task.md` → `context.md` → only the spec / plan sections needed | [context-budget.md §1](./rules/context-budget.md#1-read-in-this-order-and-stop-when-you-can-act) |
 | **Finding code** | Graphify (`graphify-out/` at the project root), then targeted search | [code-search.md](./rules/conditional/code-search.md) |
 
-The other `rules/*.md` files at the root are **compatibility redirects** for links written before the split. Never load them for new work.
+`rules/` holds only `core/`, `conditional/`, the router, and the context budget. Every rule has exactly one file.
 
 ## 2. Skills
 

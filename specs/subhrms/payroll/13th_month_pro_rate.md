@@ -2,7 +2,7 @@
 
 > **Kind:** Greenfield read-only report (page is a 4-line placeholder). Reads persisted payroll history; mirrors [payroll_summary.md](./payroll_summary.md) / [ytd_report.md](./ytd_report.md).
 > **Portal:** Payroll. **Route:** `payroll/payroll-reports/13th-month-pro-rate` (`payroll_payroll_reports_13th_month_pro_rate`) — already registered → [13th_month_pro_rate/13thMonthProRate.vue](../../../resources/views/web/src/module/payroll/reports/pages/payroll_reports/13th_month_pro_rate/13thMonthProRate.vue).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 
@@ -20,7 +20,7 @@ It **reads** persisted `payroll_run_detail`; it computes a projection, it does n
 
 **Independent of the processing run — pure monitoring.** A **13th Month Pay processing** feature already exists and is fully wired end-to-end, not a placeholder: `payroll_processing/13thmonth_pay` → `GetThirteenthMonthPayRosterQuery` / `ProcessThirteenthMonthPayHandler` (`app/Domain/Queries|Handlers/Payroll/`), gated by a dedicated `ThirteenthMonthPeriod` record (`payroll_13th_month_period` table, `pay_process_status` lock) and persisting to `payroll_run`/`payroll_run_detail` with `cycle = '13th'` (routes `GET /13th-month/roster`, `POST /13th-month/process`, `GET /13th-month/years` in `routes/api/payroll.php`). **This report must not depend on any of that.** It must not touch `ThirteenthMonthPeriod` (no `firstOrCreate`, no lock/gate check) and must not read the persisted `cycle='13th'` run. It always independently recomputes the pro-rated projection from **regular-cycle** payroll data, so it behaves identically whether the actual 13th-month run hasn't started yet, is mid-year, or has already been processed and closed — it's a standing monitoring view, not a step in the processing workflow.
 
-**But it must reuse the same math.** Per [duplicate-prevention](../../rules/duplicate-prevention.md) (no duplicate calculation engines), the pro-ration formula must mirror the *preview branch* of `GetThirteenthMonthPayRosterQuery` verbatim: same `basic_pay` sum over regular-cycle `payroll_run_detail`, same salary×months-worked fallback when no regular-cycle data exists yet, same hire-date-based `months_worked` derivation (including the half-month deduction for hires after the 15th). Keep both formulas in lockstep if either changes — do not call that query directly (it carries the period side-effect and status gating this report must avoid); write an independent, read-only query that copies its calculation steps only.
+**But it must reuse the same math.** Per [duplicate-prevention](../../../rules/conditional/system-awareness.md) (no duplicate calculation engines), the pro-ration formula must mirror the *preview branch* of `GetThirteenthMonthPayRosterQuery` verbatim: same `basic_pay` sum over regular-cycle `payroll_run_detail`, same salary×months-worked fallback when no regular-cycle data exists yet, same hire-date-based `months_worked` derivation (including the half-month deduction for hires after the 15th). Keep both formulas in lockstep if either changes — do not call that query directly (it carries the period side-effect and status gating this report must avoid); write an independent, read-only query that copies its calculation steps only.
 
 ---
 

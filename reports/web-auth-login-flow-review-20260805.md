@@ -21,12 +21,12 @@
 ### 3.1 Duplicate auth implementation (dead code) — **CORRECTED 2026-08-06**
 - **Symptom**: There are two separate "auth module" folders serving login.
 - **Discovered Code**: `resources/views/web/src/auth/` (`api/auth.api.ts`, `route/auth.routes.ts`, `index.ts`, `composables/useAuth.ts`, `types/types.auth.ts`) exists alongside the real, wired-up implementation in `resources/views/web/app/` (`stores/auth.store.ts`, `services/auth.service.ts`, `routes.ts`).
-- **Evidence (re-verified before deletion, per [Duplicate Prevention](../rules/duplicate-prevention.md) safety-check requirement)**: The original investigation's claim that `auth.api.ts` was unused dead code was **incorrect**. Actual import graph:
+- **Evidence (re-verified before deletion, per [Duplicate Prevention](../rules/conditional/system-awareness.md) safety-check requirement)**: The original investigation's claim that `auth.api.ts` was unused dead code was **incorrect**. Actual import graph:
   - `resources/views/web/app/routes.ts:88-106` imports `LoginPage.vue`, `RegisterPage.vue`, `ForgotPasswordPage.vue`, `ResetPasswordPage.vue` **directly** — these pages are live and reachable.
   - All four pages use `useAuth()` from `composables/useAuth.ts` (also live).
   - `useAuth.ts:4` imports `useAuthApi` from `../api/auth.api` and calls it for `checkSession()` and `forgotPassword()` — so **`auth.api.ts` is live, load-bearing code**, not dead. Deleting it would have broken login, register, forgot-password, and reset-password pages.
   - Only `route/auth.routes.ts` (its `authRoutes` array was never imported by `app/routes.ts` or any router aggregator — confirmed via grep) and `index.ts` (a barrel never imported from outside the `src/auth/` folder itself — confirmed via grep) were genuinely unreferenced.
-- **Root Cause**: A scaffolded self-contained auth module (with its own `route/` + `index.ts` barrel, intended for a fully self-registering module per [Project Profile](../rules/project-profile.md)'s standard layout) was partly wired up — the pages/composable/api layer are real and in active use — but the module's own route file and barrel export were superseded by direct page imports in `app/routes.ts` and never actually got registered. Those two files were pure dead weight; the rest of the folder was not.
+- **Root Cause**: A scaffolded self-contained auth module (with its own `route/` + `index.ts` barrel, intended for a fully self-registering module per [Project Profile](../rules/core/project-gate.md)'s standard layout) was partly wired up — the pages/composable/api layer are real and in active use — but the module's own route file and barrel export were superseded by direct page imports in `app/routes.ts` and never actually got registered. Those two files were pure dead weight; the rest of the folder was not.
 
 ### 3.2 Non-functional login UI affordances
 - **Symptom**: "Sign in with Microsoft 365" and "Login with Employee ID" buttons are present on the login page.
@@ -142,7 +142,7 @@ Applied via `/webkit.fix`, scoped to the two items the user approved (rate limit
 ### Resolution (2026-08-06)
 Applied via `/webkit.backend-implement`, scoped to the one item the user approved (logout token scope) — token-per-login policy and `config/sanctum.php` publishing/expiration were explicitly deferred per user decision:
 - [`app/Http/Controllers/AuthController.php:105`](file:///d:/project/hrms/app/Http/Controllers/AuthController.php#L105) — `logout()` changed from `$request->user()->tokens()->delete()` (revoked every token/device) to `$request->user()->currentAccessToken()->delete()` (revokes only the session's own token).
-- No new migration, model, route, or Query/Handler class was needed — this endpoint and controller already existed; the fix was a one-line method-body change, consistent with the thin-controller pattern in [Project Profile](../../rules/project-profile.md).
+- No new migration, model, route, or Query/Handler class was needed — this endpoint and controller already existed; the fix was a one-line method-body change, consistent with the thin-controller pattern in [Project Profile](../rules/core/project-gate.md).
 - Verified: `php -l` clean, `php artisan route:list --path=logout -v` still resolves `POST api/logout` under `auth:sanctum` unchanged.
 
 ### Resolution (2026-08-06, frontend pass)

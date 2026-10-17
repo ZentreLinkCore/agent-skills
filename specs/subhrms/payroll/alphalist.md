@@ -4,7 +4,7 @@
 > **Portal:** Payroll. **Routes (both already registered):**
 > - `payroll/bir/schedule-1-alphalist-of-employees` (`payroll_bir_schedule_1_alphalist_of_employees`) → [alphalist_schedule_1/Schedule1AlphalistOfEmployees.vue](../../../resources/views/web/src/module/payroll/government_routines/pages/bir/alphalist_schedule_1/Schedule1AlphalistOfEmployees.vue)
 > - `payroll/bir/schedule-2-alphalist-of-minimum-wage-earners` (`payroll_bir_schedule_2_alphalist_of_minimum_wage_earners`) → [alphalist_schedule_2/Schedule2AlphalistOfMinimumWageEarners.vue](../../../resources/views/web/src/module/payroll/government_routines/pages/bir/alphalist_schedule_2/Schedule2AlphalistOfMinimumWageEarners.vue)
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md) (Domain Query/Handler, no API Resources), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md) (Domain Query/Handler, no API Resources), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 
@@ -42,13 +42,13 @@ ALPHALIST  ──►  per-schedule roster table  ──►  export (Excel/CSV �
 - **Employee identity** — `App\Models\AccountDetailVW` (view `vw_accounts_details`): `tin_no`, `fullname`, `address`, `civil_status`, `dependents`, `bdate`. Same access pattern as [GetThirteenthMonthPayRosterQuery](../../../app/Queries/Payroll/GetThirteenthMonthPayRosterQuery.php).
 - **Employer header** (for the alphalist's own header/export filename) — `App\Models\Company` (table `company`, `id=1`), same as [bir_form_2316.md](./bir_form_2316.md) §2.
 
-> [!CAUTION] **Gap — Minimum Wage Earner classification does not exist yet.** No model/column found anywhere in this codebase (`AccountDetailVW`, `AccountJob`, `Account`, `employee_status`) that flags an employee as a Minimum Wage Earner. `employee_type` (from `employee_status.type`, joined via `emptype_id`) is the closest candidate but its actual values were **not** confirmed against a definitive list during research — do not assume it already encodes "MWE" without checking `employee_status` table contents first. **Gate 2 must resolve this before Schedule 2 can be built**: either (a) confirm `employee_status.type` already has an MWE-equivalent value, or (b) add a boolean/flag column (e.g. `accounts.is_mwe` or an `employee_status` row dedicated to MWE) via a new migration — per [Anti-Hallucination](../../rules/anti-hallucination.md), do not invent this classification source without confirming it first. Until resolved, Schedule 2's roster query cannot be written correctly; Gate 1 (hard-coded design) can proceed using a placeholder boolean field, clearly flagged.
+> [!CAUTION] **Gap — Minimum Wage Earner classification does not exist yet.** No model/column found anywhere in this codebase (`AccountDetailVW`, `AccountJob`, `Account`, `employee_status`) that flags an employee as a Minimum Wage Earner. `employee_type` (from `employee_status.type`, joined via `emptype_id`) is the closest candidate but its actual values were **not** confirmed against a definitive list during research — do not assume it already encodes "MWE" without checking `employee_status` table contents first. **Gate 2 must resolve this before Schedule 2 can be built**: either (a) confirm `employee_status.type` already has an MWE-equivalent value, or (b) add a boolean/flag column (e.g. `accounts.is_mwe` or an `employee_status` row dedicated to MWE) via a new migration — per [Anti-Hallucination](../../../rules/conditional/system-awareness.md), do not invent this classification source without confirming it first. Until resolved, Schedule 2's roster query cannot be written correctly; Gate 1 (hard-coded design) can proceed using a placeholder boolean field, clearly flagged.
 
 ---
 
 ## 3. Target Files
 
-Frontend (fill the already-registered stub folders; TS structure per [Project Profile](../../rules/project-profile.md)):
+Frontend (fill the already-registered stub folders; TS structure per [Project Profile](../../../rules/core/project-gate.md)):
 ```
 resources/views/web/src/module/payroll/government_routines/pages/bir/
 ├── alphalist_schedule_1/
@@ -100,11 +100,11 @@ Reuse `/api/payroll/year-end/years` (already built, see [year_end.md](./year_end
 
 ## 5. Frontend Design
 
-- **Shared chrome (both schedules):** header (breadcrumb `Payroll / Government Routines / BIR / Schedule N`), **year** select (reusing the Year End years list), stat cards (Headcount / Total Gross / Total Tax Due for Schedule 1; Headcount / Total Exempt Compensation for Schedule 2), **Export** button. Cyan accent (Payroll portal), dark mode, wide table in its own `overflow-x-auto` (per [UI & Design Standards](../../rules/ui-design.md)).
+- **Shared chrome (both schedules):** header (breadcrumb `Payroll / Government Routines / BIR / Schedule N`), **year** select (reusing the Year End years list), stat cards (Headcount / Total Gross / Total Tax Due for Schedule 1; Headcount / Total Exempt Compensation for Schedule 2), **Export** button. Cyan accent (Payroll portal), dark mode, wide table in its own `overflow-x-auto` (per [UI & Design Standards](../../../rules/conditional/ui-design.md)).
 - **Schedule 1 table** (`AlphalistSchedule1Table.vue`): Employee (name/TIN), Address, Civil Status, Dependents, Gross Compensation, Non-Taxable/Exempt, Taxable Compensation, Tax Due, Tax Withheld, Refund/Payable — the full per-employee breakdown, sortable/searchable like [ytd_report.md](./ytd_report.md)'s table.
 - **Schedule 2 table** (`AlphalistSchedule2Table.vue`): Employee (name/TIN), Address, Basic Pay, Holiday/OT/Night-Diff/Hazard components (all exempt), Total Exempt Compensation — **no tax columns rendered as data-bearing**; show a static "Exempt (RA 9504)" badge instead of a `StatusBadge` status, since MWE status isn't a workflow state.
 - **Export:** `maatwebsite/excel` **is already a project dependency** (used elsewhere for CSV/XLSX *imports* only — no export usage exists yet, confirmed this session) — introducing an `Excel::download()` export class for these two schedules follows an established package, not a new one. Note: BIR's actual Alphalist submission format is a specific fixed-format `.DAT`/text file (validated by BIR's own Alphalist Data Entry and Validation Module) — an Excel export satisfies internal review/audit needs; producing the BIR-compliant `.DAT` format is a distinct, more rigid follow-up not in this spec's initial scope (flag to the user before building it, since the exact field-by-field BIR layout needs to be sourced from the official BIR Alphalist format, not guessed).
-- **Design-First (Gate 1):** hard-code both `api/alphalist_schedule_*.api.ts` files with realistic rows (Schedule 1: a mix of refund/collectible employees; Schedule 2: a few MWE rows with zeroed tax columns) — no live calls, per [Project Profile](../../rules/project-profile.md).
+- **Design-First (Gate 1):** hard-code both `api/alphalist_schedule_*.api.ts` files with realistic rows (Schedule 1: a mix of refund/collectible employees; Schedule 2: a few MWE rows with zeroed tax columns) — no live calls, per [Project Profile](../../../rules/core/project-gate.md).
 
 ---
 

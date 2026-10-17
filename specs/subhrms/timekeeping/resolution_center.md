@@ -3,7 +3,7 @@
 > **Kind:** Extension — full redesign of an existing, live (non-mock) module that has a critical correctness gap plus multiple standards violations.
 > **Portal:** **Timekeeping** (`/api/timekeeping/resolution-center/...` routes, `timekeeping/resolution_center` frontend module).
 > **Route:** `timekeeping/resolution-center` (`resolution_center`) — unchanged.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [vue-standards.md](../../rules/vue-standards.md), [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [frontend-vue.md](../../../rules/conditional/frontend-vue.md), [system-awareness.md](../../../rules/conditional/system-awareness.md).
 > **System Awareness:** Models reused (`AttendanceException`, `AttendanceDispute`, `AppAdjustment`, `Timesheet`, `AccountDetailVW`); Tables reused only; New migration: **no**.
 > **Implementation status:** Backend (Decision 1) — **done**. Frontend standards redesign (Section 5) — **done**: `c-select`, drag-to-scroll, pagination, `StatusBadge`, `useInitialProfile` all applied to `ExceptionsTab.vue`/`DisputesTab.vue`/`ResolutionModal.vue`/`DisputeDetailsModal.vue`. Note: this module was already live (real endpoints, real data) going into this pass, so there was no hard-coded/mock design-first stage to build — the redesign was applied directly against the live composable.
 
@@ -41,7 +41,7 @@ This is the load-bearing decision — everything else in this spec is secondary 
 
 **Option A — Route through the existing `AppAdjustment` + `HandleTimesheet` auto-merge pipeline (Recommended — implemented)**
 - When a Timekeeper resolves an exception with "Custom Punches", **create a real `AppAdjustment` row** (same model the employee-portal filing flow uses — 182 real rows already), but created with **`status = 1` (pre-approved)** since the Timekeeper's action *is* the approval — no further approval step needed. This reuses the exact mechanism `HandleTimesheet` already checks for (`HandleAttendanceAdjustmentQuery::checkApproved()`/`checkAdjustmentLogs()`) to auto-merge into `adj_aa_*` totals, and it's exactly what already renders correctly in `TimesheetProcessingTable.vue`'s breakdown view.
-- Extract the `AppAdjustment::create(...)` block currently inline inside `TKApplicationController::submit_application()` into a small reusable method (`HandleAttendanceAdjustmentQuery::createAdjustment(...)`) so both the employee-filing path and this new Timekeeper-initiated path call the same creation logic instead of duplicating it — per [duplicate-prevention.md](../../rules/duplicate-prevention.md).
+- Extract the `AppAdjustment::create(...)` block currently inline inside `TKApplicationController::submit_application()` into a small reusable method (`HandleAttendanceAdjustmentQuery::createAdjustment(...)`) so both the employee-filing path and this new Timekeeper-initiated path call the same creation logic instead of duplicating it — per [system-awareness.md](../../../rules/conditional/system-awareness.md).
 - Fix `resolved_by` / timeline `sender` to resolve the real logged-in user's display name (`AccountDetailVW::find(Auth::id())->fullname`) instead of the hardcoded string.
 - **Dispute approval does *not* create an `AppAdjustment`** (clarified during implementation — see the resolved note below): `DisputeDetailsModal.vue`'s Approve/Reject/Info-Requested actions never collect a corrected punch-in/punch-out, only a free-text remark, so there is no time data to build a correction from. Approving a dispute only fixes its status/timeline + attribution; if a punch-time correction is actually needed, the Timekeeper resolves it separately via the Exceptions tab's "Custom Punches", which does collect real times.
 
@@ -56,7 +56,7 @@ This is the load-bearing decision — everything else in this spec is secondary 
 
 | Pros | Cons |
 |---|---|
-| Immediate effect, no dependency on the `adj_aa_*` merge path | Introduces a **second**, parallel "how corrections apply" mechanism next to the already-working `AppAdjustment` one — exactly the kind of duplicate logic [duplicate-prevention.md](../../rules/duplicate-prevention.md) warns against |
+| Immediate effect, no dependency on the `adj_aa_*` merge path | Introduces a **second**, parallel "how corrections apply" mechanism next to the already-working `AppAdjustment` one — exactly the kind of duplicate logic [system-awareness.md](../../../rules/conditional/system-awareness.md) warns against |
 | — | Loses the audit trail shape (`docnumber`, `remarks`, `approvers`) every other correction has; `Timesheet` has no equivalent audit columns |
 | — | Bypasses whatever the future real auto-audit detection logic will expect to reconcile against |
 

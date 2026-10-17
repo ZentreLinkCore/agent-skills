@@ -3,7 +3,7 @@
 > **Kind:** **Implemented** — Gate 1 (hard-coded design) and Gate 2 (tables, models, queries/handlers, routes, live API) have both landed. The loan register, ledger, and amortization generation all work end-to-end against the database. What is **not** yet wired is the last leg of the chain — posting each amortization as a `payroll_entry` and having Payroll Processing route it into the `loans` column. That leg is specified separately in **§7 Pending**.
 > **Portal:** Payroll. **Route:** `payroll/loans` (`payroll_loans`) — registered → [loans/Loans.vue](../../../resources/views/web/src/module/payroll/payroll_entries/pages/loans/Loans.vue).
 > **Builds on** the **Loan Types** master ([loan_types.md](./loan_types.md)), and (once §7 lands) the shared `payroll_entry` table ([batch_entries.md](./batch_entries.md) §3a).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 
@@ -77,7 +77,7 @@ Not optional in practice: generation reads the **next unpaid schedule row** to d
 Compound indexes: `(idloan, idpayperiod)` for the idempotency check, `(idloan, seq)` for ordered ledger reads.
 
 > [!NOTE]
-> **Deviation from convention:** this migration declares a real `->foreign('idloan')->onDelete('cascade')` constraint. [project-profile](../../rules/project-profile.md) mandates zero DB-level FKs (index only, integrity enforced in the Query/Handler layer). Documented here as the current state; reconcile per §7.3.
+> **Deviation from convention:** this migration declares a real `->foreign('idloan')->onDelete('cascade')` constraint. [project-profile](../../../rules/core/project-gate.md) mandates zero DB-level FKs (index only, integrity enforced in the Query/Handler layer). Documented here as the current state; reconcile per §7.3.
 
 ---
 
@@ -162,7 +162,7 @@ Everything below is specified but **not** in the codebase yet.
 
 **7.2 Route loan entries into `payroll_run_detail.loans`.** [`ProcessPayrollHandler`](../../../app/Handlers/Payroll/ProcessPayrollHandler.php) currently hard-codes `$hdmf_loan = 0.00; $sss_loan = 0.00; $loans = 0.00`, and its generic entry loop folds **every** `kind='deduction'` row into `$special_deductions` → `other_deductions`. Split `source='loan'` out of that loop into `$loans` (optionally sub-splitting HDMF / SSS by loan type) so the `loans` column of the run detail is populated and not double-counted in `other_deductions`. Deduction ordering follows `loantype.priority`.
 
-**7.3 Drop the DB-level FK** on `payroll_loan_schedule.idloan` (§3b note) in favour of a plain `->index()`, per [project-profile](../../rules/project-profile.md). The migration is recent and unreleased, so edit it in place rather than adding an alter. Replace the lost `onDelete('cascade')` with an explicit schedule delete in the delete path.
+**7.3 Drop the DB-level FK** on `payroll_loan_schedule.idloan` (§3b note) in favour of a plain `->index()`, per [project-profile](../../../rules/core/project-gate.md). The migration is recent and unreleased, so edit it in place rather than adding an alter. Replace the lost `onDelete('cascade')` with an explicit schedule delete in the delete path.
 
 **7.4 Add the `pages/loans/index.ts` barrel** re-exporting `useLoans`, `useLoansApi`, and the types, matching the sibling pages (§5).
 

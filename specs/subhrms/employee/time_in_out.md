@@ -6,7 +6,7 @@
 > **Route:**
 > - Mobile Expo Router: `/(app)/time-in-out` (Time In / Out Cockpit Screen), `/(auth)/login` (Attendance Gate on Login), `/(app)` (Dashboard).
 > - Backend API: `GET /api/attendance/today`, `POST /api/attendance/record`, `GET /api/attendance/history`, `POST /api/biometric/check-device`.
-> **Conventions:** [project-profile.md](../../rules/project-profile.md), [ui-design.md](../../rules/ui-design.md), [laravel-standards.md](../../rules/laravel-standards.md), [hrms-rules.md](../../rules/hrms-rules.md).
+> **Conventions:** [project-gate.md](../../../rules/core/project-gate.md), [ui-design.md](../../../rules/conditional/ui-design.md), [backend.md](../../../rules/conditional/backend.md), [payroll.md](../../../rules/conditional/payroll.md).
 > **System Awareness:**
 > - Models reused: `Timesheet`, `Account`, `AccountJob`, `UserBiometricDevice`, `BiometricAuthLog`.
 > - Tables reused: `timesheet`, `accounts`, `accountjob`, `user_biometric_devices`, `biometric_auth_logs`.

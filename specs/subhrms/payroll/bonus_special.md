@@ -3,7 +3,7 @@
 > **Kind:** Greenfield (page is a 4-line placeholder; no backend yet).
 > **Portal:** Payroll. **Route:** `payroll/bonus-special` (`payroll_bonus_special`) — already registered → [bonus_special/BonusSpecial.vue](../../../resources/views/web/src/module/payroll/payroll_entries/pages/bonus_special/BonusSpecial.vue).
 > **Builds on the shared `payroll_entry` table** ([batch_entries.md](./batch_entries.md) §3a).
-> **Conventions:** [.agents/rules/project-profile.md](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md).
+> **Conventions:** [.agents/rules/project-gate.md](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md).
 
 ---
 

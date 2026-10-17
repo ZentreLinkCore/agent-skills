@@ -1,9 +1,9 @@
 # Spec — Employee Separation & Clearance (HR) — the missing trigger of the Final Pay workflow
 
 > **Kind:** Greenfield HR module. It **owns the start** of the separation → final-pay chain and fixes two responsibilities currently misplaced in Timekeeping.
-> **Portal:** HR (`hr` namespace + URL prefix + module folder). **Accent: emerald** (per [project-profile](../../rules/project-profile.md)).
+> **Portal:** HR (`hr` namespace + URL prefix + module folder). **Accent: emerald** (per [project-profile](../../../rules/core/project-gate.md)).
 > **Downstream:** Timekeeping [Final Pay Processing](../timekeeping/final_pay_processing.md) → Payroll [Final Pay](../payroll/final_pay.md).
-> **Conventions:** [project-profile](../../rules/project-profile.md), [hrms-rules](../../rules/hrms-rules.md), [ui-design](../../rules/ui-design.md).
+> **Conventions:** [project-profile](../../../rules/core/project-gate.md), [hrms-rules](../../../rules/conditional/payroll.md), [ui-design](../../../rules/conditional/ui-design.md).
 
 ---
 
@@ -147,7 +147,7 @@ separation/
 3. **Clearance gates endorsement:** TK endorsement (and Payroll final pay) should require `employee_separation.status = 'Cleared'` (or surface outstanding accountabilities).
 4. **Accountabilities → Payroll:** clearance `amount`s are deductions in the Payroll Final Pay computation — HR records, Payroll subtracts (no double entry).
 5. **Reinstatement/cancellation:** cancelling an approved separation must clear `accountjob.sdate` + restore `accounts.status` (mirror the approve path in reverse).
-6. **Authorization:** HR-officer role; separation data is sensitive ([hrms-rules](../../rules/hrms-rules.md) §4).
+6. **Authorization:** HR-officer role; separation data is sensitive ([hrms-rules](../../../rules/conditional/payroll.md) §4).
 
 ---
 
