@@ -23,7 +23,7 @@ Claude Code loads **every** `.md` in `.claude/rules/` on **every** turn. Whateve
 
 - Earlier versions kept a second copy of the rules here. Once that copy was refreshed with the full library, every turn loaded ~33,600 tokens of rules. Symlinking the always-on files instead means there is nothing here to drift and nothing to re-copy.
 - On Windows without symlink support, Git Bash's `ln -s` silently makes a **copy**. `setup.sh` detects that and warns: re-run it after every `git -C .agents pull` so the copies stay current.
-- `setup.sh` also retires what older versions installed (the full copies and the pointer stubs): symlinks are removed, and real files are moved to `.claude-rules-backup/`, never deleted.
+- `setup.sh` also retires what older versions installed (the full copies and the pointer stubs): symlinks are removed, and real files are moved to `.claude-rules-backup/`, never deleted. That folder is added to the project's `.git/info/exclude` (local only; the project's `.gitignore` is untouched), so it never shows in `git status`.
 
 ## Editing
 

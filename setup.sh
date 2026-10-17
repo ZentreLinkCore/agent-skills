@@ -115,6 +115,18 @@ for name in $RETIRED; do
 done
 [ "$retired" -gt 0 ] && echo "  ✓ retired ${retired} old rule file(s) from .claude/rules/ (real files kept in .claude-rules-backup/)"
 
+# Keep the backup out of the project's `git status` without touching its .gitignore:
+# .git/info/exclude is this clone's own ignore list and is never committed.
+if [ -d .claude-rules-backup ]; then
+    exclude="$(git rev-parse --git-path info/exclude 2>/dev/null || true)"
+    if [ -n "$exclude" ] && ! grep -qxF '/.claude-rules-backup/' "$exclude" 2>/dev/null; then
+        mkdir -p "$(dirname "$exclude")"
+        if [ -s "$exclude" ] && [ -n "$(tail -c1 "$exclude")" ]; then echo >> "$exclude"; fi
+        echo '/.claude-rules-backup/' >> "$exclude"
+        echo "  ✓ .claude-rules-backup/ hidden from git status (.git/info/exclude; .gitignore untouched)"
+    fi
+fi
+
 # ── 3. Portable entry point ────────────────────────────────────────────────────
 # Never overwritten: a project's root AGENTS.md can hold its own sections (e.g. the dev
 # login the browser checks in /webkit-verify and /webkit-design-review read).
